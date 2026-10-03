@@ -12,8 +12,8 @@
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-  --text-2xs: 0.6875rem;
-  --text-2xs--line-height: 1.05rem;
+  --text-2xs: 0.75rem;
+  --text-2xs--line-height: 1.1rem;
   --text-2xs--letter-spacing: 0.015em;
 
   /* ---------- Night surface scale ---------- */
@@ -31,7 +31,7 @@
   --color-mist-200: #d7deec;
   --color-mist-300: #b6c0d6;
   --color-mist-400: #96a3bd;
-  --color-mist-500: #77849f;
+  --color-mist-500: #8a97b1;
 
   /* ---------- Brand : violet électrique ---------- */
   --color-brand-100: #ede9fe;
@@ -323,7 +323,7 @@
 
   /* ---------- Type helpers ---------- */
   .eyebrow {
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
     line-height: 1;
     font-weight: 700;
     letter-spacing: 0.09em;

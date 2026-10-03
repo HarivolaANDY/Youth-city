@@ -236,7 +236,7 @@ export const Dashboard: React.FC = () => {
                 className="text-2xs text-warn-300"
               >
                 {'★'.repeat(currentHousing.comfortStars)}
-                <span className="text-mist-500/40">{'★'.repeat(5 - currentHousing.comfortStars)}</span>
+                <span className="text-mist-400/60">{'★'.repeat(5 - currentHousing.comfortStars)}</span>
               </span>
             </div>
             <p className="mt-1.5 text-2xs text-mist-500">
