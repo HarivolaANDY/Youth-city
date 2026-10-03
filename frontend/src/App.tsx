@@ -1,15 +1,33 @@
-import React, { useEffect, useRef } from 'react';
+import React, { Suspense, lazy, useEffect, useRef } from 'react';
 import { useGameStore } from './stores/useGameStore';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import { NavigationTabs } from './components/NavigationTabs';
 import { Dashboard } from './features/dashboard/Dashboard';
-import { CityMap } from './features/city/CityMap';
-import { CampusView } from './features/campus/CampusView';
-import { CareerView } from './features/career/CareerView';
-import { FinanceView } from './features/finance/FinanceView';
-import { ResidentialView } from './features/residential/ResidentialView';
-import { CareerPassportView } from './features/passport/CareerPassportView';
+
+const CityMap = lazy(() => import('./features/city/CityMap').then((m) => ({ default: m.CityMap })));
+const CampusView = lazy(() => import('./features/campus/CampusView').then((m) => ({ default: m.CampusView })));
+const CareerView = lazy(() => import('./features/career/CareerView').then((m) => ({ default: m.CareerView })));
+const FinanceView = lazy(() => import('./features/finance/FinanceView').then((m) => ({ default: m.FinanceView })));
+const ResidentialView = lazy(() =>
+  import('./features/residential/ResidentialView').then((m) => ({ default: m.ResidentialView }))
+);
+const CareerPassportView = lazy(() =>
+  import('./features/passport/CareerPassportView').then((m) => ({ default: m.CareerPassportView }))
+);
+
+const ViewSkeleton: React.FC = () => (
+  <div role="status" aria-busy="true" className="space-y-5">
+    <span className="sr-only">Chargement de la section…</span>
+    <div className="panel h-32 animate-pulse-soft" />
+    <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+      <div className="panel h-40 animate-pulse-soft" />
+      <div className="panel h-40 animate-pulse-soft" />
+      <div className="panel hidden h-40 animate-pulse-soft lg:block" />
+    </div>
+  </div>
+);
+
 import { NovaMentorModal } from './components/NovaMentorModal';
 import { DecisionModal } from './components/DecisionModal';
 import { ToastContainer } from './components/ToastContainer';
@@ -79,7 +97,7 @@ export const App: React.FC = () => {
 
             <div className="mt-5 sm:mt-6">
               <div key={activeTab} className="animate-rise-in">
-                {renderActiveView()}
+                <Suspense fallback={<ViewSkeleton />}>{renderActiveView()}</Suspense>
               </div>
             </div>
           </main>
