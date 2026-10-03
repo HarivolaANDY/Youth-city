@@ -1,7 +1,14 @@
 from django.urls import path
+from rest_framework_simplejwt.views import TokenRefreshView
 from game import views
 
 urlpatterns = [
+    # Auth & Accounts (§42, §47)
+    path('auth/register/', views.register_user, name='auth-register'),
+    path('auth/login/', views.login_user, name='auth-login'),
+    path('auth/me/', views.get_current_user, name='auth-me'),
+    path('auth/token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
+
     # Game Loop & Citizen Status
     path('game/state/', views.get_game_state, name='game-state'),
     path('game/advance_time/', views.advance_time, name='advance-time'),

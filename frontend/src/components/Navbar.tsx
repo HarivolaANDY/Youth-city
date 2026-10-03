@@ -12,6 +12,9 @@ import {
   RotateCcw,
   Sparkles,
   ChevronDown,
+  User,
+  LogIn,
+  LogOut,
 } from 'lucide-react';
 import { useGameStore } from '../stores/useGameStore';
 import { Progress } from './ui/Progress';
@@ -59,6 +62,10 @@ export const Navbar: React.FC = () => {
     resetGame,
     setActiveTab,
     isBackendConnected,
+    user,
+    isAuthenticated,
+    toggleAuthModal,
+    logout,
   } = useGameStore();
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -247,6 +254,34 @@ export const Navbar: React.FC = () => {
             </Button>
 
 
+            {isAuthenticated ? (
+              <Tooltip text={`Connecté en tant que ${user?.username} — Espace Citoyen`}>
+                <Button
+                  variant="secondary"
+                  onClick={() => toggleAuthModal(true, 'login')}
+                  className="border-brand-400/30 bg-brand-500/10 text-brand-200"
+                >
+                  <User className="size-3.5 text-gain-400" aria-hidden="true" />
+                  <span className="hidden md:inline max-w-24 truncate font-bold">{user?.username}</span>
+                  <span
+                    aria-hidden="true"
+                    className="size-1.5 rounded-full bg-gain-400 shadow-[0_0_6px] shadow-gain-400 animate-pulse-soft"
+                  />
+                </Button>
+              </Tooltip>
+            ) : (
+              <Tooltip text="Se connecter ou s'inscrire pour sauvegarder sa progression">
+                <Button
+                  variant="secondary"
+                  onClick={() => toggleAuthModal(true, 'login')}
+                  className="border-white/10"
+                >
+                  <LogIn className="size-3.5 text-brand-300" aria-hidden="true" />
+                  <span className="hidden md:inline">Connexion</span>
+                </Button>
+              </Tooltip>
+            )}
+
             <div className="relative" ref={menuRef}>
               <Tooltip text="Options et réinitialisation" align="end">
                 <button
@@ -273,8 +308,44 @@ export const Navbar: React.FC = () => {
                   role="menu"
                   aria-label="Options de partie"
                   onKeyDown={handleMenuKeyDown}
-                  className="panel panel-accent absolute right-0 top-full z-50 mt-2 w-60 overflow-hidden rounded-xl p-1.5 shadow-panel-lg animate-pop-in"
+                  className="panel panel-accent absolute right-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-xl p-1.5 shadow-panel-lg animate-pop-in"
                 >
+                  {/* Section Compte Utilisateur (§42) */}
+                  {isAuthenticated ? (
+                    <div className="border-b border-white/[0.06] px-2.5 py-2 mb-1 bg-white/[0.02] rounded-lg">
+                      <span className="block text-2xs text-mist-500 font-medium">Compte citoyen :</span>
+                      <span className="block text-xs font-bold text-brand-300 truncate">@{user?.username}</span>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          logout();
+                          setMenuOpen(false);
+                        }}
+                        className="mt-1.5 flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-2xs font-bold text-risk-300 transition-colors hover:bg-risk-500/10 focus-visible:outline-none"
+                      >
+                        <LogOut className="size-3 shrink-0" aria-hidden="true" />
+                        <span>Se déconnecter</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="border-b border-white/[0.06] px-2.5 py-2 mb-1 bg-white/[0.02] rounded-lg">
+                      <span className="block text-2xs text-mist-500 font-medium">Session invité / démo</span>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          toggleAuthModal(true, 'login');
+                          setMenuOpen(false);
+                        }}
+                        className="mt-1 flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-2xs font-bold text-brand-300 transition-colors hover:bg-brand-500/20 focus-visible:outline-none"
+                      >
+                        <LogIn className="size-3 shrink-0" aria-hidden="true" />
+                        <span>Connexion / S'inscrire</span>
+                      </button>
+                    </div>
+                  )}
+
                   <p className="px-2.5 pt-1.5 pb-2 text-2xs font-bold tracking-wider text-mist-500 uppercase">
                     Réinitialiser la simulation
                   </p>

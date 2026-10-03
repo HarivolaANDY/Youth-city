@@ -140,3 +140,22 @@ export interface ToastNotification {
   message: string;
   type: 'success' | 'warning' | 'info' | 'xp' | 'money';
 }
+
+export interface AuthUser {
+  id: number;
+  username: string;
+  email: string;
+  date_joined?: string;
+}
+
+export interface AuthTokens {
+  access: string;
+  refresh: string;
+}
+
+export interface AuthResponse {
+  user: AuthUser;
+  tokens: AuthTokens;
+  citizen: Citizen;
+}
+

@@ -1,9 +1,12 @@
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
 from django.db import transaction as db_transaction
+from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from game.models import (
     Property,
@@ -24,6 +27,8 @@ from game.serializers import (
     DilemmaSerializer,
     TransactionSerializer,
     CitizenDetailSerializer,
+    UserSerializer,
+    RegisterSerializer,
 )
 
 TIME_SLOTS = [
@@ -33,14 +38,46 @@ TIME_SLOTS = [
     'Nuit (22:00)',
 ]
 
+def create_initial_character_for_user(user, name=None):
+    """Initialise un profil citoyen complet pour un nouvel utilisateur."""
+    prop = Property.objects.filter(key='housing-studio').first() or Property.objects.first()
+    char_name = name.strip() if name and name.strip() else user.username
+    char = Character.objects.create(
+        user=user,
+        name=char_name,
+        avatar_seed=user.username,
+        title="Nouveau Citoyen de Youth City",
+        level=1,
+        xp=0,
+        xp_to_next_level=500,
+        energy=80,
+        wellbeing=80,
+        money=250000,
+        savings=50000,
+        day=1,
+        time_slot=TIME_SLOTS[0],
+        current_housing=prop,
+        current_objective={
+            'title': 'Découvrir Youth City & Choisir une formation',
+            'target': 'Visiter le Campus District et s\'inscrire à un cours',
+            'progress': 10,
+        },
+    )
+    for skill in Skill.objects.all():
+        base_level = 20 if skill.key in ['budget', 'communication'] else 10
+        CharacterSkill.objects.create(character=char, skill=skill, level_percent=base_level)
+    return char
+
+
 def get_active_character(request):
     """Retrieves the active citizen avatar (user or default demo citizen)."""
     if request.user and request.user.is_authenticated:
-        char, _ = Character.objects.get_or_create(user=request.user, defaults={'name': request.user.username})
+        char = Character.objects.filter(user=request.user).first()
+        if not char:
+            char = create_initial_character_for_user(request.user)
         return char
-    char = Character.objects.first()
+    char = Character.objects.filter(user__isnull=True).first() or Character.objects.first()
     if not char:
-        # Fallback creation if seed has not been run
         prop = Property.objects.first()
         char = Character.objects.create(name="Emmanuel", current_housing=prop)
     return char
@@ -460,23 +497,20 @@ def resolve_dilemma(request):
 def reset_game(request):
     """Resets game state to demo preset (Emmanuel) or new citizen."""
     preset = request.data.get('preset', 'demo')
-    from django.core.management import call_command
-    call_command('seed_game_data')
 
-    character = Character.objects.first()
-    if preset == 'new':
-        character.name = "Nouveau Citoyen"
-        character.title = "Citoyen Débutant"
-        character.level = 1
-        character.xp = 0
-        character.xp_to_next_level = 500
-        character.energy = 80
-        character.wellbeing = 80
-        character.money = 250000
-        character.savings = 50000
+    if request.user and request.user.is_authenticated:
+        character = get_active_character(request)
+        room = Property.objects.filter(key='housing-room').first() or Property.objects.first()
+        character.title = "Nouveau Citoyen de Youth City" if preset == 'new' else "Citoyen Actif"
+        character.level = 1 if preset == 'new' else 5
+        character.xp = 0 if preset == 'new' else 1450
+        character.xp_to_next_level = 500 if preset == 'new' else 2000
+        character.energy = 80 if preset == 'new' else 72
+        character.wellbeing = 80 if preset == 'new' else 81
+        character.money = 250000 if preset == 'new' else 425000
+        character.savings = 50000 if preset == 'new' else 200000
         character.day = 1
         character.time_slot = TIME_SLOTS[0]
-        room = Property.objects.filter(key='housing-room').first()
         character.current_housing = room
         character.current_job = None
         character.completed_courses = []
@@ -484,18 +518,134 @@ def reset_game(request):
         character.completed_challenges = 0
         character.save()
 
-        # Reset skills
         for cs in character.skills.all():
-            cs.level_percent = 15
+            cs.level_percent = 15 if preset == 'new' else 50
             cs.save()
 
         Certification.objects.filter(character=character).delete()
         Transaction.objects.filter(character=character).delete()
 
+        return Response({
+            'message': f"Partie réinitialisée en mode '{preset}'.",
+            'citizen': CitizenDetailSerializer(character).data,
+            'day': character.day,
+            'timeSlot': character.time_slot,
+            'transactions': [],
+        })
+    else:
+        from django.core.management import call_command
+        call_command('seed_game_data')
+        character = Character.objects.filter(user__isnull=True).first() or Character.objects.first()
+        if preset == 'new':
+            character.name = "Nouveau Citoyen"
+            character.title = "Citoyen Débutant"
+            character.level = 1
+            character.xp = 0
+            character.xp_to_next_level = 500
+            character.energy = 80
+            character.wellbeing = 80
+            character.money = 250000
+            character.savings = 50000
+            character.day = 1
+            character.time_slot = TIME_SLOTS[0]
+            room = Property.objects.filter(key='housing-room').first()
+            character.current_housing = room
+            character.current_job = None
+            character.completed_courses = []
+            character.completed_projects = 0
+            character.completed_challenges = 0
+            character.save()
+
+            for cs in character.skills.all():
+                cs.level_percent = 15
+                cs.save()
+
+            Certification.objects.filter(character=character).delete()
+            Transaction.objects.filter(character=character).delete()
+
+        return Response({
+            'message': f"Partie réinitialisée en mode '{preset}'.",
+            'citizen': CitizenDetailSerializer(character).data,
+            'day': character.day,
+            'timeSlot': character.time_slot,
+            'transactions': TransactionSerializer(Transaction.objects.filter(character=character), many=True).data,
+        })
+
+
+# --- AUTHENTICATION & COMPTES (§42, §47) ---
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def register_user(request):
+    """Registers a new user account, creates their citizen character, and returns JWT tokens."""
+    serializer = RegisterSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    username = serializer.validated_data['username']
+    email = serializer.validated_data.get('email', '')
+    password = serializer.validated_data['password']
+    citizen_name = serializer.validated_data.get('citizenName', '')
+
+    with db_transaction.atomic():
+        user = User.objects.create_user(username=username, email=email, password=password)
+        character = create_initial_character_for_user(user, name=citizen_name)
+
+    refresh = RefreshToken.for_user(user)
+
     return Response({
-        'message': f"Partie réinitialisée en mode '{preset}'.",
+        'user': UserSerializer(user).data,
+        'tokens': {
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+        },
         'citizen': CitizenDetailSerializer(character).data,
-        'day': character.day,
-        'timeSlot': character.time_slot,
-        'transactions': TransactionSerializer(Transaction.objects.filter(character=character), many=True).data,
+    }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login_user(request):
+    """Authenticates user credentials and returns JWT tokens with citizen data."""
+    username = request.data.get('username', '').strip()
+    password = request.data.get('password', '')
+
+    if not username or not password:
+        return Response(
+            {'error': 'Identifiant et mot de passe requis.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    user = authenticate(request, username=username, password=password)
+    if not user:
+        return Response(
+            {'error': 'Nom d\'utilisateur ou mot de passe incorrect.'},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+
+    character = Character.objects.filter(user=user).first()
+    if not character:
+        character = create_initial_character_for_user(user)
+
+    refresh = RefreshToken.for_user(user)
+
+    return Response({
+        'user': UserSerializer(user).data,
+        'tokens': {
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+        },
+        'citizen': CitizenDetailSerializer(character).data,
     })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_current_user(request):
+    """Returns currently authenticated user profile and their citizen stats."""
+    character = get_active_character(request)
+    return Response({
+        'user': UserSerializer(request.user).data,
+        'citizen': CitizenDetailSerializer(character).data,
+    })
+

@@ -95,3 +95,43 @@ class YouthCityBackendAPITests(APITestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.character.refresh_from_db()
         self.assertEqual(self.character.money, 425000 - 90000)
+
+    def test_09_auth_registration_and_login_flow(self):
+        """Tests user registration, JWT generation, login, and profile retrieval."""
+        reg_payload = {
+            'username': 'harivola_test',
+            'email': 'harivola@test.local',
+            'password': 'SecurePassword2026!',
+            'citizenName': 'Harivola Citoyen',
+        }
+        reg_res = self.client.post('/api/auth/register/', reg_payload)
+        self.assertEqual(reg_res.status_code, status.HTTP_201_CREATED)
+        reg_data = reg_res.json()
+        self.assertIn('tokens', reg_data)
+        self.assertIn('access', reg_data['tokens'])
+        self.assertIn('citizen', reg_data)
+        self.assertEqual(reg_data['citizen']['name'], 'Harivola Citoyen')
+        self.assertEqual(reg_data['user']['username'], 'harivola_test')
+
+        # Test login
+        login_res = self.client.post('/api/auth/login/', {
+            'username': 'harivola_test',
+            'password': 'SecurePassword2026!',
+        })
+        self.assertEqual(login_res.status_code, status.HTTP_200_OK)
+        login_data = login_res.json()
+        access_token = login_data['tokens']['access']
+
+        # Test authenticated me endpoint
+        me_res = self.client.get('/api/auth/me/', HTTP_AUTHORIZATION=f'Bearer {access_token}')
+        self.assertEqual(me_res.status_code, status.HTTP_200_OK)
+        me_data = me_res.json()
+        self.assertEqual(me_data['user']['username'], 'harivola_test')
+        self.assertEqual(me_data['citizen']['name'], 'Harivola Citoyen')
+
+        # Test game state for authenticated user (isolated from demo user)
+        state_res = self.client.get('/api/game/state/', HTTP_AUTHORIZATION=f'Bearer {access_token}')
+        self.assertEqual(state_res.status_code, status.HTTP_200_OK)
+        state_data = state_res.json()
+        self.assertEqual(state_data['citizen']['name'], 'Harivola Citoyen')
+

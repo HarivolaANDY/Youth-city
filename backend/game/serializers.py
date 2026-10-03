@@ -1,3 +1,5 @@
+from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from game.models import (
     Property,
@@ -10,6 +12,31 @@ from game.models import (
     Transaction,
     Dilemma,
 )
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'date_joined']
+
+
+class RegisterSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    password = serializers.CharField(write_only=True, min_length=6)
+    citizenName = serializers.CharField(required=False, allow_blank=True, max_length=64)
+
+    def validate_username(self, value):
+        val = value.strip()
+        if not val:
+            raise serializers.ValidationError("Le nom d'utilisateur est requis.")
+        if User.objects.filter(username__iexact=val).exists():
+            raise serializers.ValidationError("Ce nom d'utilisateur est déjà utilisé.")
+        return val
+
+    def validate_password(self, value):
+        validate_password(value)
+        return value
+
 
 class PropertySerializer(serializers.ModelSerializer):
     id = serializers.CharField(source='key')

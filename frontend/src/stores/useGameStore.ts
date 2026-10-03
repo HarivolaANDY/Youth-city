@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import confetti from 'canvas-confetti';
-import type { Citizen, DistrictId, TimeSlot, Transaction, ToastNotification, Dilemma } from '../types/game';
+import type { Citizen, DistrictId, TimeSlot, Transaction, ToastNotification, Dilemma, AuthUser } from '../types/game';
 import { INITIAL_CITIZEN, COURSES, JOBS, HOUSINGS, SAMPLE_DILEMMA } from '../data/mockData';
 import { api } from '../services/api';
 import { formatNumber } from '../lib/format';
@@ -16,6 +16,16 @@ interface GameState {
   transactions: Transaction[];
   notifications: ToastNotification[];
   isBackendConnected: boolean;
+
+  // Authentification & Comptes (§42, §47)
+  user: AuthUser | null;
+  isAuthenticated: boolean;
+  isAuthModalOpen: boolean;
+  authMode: 'login' | 'register';
+  toggleAuthModal: (open?: boolean, mode?: 'login' | 'register') => void;
+  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  register: (payload: { username: string; email?: string; password: string; citizenName?: string }) => Promise<{ success: boolean; error?: string }>;
+  logout: () => void;
   
   // Lifecycle
   initGame: () => Promise<void>;
@@ -74,8 +84,87 @@ export const useGameStore = create<GameState>((set, get) => ({
   ],
   isBackendConnected: false,
 
+  // Authentification & Comptes (§42, §47)
+  user: null,
+  isAuthenticated: false,
+  isAuthModalOpen: false,
+  authMode: 'login',
+
+  toggleAuthModal: (open, mode = 'login') =>
+    set((state) => ({
+      isAuthModalOpen: open !== undefined ? open : !state.isAuthModalOpen,
+      authMode: mode,
+    })),
+
+  login: async (username, password) => {
+    const res = await api.login({ username, password });
+    if (res.error || !res.data) {
+      return { success: false, error: res.error || 'Erreur de connexion.' };
+    }
+    const { user, citizen } = res.data;
+    set({
+      user,
+      citizen,
+      isAuthenticated: true,
+      isAuthModalOpen: false,
+      isBackendConnected: true,
+    });
+    get().addNotification(
+      'Connexion réussie',
+      `Ravi de te revoir, ${user.username} ! Ta progression citoyenne est synchronisée.`,
+      'success'
+    );
+    await get().initGame();
+    return { success: true };
+  },
+
+  register: async (payload) => {
+    const res = await api.register(payload);
+    if (res.error || !res.data) {
+      return { success: false, error: res.error || "Erreur lors de l'inscription." };
+    }
+    const { user, citizen } = res.data;
+    set({
+      user,
+      citizen,
+      isAuthenticated: true,
+      isAuthModalOpen: false,
+      isBackendConnected: true,
+    });
+    get().addNotification(
+      'Bienvenue dans Youth City !',
+      `Ton compte et ton citoyen ${citizen.name} sont créés.`,
+      'success'
+    );
+    confetti({ particleCount: 75, spread: 60, origin: { y: 0.6 } });
+    await get().initGame();
+    return { success: true };
+  },
+
+  logout: () => {
+    api.logout();
+    set({
+      user: null,
+      isAuthenticated: false,
+    });
+    get().addNotification(
+      'Déconnexion',
+      'Tu es repassé en session démo / invité.',
+      'info'
+    );
+    get().initGame();
+  },
+
   initGame: async () => {
     try {
+      const userProfile = await api.getCurrentUser();
+      if (userProfile && userProfile.user) {
+        set({
+          user: userProfile.user,
+          isAuthenticated: true,
+        });
+      }
+
       const state = await api.getGameState();
       if (state && state.citizen) {
         set({
