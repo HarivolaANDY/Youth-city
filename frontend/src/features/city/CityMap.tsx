@@ -11,7 +11,7 @@ import {
   Sparkles,
   MapPin,
 } from 'lucide-react';
-import { DISTRICTS } from '../../data/mockData';
+import { DISTRICTS, COURSES, JOBS, HOUSINGS } from '../../data/mockData';
 import { useGameStore } from '../../stores/useGameStore';
 import type { DistrictId } from '../../types/game';
 import { ViewHeader } from '../../components/ui/ViewHeader';
@@ -32,20 +32,37 @@ const ICON_MAP = {
 export const CityMap: React.FC = () => {
   const { selectDistrict, citizen } = useGameStore();
 
+  const housing = HOUSINGS.find((h) => h.id === citizen.currentHousingId);
+  const availableCourses = COURSES.filter((c) => !citizen.completedCourses.includes(c.id)).length;
+  const openJobs = JOBS.filter((j) => j.id !== citizen.currentJobId).length;
+  const plural = (n: number, one: string, many: string) => `${n} ${n > 1 ? many : one}`;
+
   const getDistrictLiveMeta = (id: DistrictId) => {
     switch (id) {
       case 'campus':
-        return { label: '3 Formations disponibles', active: true, tag: 'Éducation' };
+        return {
+          label: availableCourses
+            ? plural(availableCourses, 'formation disponible', 'formations disponibles')
+            : 'Toutes les formations validées',
+          active: availableCourses > 0,
+          tag: 'Éducation',
+        };
       case 'business':
         return {
-          label: citizen.currentJobId ? 'Emploi actif en cours' : '3 Offres d\'emploi ouvertes',
+          label: citizen.currentJobId
+            ? 'Emploi actif en cours'
+            : plural(openJobs, "offre d'emploi ouverte", "offres d'emploi ouvertes"),
           active: !!citizen.currentJobId,
           tag: citizen.currentJobId ? 'En poste' : 'Recrutement',
         };
       case 'residential':
-        return { label: 'Logement actuel (Studio)', active: true, tag: 'Foyer' };
+        return { label: `Logement actuel : ${housing?.title ?? 'aucun'}`, active: !!housing, tag: 'Foyer' };
       case 'finance':
-        return { label: 'Banque & Livret d\'épargne', active: true, tag: 'Trésorerie' };
+        return {
+          label: `Épargne : ${citizen.savings.toLocaleString()} MGA`,
+          active: true,
+          tag: 'Trésorerie',
+        };
       case 'market':
         return { label: 'Équipement PC & Ravitaillement', active: true, tag: 'Commerce' };
       case 'startup':
@@ -54,6 +71,7 @@ export const CityMap: React.FC = () => {
         return { label: 'Hackathons & Guildes V2', active: false, tag: 'Communauté' };
     }
   };
+
 
   return (
     <div className="space-y-5 sm:space-y-6">
@@ -73,7 +91,7 @@ export const CityMap: React.FC = () => {
                 aria-hidden="true"
                 className="size-2 rounded-full bg-gain-400 shadow-[0_0_8px] shadow-gain-400/60 animate-pulse-soft"
               />
-              City Center &amp; Résidentiel
+              Résidentiel &middot; {housing?.title ?? 'Sans logement'}
             </span>
           </div>
         }
