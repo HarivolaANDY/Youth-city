@@ -304,10 +304,17 @@
     position: relative;
     border-radius: var(--radius-2xl);
     border: 1px solid rgb(148 163 184 / 0.12);
-    background-color: color-mix(in oklab, var(--color-night-850) 82%, transparent);
-    backdrop-filter: blur(16px) saturate(140%);
-    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    /* Fond quasi opaque par défaut : pas de flou coûteux sur mobile. */
+    background-color: color-mix(in oklab, var(--color-night-850) 94%, transparent);
     box-shadow: var(--shadow-panel);
+  }
+
+  @media (min-width: 768px) and (prefers-reduced-transparency: no-preference) {
+    .panel {
+      background-color: color-mix(in oklab, var(--color-night-850) 82%, transparent);
+      backdrop-filter: blur(16px) saturate(140%);
+      -webkit-backdrop-filter: blur(16px) saturate(140%);
+    }
   }
 
   .panel-inset {
@@ -353,6 +360,13 @@
     border-radius: 9999px;
     filter: blur(90px);
     opacity: 0.5;
+  }
+
+  /* Les halos flous (filter: blur) sont réservés aux écrans larges. */
+  @media (max-width: 767px), (prefers-reduced-transparency: reduce) {
+    .aurora {
+      display: none;
+    }
   }
 
   .aurora::before {
