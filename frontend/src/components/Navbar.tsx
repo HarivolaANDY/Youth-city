@@ -8,6 +8,7 @@ import {
   Clock,
   Moon,
   Bot,
+  Settings,
   RotateCcw,
   Sparkles,
   ChevronDown,
@@ -18,6 +19,7 @@ import { Badge } from './ui/Badge';
 import { IconChip } from './ui/IconChip';
 import { Tooltip } from './ui/Tooltip';
 import { Button } from './ui/Button';
+import { Modal } from './ui/Modal';
 import { formatNumber } from '../lib/format';
 
 interface VitalProps {
@@ -60,6 +62,7 @@ export const Navbar: React.FC = () => {
   } = useGameStore();
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [pendingReset, setPendingReset] = useState<'demo' | 'new' | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -109,7 +112,13 @@ export const Navbar: React.FC = () => {
   const energyPercent = Math.min(100, Math.max(0, citizen.energy));
   const energyTone = energyPercent > 20 ? 'warn' : 'risk';
 
+  const confirmReset = () => {
+    if (pendingReset) resetGame(pendingReset);
+    setPendingReset(null);
+  };
+
   return (
+    <>
     <header className="sticky top-0 z-40 border-b border-white/[0.07] bg-night-950/80 backdrop-blur-xl">
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center gap-3">
@@ -254,7 +263,7 @@ export const Navbar: React.FC = () => {
                   aria-expanded={menuOpen}
                   className="grid size-9 place-items-center rounded-lg border border-white/10 bg-white/[0.04] text-mist-400 transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 active:scale-95"
                 >
-                  <RotateCcw className="size-4" aria-hidden="true" />
+                  <Settings className="size-4" aria-hidden="true" />
                   <span className="sr-only">Options et réinitialisation</span>
                 </button>
               </Tooltip>
@@ -273,7 +282,7 @@ export const Navbar: React.FC = () => {
                     type="button"
                     role="menuitem"
                     onClick={() => {
-                      resetGame('demo');
+                      setPendingReset('demo');
                       setMenuOpen(false);
                     }}
                     className="flex w-full flex-col items-start gap-0.5 rounded-md px-2.5 py-2 text-left text-xs text-mist-300 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:bg-white/[0.06] focus-visible:outline-none"
@@ -285,7 +294,7 @@ export const Navbar: React.FC = () => {
                     type="button"
                     role="menuitem"
                     onClick={() => {
-                      resetGame('new');
+                      setPendingReset('new');
                       setMenuOpen(false);
                     }}
                     className="flex w-full flex-col items-start gap-0.5 rounded-md px-2.5 py-2 text-left text-xs text-mist-300 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:bg-white/[0.06] focus-visible:outline-none"
@@ -337,5 +346,31 @@ export const Navbar: React.FC = () => {
         </dl>
       </div>
     </header>
+
+    <Modal open={pendingReset !== null} onClose={() => setPendingReset(null)} labelledBy="reset-title" describedBy="reset-desc">
+      <div className="px-5 py-5 pr-14 sm:px-6">
+        <div className="mb-3 flex items-center gap-3">
+          <IconChip tone="warn">
+            <RotateCcw />
+          </IconChip>
+          <h2 id="reset-title" className="text-base font-black text-white">
+            {pendingReset === 'new' ? 'Commencer une nouvelle partie ?' : 'Charger le profil démo ?'}
+          </h2>
+        </div>
+        <p id="reset-desc" className="text-xs leading-relaxed text-mist-300">
+          Ta progression actuelle (argent, compétences, niveau, historique) sera définitivement remplacée. Cette action
+          est irréversible.
+        </p>
+        <div className="mt-5 flex flex-wrap justify-end gap-2">
+          <Button variant="ghost" onClick={() => setPendingReset(null)}>
+            Annuler
+          </Button>
+          <Button variant="warn" onClick={confirmReset}>
+            Réinitialiser
+          </Button>
+        </div>
+      </div>
+    </Modal>
+    </>
   );
 };
