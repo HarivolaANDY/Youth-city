@@ -22,13 +22,15 @@ import { Avatar } from '../../components/ui/Avatar';
 import { IconChip } from '../../components/ui/IconChip';
 import { Progress } from '../../components/ui/Progress';
 import { MeterRow } from '../../components/ui/MeterRow';
-import { HOUSINGS, JOBS } from '../../data/mockData';
+import { HOUSINGS, JOBS, COURSES } from '../../data/mockData';
+import { getGuidance } from '../../lib/guidance';
 
 export const Dashboard: React.FC = () => {
   const { citizen, day, setActiveTab, toggleNovaModal, workShift, transactions } = useGameStore();
 
   const currentHousing = HOUSINGS.find((h) => h.id === citizen.currentHousingId) || HOUSINGS[0];
   const currentJob = JOBS.find((j) => j.id === citizen.currentJobId);
+  const guidance = getGuidance(citizen, JOBS, COURSES);
 
   const xpProgressPercent = Math.min(100, Math.round((citizen.xp / citizen.xpToNextLevel) * 100));
 
@@ -138,29 +140,28 @@ export const Dashboard: React.FC = () => {
             </div>
 
             <blockquote className="panel-inset mb-4 p-3.5 text-xs leading-relaxed text-mist-200">
-              &laquo;&nbsp;Bonjour {citizen.name} ! Ton ratio d&rsquo;épargne est stable (
-              {citizen.savings.toLocaleString()} MGA), mais ton niveau en JavaScript (
-              {citizen.skills.javascript || 0}%) mérite encore 1 ou 2 modules pour viser le poste Développeur Junior
-              chez TechSolutions.&nbsp;&raquo;
+              &laquo;&nbsp;{guidance.briefing}&nbsp;&raquo;
             </blockquote>
 
             <div className="mb-4 space-y-2">
               <span className="eyebrow block">Plan du jour</span>
               <ul className="space-y-2">
-                <li className="flex items-center gap-2 text-xs text-mist-400">
-                  <CheckCircle2 className="size-4 shrink-0 text-gain-400" aria-hidden="true" />
-                  <span className="line-through">Petit déjeuner et repos</span>
-                </li>
-                <li className="flex items-center gap-2 text-xs text-mist-200">
-                  <Circle className="size-4 shrink-0 text-brand-400" aria-hidden="true" />
-                  <span>Terminer le quiz JS au Campus</span>
-                </li>
-                <li className="flex items-center gap-2 text-xs text-mist-200">
-                  <Circle className="size-4 shrink-0 text-mist-500" aria-hidden="true" />
-                  <span>Effectuer son shift de travail</span>
-                </li>
+                {guidance.plan.map((item) => (
+                  <li
+                    key={item.label}
+                    className={`flex items-center gap-2 text-xs ${item.done ? 'text-mist-400' : 'text-mist-200'}`}
+                  >
+                    {item.done ? (
+                      <CheckCircle2 className="size-4 shrink-0 text-gain-400" aria-hidden="true" />
+                    ) : (
+                      <Circle className="size-4 shrink-0 text-brand-400" aria-hidden="true" />
+                    )}
+                    <span className={item.done ? 'line-through' : ''}>{item.label}</span>
+                  </li>
+                ))}
               </ul>
             </div>
+
           </div>
 
           <Button variant="outline" block onClick={() => toggleNovaModal(true)}>
