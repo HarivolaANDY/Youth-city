@@ -1,0 +1,293 @@
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Building2,
+  Zap,
+  Heart,
+  Coins,
+  Landmark,
+  Clock,
+  Moon,
+  Bot,
+  RotateCcw,
+  Sparkles,
+  ChevronDown,
+} from 'lucide-react';
+import { useGameStore } from '../stores/useGameStore';
+import { Progress } from './ui/Progress';
+import { Badge } from './ui/Badge';
+import { IconChip } from './ui/IconChip';
+
+interface VitalProps {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+  showUnit?: boolean;
+  tone: string;
+  chipTone: string;
+  hint: string;
+}
+
+const Vital: React.FC<VitalProps> = ({ icon, label, value, showUnit, tone, chipTone, hint }) => (
+  <div className="flex items-center gap-2.5" title={hint}>
+    <span className={`grid size-8 shrink-0 place-items-center rounded-md border ${chipTone}`} aria-hidden="true">
+      {icon}
+    </span>
+    <div className="min-w-0">
+      <span className="block text-2xs leading-none font-medium text-mist-400">{label}</span>
+      <span className={`metric mt-1 block text-sm font-bold leading-none ${tone}`}>
+        {value}
+        {showUnit && <span className="ml-1 text-2xs font-medium opacity-70">MGA</span>}
+      </span>
+    </div>
+  </div>
+);
+
+export const Navbar: React.FC = () => {
+  const {
+    citizen,
+    day,
+    timeSlot,
+    advanceTime,
+    restAndSleep,
+    toggleNovaModal,
+    triggerDilemma,
+    resetGame,
+    setActiveTab,
+    isBackendConnected,
+  } = useGameStore();
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setMenuOpen(false);
+    };
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [menuOpen]);
+
+  const energyPercent = Math.min(100, Math.max(0, citizen.energy));
+  const energyTone = energyPercent > 20 ? 'warn' : 'risk';
+
+  return (
+    <header className="sticky top-0 z-40 border-b border-white/[0.07] bg-night-950/80 backdrop-blur-xl">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setActiveTab('dashboard')}
+            className="group flex shrink-0 items-center gap-3 rounded-lg pr-2 text-left transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-400"
+          >
+            <IconChip tone="brand" className="bg-linear-to-br from-brand-600 to-iris-500 text-white shadow-brand transition-transform duration-300 ease-spring group-hover:scale-105">
+              <Building2 />
+            </IconChip>
+            <span className="min-w-0">
+              <span className="flex items-center gap-2">
+                <span className="font-display text-lg font-extrabold tracking-[0.12em] text-gradient">
+                  YOUTH CITY
+                </span>
+                <Badge
+                  tone={isBackendConnected ? 'gain' : 'brand'}
+                  variant="square"
+                  className="tracking-[0.14em] flex items-center gap-1.5"
+                  title={isBackendConnected ? 'Backend Django & Base de Données synchronisés' : 'Mode MVP local'}
+                >
+                  <span
+                    className={`size-1.5 rounded-full ${
+                      isBackendConnected
+                        ? 'bg-gain-400 shadow-[0_0_6px] shadow-gain-400 animate-pulse-soft'
+                        : 'bg-brand-400'
+                    }`}
+                  />
+                  {isBackendConnected ? 'API SYNC' : 'MVP'}
+                </Badge>
+              </span>
+              <span className="hidden text-2xs font-medium text-mist-400 sm:block">
+                Apprends la vie. Construis ton avenir.
+              </span>
+            </span>
+          </button>
+
+          <div className="ml-auto hidden items-center gap-5 rounded-2xl border border-white/[0.07] bg-white/[0.03] px-4 py-2.5 lg:flex">
+            <Vital
+              icon={<Coins className="size-4" />}
+              label="Disponible"
+              value={citizen.money.toLocaleString()}
+              showUnit
+              tone="text-gain-300"
+              chipTone="border-gain-400/25 bg-gain-500/12 text-gain-400"
+              hint="Solde liquide disponible"
+            />
+            <Vital
+              icon={<Landmark className="size-4" />}
+              label="Épargne"
+              value={citizen.savings.toLocaleString()}
+              showUnit
+              tone="text-cool-300"
+              chipTone="border-cool-400/25 bg-cool-500/12 text-cool-400"
+              hint="Épargne de précaution"
+            />
+
+            <span aria-hidden="true" className="h-7 w-px bg-white/10" />
+
+            <div className="w-28" title="Jauge d'énergie vitale">
+              <div className="mb-1.5 flex items-center justify-between">
+                <span className="flex items-center gap-1 text-2xs font-medium text-mist-400">
+                  <Zap className="size-3 text-warn-400" aria-hidden="true" />
+                  Énergie
+                </span>
+                <span
+                  className={`metric text-2xs font-bold ${energyPercent > 20 ? 'text-warn-300' : 'text-risk-300'}`}
+                >
+                  {energyPercent}%
+                </span>
+              </div>
+              <Progress value={energyPercent} tone={energyTone} size="xs" label={`Énergie ${energyPercent}%`} />
+            </div>
+
+            <div className="flex items-center gap-1.5" title="Indice de bien-être personnel">
+              <Heart className="size-4 text-risk-400" aria-hidden="true" />
+              <span className="metric text-sm font-bold text-risk-300">{citizen.wellbeing}%</span>
+              <span className="sr-only">de bien-être</span>
+            </div>
+
+            <span aria-hidden="true" className="h-7 w-px bg-white/10" />
+
+            <div className="flex items-center gap-2" title="Jour et créneau horaire en cours">
+              <Clock className="size-4 text-iris-400" aria-hidden="true" />
+              <div className="text-xs leading-tight">
+                <span className="block font-bold text-mist-100">Jour {day}</span>
+                <span className="block text-2xs text-mist-400">{timeSlot}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="ml-auto flex items-center gap-2 lg:ml-0">
+            <button
+              type="button"
+              onClick={advanceTime}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 text-xs font-semibold text-mist-200 shadow-raise transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 active:scale-95 md:px-3"
+              title="Avancer au créneau horaire suivant"
+            >
+              <Clock className="size-3.5 text-iris-400" aria-hidden="true" />
+              <span className="hidden md:inline">Temps +</span>
+              <span className="sr-only md:hidden">Avancer au créneau horaire suivant</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={restAndSleep}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 text-xs font-semibold text-mist-200 shadow-raise transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 active:scale-95 md:px-3"
+              title="Dormir dans ton logement pour régénérer ton énergie"
+            >
+              <Moon className="size-3.5 text-brand-300" aria-hidden="true" />
+              <span className="hidden md:inline">Dormir</span>
+              <span className="sr-only md:hidden">Dormir et régénérer ton énergie</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => triggerDilemma()}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-warn-400/25 bg-warn-500/10 px-2.5 text-xs font-semibold text-warn-300 transition-colors hover:border-warn-400/45 hover:bg-warn-500/20 hover:text-warn-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 active:scale-95 md:px-3"
+              title="Simuler un événement aléatoire / dilemme citoyen"
+            >
+              <Sparkles className="size-4 text-warn-400" aria-hidden="true" />
+              <span className="hidden md:inline">Dilemme</span>
+              <span className="sr-only md:hidden">Lancer un dilemme</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => toggleNovaModal(true)}
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-brand-400/40 bg-linear-to-r from-brand-600 to-iris-600 px-3 text-xs font-bold text-white shadow-brand transition-[background-position,transform] hover:from-brand-500 hover:to-iris-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300 active:scale-95"
+            >
+              <Bot className="size-4 text-brand-200" aria-hidden="true" />
+              <span className="hidden xl:inline">NOVA</span>
+              <span className="xl:hidden sr-only">Ouvrir le mentor NOVA</span>
+              <span
+                aria-hidden="true"
+                className="size-1.5 rounded-full bg-gain-400 shadow-[0_0_8px] shadow-gain-400 animate-pulse-soft"
+              />
+            </button>
+
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                ref={menuButtonRef}
+                onClick={() => setMenuOpen((prev) => !prev)}
+                onKeyDown={(event) => {
+                  if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    setMenuOpen(true);
+                  }
+                }}
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                className="grid size-9 place-items-center rounded-lg border border-white/10 bg-white/[0.04] text-mist-400 transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 active:scale-95"
+                title="Options et réinitialisation"
+              >
+                <RotateCcw className="size-4" aria-hidden="true" />
+                <span className="sr-only">Options et réinitialisation</span>
+              </button>
+
+              {menuOpen && (
+                <div
+                  role="menu"
+                  aria-label="Options de partie"
+                  className="panel panel-accent absolute right-0 top-full z-50 mt-2 w-60 overflow-hidden rounded-xl p-1.5 shadow-panel-lg animate-pop-in"
+                >
+                  <p className="px-2.5 pt-1.5 pb-2 text-2xs font-bold tracking-wider text-mist-500 uppercase">
+                    Réinitialiser la simulation
+                  </p>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      resetGame('demo');
+                      setMenuOpen(false);
+                    }}
+                    className="flex w-full flex-col items-start gap-0.5 rounded-md px-2.5 py-2 text-left text-xs text-mist-300 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:bg-white/[0.06] focus-visible:outline-none"
+                  >
+                    <span className="font-bold text-mist-100">Profil démo</span>
+                    <span className="text-2xs text-mist-500">Emmanuel &mdash; niveau 5, en cours de partie</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      resetGame('new');
+                      setMenuOpen(false);
+                    }}
+                    className="flex w-full flex-col items-start gap-0.5 rounded-md px-2.5 py-2 text-left text-xs text-mist-300 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:bg-white/[0.06] focus-visible:outline-none"
+                  >
+                    <span className="font-bold text-mist-100">Nouvelle partie</span>
+                    <span className="text-2xs text-mist-500">Citoyen débutant &mdash; niveau 1, 0 XP</span>
+                  </button>
+                  <p className="mt-1 flex items-center gap-1.5 border-t border-white/[0.06] px-2.5 py-2 text-2xs text-mist-500">
+                    <ChevronDown className="size-3" aria-hidden="true" />
+                    Réinitialise la progression simulée
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+};
