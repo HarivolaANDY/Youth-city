@@ -287,6 +287,39 @@ export const Navbar: React.FC = () => {
             </div>
           </div>
         </div>
+
+        <dl
+          aria-label="Statistiques du citoyen"
+          className="flex items-center justify-between gap-3 border-t border-white/[0.06] py-2 text-xs lg:hidden"
+        >
+          <div className="flex items-center gap-1.5">
+            <dt className="sr-only">Disponible</dt>
+            <Coins className="size-3.5 text-gain-400" aria-hidden="true" />
+            <dd className="metric font-bold text-gain-300">{citizen.money.toLocaleString()}</dd>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <dt className="sr-only">Épargne</dt>
+            <Landmark className="size-3.5 text-cool-400" aria-hidden="true" />
+            <dd className="metric font-bold text-cool-300">{citizen.savings.toLocaleString()}</dd>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <dt className="sr-only">Énergie</dt>
+            <Zap className="size-3.5 text-warn-400" aria-hidden="true" />
+            <dd className={`metric font-bold ${energyPercent > 20 ? 'text-warn-300' : 'text-risk-300'}`}>
+              {energyPercent}%
+            </dd>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <dt className="sr-only">Bien-être</dt>
+            <Heart className="size-3.5 text-risk-400" aria-hidden="true" />
+            <dd className="metric font-bold text-risk-300">{citizen.wellbeing}%</dd>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <dt className="sr-only">Jour</dt>
+            <Clock className="size-3.5 text-iris-400" aria-hidden="true" />
+            <dd className="font-bold text-mist-100">J{day}</dd>
+          </div>
+        </dl>
       </div>
     </header>
   );
