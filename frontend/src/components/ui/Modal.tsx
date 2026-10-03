@@ -10,6 +10,8 @@ export interface ModalProps {
   labelledBy: string;
   describedBy?: string;
   size?: 'md' | 'lg';
+  /** Si false, un clic sur l'arrière-plan ne ferme pas la modale (Échap et le bouton de fermeture restent actifs). */
+  dismissOnBackdrop?: boolean;
   children: React.ReactNode;
 }
 
@@ -19,6 +21,7 @@ export const Modal: React.FC<ModalProps> = ({
   labelledBy,
   describedBy,
   size = 'md',
+  dismissOnBackdrop = true,
   children,
 }) => {
   const surfaceRef = useRef<HTMLDivElement>(null);
@@ -82,7 +85,7 @@ export const Modal: React.FC<ModalProps> = ({
     <div
       className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-night-950/80 backdrop-blur-md animate-fade-in sm:items-center sm:p-6"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (dismissOnBackdrop && event.target === event.currentTarget) onClose();
       }}
     >
       <div

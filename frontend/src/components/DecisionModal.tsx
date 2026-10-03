@@ -18,7 +18,7 @@ export const DecisionModal: React.FC = () => {
   };
 
   return (
-    <Modal open onClose={dismissDilemma} labelledBy="dilemma-title" size="lg">
+    <Modal open onClose={dismissDilemma} labelledBy="dilemma-title" size="lg" dismissOnBackdrop={false}>
       <div className="border-b border-white/[0.07] bg-warn-500/[0.04] px-5 py-4 pr-14 sm:px-6">
         <div className="flex items-center gap-3">
           <IconChip tone="warn">
