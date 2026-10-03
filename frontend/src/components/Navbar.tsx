@@ -16,6 +16,7 @@ import { useGameStore } from '../stores/useGameStore';
 import { Progress } from './ui/Progress';
 import { Badge } from './ui/Badge';
 import { IconChip } from './ui/IconChip';
+import { Tooltip } from './ui/Tooltip';
 
 interface VitalProps {
   icon: React.ReactNode;
@@ -28,7 +29,7 @@ interface VitalProps {
 }
 
 const Vital: React.FC<VitalProps> = ({ icon, label, value, showUnit, tone, chipTone, hint }) => (
-  <div className="flex items-center gap-2.5" title={hint}>
+  <Tooltip text={hint}><div className="flex items-center gap-2.5">
     <span className={`grid size-8 shrink-0 place-items-center rounded-md border ${chipTone}`} aria-hidden="true">
       {icon}
     </span>
@@ -39,7 +40,7 @@ const Vital: React.FC<VitalProps> = ({ icon, label, value, showUnit, tone, chipT
         {showUnit && <span className="ml-1 text-2xs font-medium opacity-70">MGA</span>}
       </span>
     </div>
-  </div>
+  </div></Tooltip>
 );
 
 export const Navbar: React.FC = () => {
@@ -80,6 +81,28 @@ export const Navbar: React.FC = () => {
       document.removeEventListener('keydown', handleKey);
     };
   }, [menuOpen]);
+
+  const getMenuItems = () =>
+    Array.from(menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []);
+
+  useEffect(() => {
+    if (menuOpen) getMenuItems()[0]?.focus();
+  }, [menuOpen]);
+
+  const handleMenuKeyDown = (event: React.KeyboardEvent) => {
+    const items = getMenuItems();
+    const index = items.indexOf(document.activeElement as HTMLElement);
+    const move = (next: number) => {
+      event.preventDefault();
+      items[(next + items.length) % items.length]?.focus();
+    };
+
+    if (event.key === 'ArrowDown') move(index + 1);
+    else if (event.key === 'ArrowUp') move(index - 1);
+    else if (event.key === 'Home') move(0);
+    else if (event.key === 'End') move(items.length - 1);
+    else if (event.key === 'Tab') setMenuOpen(false);
+  };
 
   const energyPercent = Math.min(100, Math.max(0, citizen.energy));
   const energyTone = energyPercent > 20 ? 'warn' : 'risk';
@@ -145,7 +168,7 @@ export const Navbar: React.FC = () => {
 
             <span aria-hidden="true" className="h-7 w-px bg-white/10" />
 
-            <div className="w-28" title="Jauge d'énergie vitale">
+            <Tooltip text="Jauge d'énergie vitale"><div className="w-28">
               <div className="mb-1.5 flex items-center justify-between">
                 <span className="flex items-center gap-1 text-2xs font-medium text-mist-400">
                   <Zap className="size-3 text-warn-400" aria-hidden="true" />
@@ -158,58 +181,62 @@ export const Navbar: React.FC = () => {
                 </span>
               </div>
               <Progress value={energyPercent} tone={energyTone} size="xs" label={`Énergie ${energyPercent}%`} />
-            </div>
+            </div></Tooltip>
 
-            <div className="flex items-center gap-1.5" title="Indice de bien-être personnel">
+            <Tooltip text="Indice de bien-être personnel"><div className="flex items-center gap-1.5">
               <Heart className="size-4 text-risk-400" aria-hidden="true" />
               <span className="metric text-sm font-bold text-risk-300">{citizen.wellbeing}%</span>
               <span className="sr-only">de bien-être</span>
-            </div>
+            </div></Tooltip>
 
             <span aria-hidden="true" className="h-7 w-px bg-white/10" />
 
-            <div className="flex items-center gap-2" title="Jour et créneau horaire en cours">
+            <Tooltip text="Jour et créneau horaire en cours"><div className="flex items-center gap-2">
               <Clock className="size-4 text-iris-400" aria-hidden="true" />
               <div className="text-xs leading-tight">
                 <span className="block font-bold text-mist-100">Jour {day}</span>
                 <span className="block text-2xs text-mist-400">{timeSlot}</span>
               </div>
-            </div>
+            </div></Tooltip>
           </div>
 
           <div className="ml-auto flex items-center gap-2 lg:ml-0">
-            <button
-              type="button"
-              onClick={advanceTime}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 text-xs font-semibold text-mist-200 shadow-raise transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 active:scale-95 md:px-3"
-              title="Avancer au créneau horaire suivant"
-            >
-              <Clock className="size-3.5 text-iris-400" aria-hidden="true" />
-              <span className="hidden md:inline">Temps +</span>
-              <span className="sr-only md:hidden">Avancer au créneau horaire suivant</span>
-            </button>
+            <Tooltip text="Avancer au créneau horaire suivant">
+              <button
+                type="button"
+                onClick={advanceTime}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 text-xs font-semibold text-mist-200 shadow-raise transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 active:scale-95 md:px-3"
+              >
+                <Clock className="size-3.5 text-iris-400" aria-hidden="true" />
+                <span className="hidden md:inline">Temps +</span>
+                <span className="sr-only md:hidden">Avancer au créneau horaire suivant</span>
+              </button>
+            </Tooltip>
 
-            <button
-              type="button"
-              onClick={restAndSleep}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 text-xs font-semibold text-mist-200 shadow-raise transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 active:scale-95 md:px-3"
-              title="Dormir dans ton logement pour régénérer ton énergie"
-            >
-              <Moon className="size-3.5 text-brand-300" aria-hidden="true" />
-              <span className="hidden md:inline">Dormir</span>
-              <span className="sr-only md:hidden">Dormir et régénérer ton énergie</span>
-            </button>
+            <Tooltip text="Dormir dans ton logement pour régénérer ton énergie">
+              <button
+                type="button"
+                onClick={restAndSleep}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 text-xs font-semibold text-mist-200 shadow-raise transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 active:scale-95 md:px-3"
+              >
+                <Moon className="size-3.5 text-brand-300" aria-hidden="true" />
+                <span className="hidden md:inline">Dormir</span>
+                <span className="sr-only md:hidden">Dormir et régénérer ton énergie</span>
+              </button>
+            </Tooltip>
 
-            <button
-              type="button"
-              onClick={() => triggerDilemma()}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-warn-400/25 bg-warn-500/10 px-2.5 text-xs font-semibold text-warn-300 transition-colors hover:border-warn-400/45 hover:bg-warn-500/20 hover:text-warn-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 active:scale-95 md:px-3"
-              title="Simuler un événement aléatoire / dilemme citoyen"
-            >
-              <Sparkles className="size-4 text-warn-400" aria-hidden="true" />
-              <span className="hidden md:inline">Dilemme</span>
-              <span className="sr-only md:hidden">Lancer un dilemme</span>
-            </button>
+            <Tooltip text="Simuler un événement aléatoire / dilemme citoyen">
+              <button
+                type="button"
+                onClick={() => triggerDilemma()}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-warn-400/25 bg-warn-500/10 px-2.5 text-xs font-semibold text-warn-300 transition-colors hover:border-warn-400/45 hover:bg-warn-500/20 hover:text-warn-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 active:scale-95 md:px-3"
+              >
+                <Sparkles className="size-4 text-warn-400" aria-hidden="true" />
+                <span className="hidden md:inline">Dilemme</span>
+                <span className="sr-only md:hidden">Lancer un dilemme</span>
+              </button>
+            </Tooltip>
+
 
             <button
               type="button"
@@ -226,29 +253,31 @@ export const Navbar: React.FC = () => {
             </button>
 
             <div className="relative" ref={menuRef}>
-              <button
-                type="button"
-                ref={menuButtonRef}
-                onClick={() => setMenuOpen((prev) => !prev)}
-                onKeyDown={(event) => {
-                  if (event.key === 'ArrowDown') {
-                    event.preventDefault();
-                    setMenuOpen(true);
-                  }
-                }}
-                aria-haspopup="menu"
-                aria-expanded={menuOpen}
-                className="grid size-9 place-items-center rounded-lg border border-white/10 bg-white/[0.04] text-mist-400 transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 active:scale-95"
-                title="Options et réinitialisation"
-              >
-                <RotateCcw className="size-4" aria-hidden="true" />
-                <span className="sr-only">Options et réinitialisation</span>
-              </button>
+              <Tooltip text="Options et réinitialisation" align="end">
+                <button
+                  type="button"
+                  ref={menuButtonRef}
+                  onClick={() => setMenuOpen((prev) => !prev)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'ArrowDown') {
+                      event.preventDefault();
+                      setMenuOpen(true);
+                    }
+                  }}
+                  aria-haspopup="menu"
+                  aria-expanded={menuOpen}
+                  className="grid size-9 place-items-center rounded-lg border border-white/10 bg-white/[0.04] text-mist-400 transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 active:scale-95"
+                >
+                  <RotateCcw className="size-4" aria-hidden="true" />
+                  <span className="sr-only">Options et réinitialisation</span>
+                </button>
+              </Tooltip>
 
               {menuOpen && (
                 <div
                   role="menu"
                   aria-label="Options de partie"
+                  onKeyDown={handleMenuKeyDown}
                   className="panel panel-accent absolute right-0 top-full z-50 mt-2 w-60 overflow-hidden rounded-xl p-1.5 shadow-panel-lg animate-pop-in"
                 >
                   <p className="px-2.5 pt-1.5 pb-2 text-2xs font-bold tracking-wider text-mist-500 uppercase">
