@@ -1,4 +1,5 @@
 import type { Citizen, Course, Job } from '../types/game';
+import { formatNumber } from './format';
 
 export interface PlanItem {
   label: string;
@@ -34,7 +35,7 @@ export const getGuidance = (citizen: Citizen, jobs: Job[], courses: Course[]): G
       )
     : undefined;
 
-  let briefing = `Bonjour ${citizen.name} ! Ton épargne est de ${citizen.savings.toLocaleString()} MGA.`;
+  let briefing = `Bonjour ${citizen.name} ! Ton épargne est de ${formatNumber(citizen.savings)} MGA.`;
   if (target && missing) {
     briefing += ` Ton niveau en ${missing.skillName} (${citizen.skills[missing.skillKey] ?? 0} %) doit encore progresser de ${missing.gap} points pour viser le poste « ${target.title} » chez ${target.company}.`;
   } else if (target) {

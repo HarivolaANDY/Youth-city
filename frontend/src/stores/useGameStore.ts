@@ -3,6 +3,7 @@ import confetti from 'canvas-confetti';
 import type { Citizen, DistrictId, TimeSlot, Transaction, ToastNotification, Dilemma } from '../types/game';
 import { INITIAL_CITIZEN, COURSES, JOBS, HOUSINGS, SAMPLE_DILEMMA } from '../data/mockData';
 import { api } from '../services/api';
+import { formatNumber } from '../lib/format';
 
 interface GameState {
   citizen: Citizen;
@@ -176,7 +177,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       category,
     };
 
-    addNotification(`+${amount.toLocaleString()} MGA`, label, 'money');
+    addNotification(`+${formatNumber(amount)} MGA`, label, 'money');
     set({
       citizen: { ...citizen, money: newMoney },
       transactions: [newTx, ...transactions],
@@ -186,7 +187,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   spendMoney: (amount, label, category = 'Dépenses') => {
     const { citizen, addNotification, transactions } = get();
     if (citizen.money < amount) {
-      addNotification('Fonds insuffisants', `Tu as besoin de ${amount.toLocaleString()} MGA mais tu ne disposes que de ${citizen.money.toLocaleString()} MGA.`, 'warning');
+      addNotification('Fonds insuffisants', `Tu as besoin de ${formatNumber(amount)} MGA mais tu ne disposes que de ${formatNumber(citizen.money)} MGA.`, 'warning');
       return false;
     }
 
@@ -200,7 +201,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       category,
     };
 
-    addNotification(`-${amount.toLocaleString()} MGA`, label, 'money');
+    addNotification(`-${formatNumber(amount)} MGA`, label, 'money');
     set({
       citizen: { ...citizen, money: newMoney },
       transactions: [newTx, ...transactions],
@@ -219,7 +220,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         savings: get().citizen.savings + amount,
       },
     });
-    addNotification('Épargne sécurisée', `${amount.toLocaleString()} MGA placés sur ton livret de précaution.`, 'success');
+    addNotification('Épargne sécurisée', `${formatNumber(amount)} MGA placés sur ton livret de précaution.`, 'success');
 
     // Sync with backend
     api.depositSavings(amount).then((res) => {
@@ -242,7 +243,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         savings: citizen.savings - amount,
       },
     });
-    addNotification('Retrait d\'épargne', `${amount.toLocaleString()} MGA transférés sur ton compte courant.`, 'info');
+    addNotification('Retrait d\'épargne', `${formatNumber(amount)} MGA transférés sur ton compte courant.`, 'info');
 
     // Sync with backend
     api.withdrawSavings(amount).then((res) => {

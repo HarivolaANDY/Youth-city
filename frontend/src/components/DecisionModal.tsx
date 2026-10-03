@@ -5,6 +5,7 @@ import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { IconChip } from './ui/IconChip';
+import { formatNumber } from '../lib/format';
 
 export const DecisionModal: React.FC = () => {
   const { activeDilemma, dismissDilemma, resolveDilemmaOption, citizen } = useGameStore();
@@ -89,7 +90,7 @@ export const DecisionModal: React.FC = () => {
                   {opt.costMoney > 0 && (
                     <span className="metric flex items-center gap-1 font-bold text-risk-300">
                       <Coins className="size-3" aria-hidden="true" />
-                      &minus;{opt.costMoney.toLocaleString()} MGA
+                      &minus;{formatNumber(opt.costMoney)} MGA
                     </span>
                   )}
                   {opt.costEnergy > 0 && (

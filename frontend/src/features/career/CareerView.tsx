@@ -8,6 +8,7 @@ import { Panel } from '../../components/ui/Panel';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { IconChip } from '../../components/ui/IconChip';
+import { formatNumber } from '../../lib/format';
 
 export const CareerView: React.FC = () => {
   const { citizen, hireForJob, workShift, addNotification } = useGameStore();
@@ -64,7 +65,7 @@ export const CareerView: React.FC = () => {
                 <span className="eyebrow block text-gain-400">Poste en cours</span>
                 <span className="mt-1 block truncate text-sm font-bold text-white">{activeJob.title}</span>
                 <span className="metric block text-xs text-gain-300">
-                  +{activeJob.salary.toLocaleString()} MGA / mois
+                  +{formatNumber(activeJob.salary)} MGA / mois
                 </span>
               </div>
             </div>
@@ -91,7 +92,7 @@ export const CareerView: React.FC = () => {
             </h3>
             <p className="mt-1 text-xs text-mist-400">
               Coût : &minus;{activeJob.energyPerShift}% d&rsquo;énergie &bull; Gain : +
-              {Math.round(activeJob.salary / 20).toLocaleString()} MGA &bull; +40 XP
+              {formatNumber(Math.round(activeJob.salary / 20))} MGA &bull; +40 XP
             </p>
           </div>
 
@@ -232,7 +233,7 @@ export const CareerView: React.FC = () => {
 
                   <h3 className="mb-1 text-base font-bold text-white">{job.title}</h3>
                   <p className="metric mb-3 text-xs font-bold text-gain-400">
-                    +{job.salary.toLocaleString()} MGA / mois
+                    +{formatNumber(job.salary)} MGA / mois
                   </p>
 
                   <p className="mb-4 text-xs leading-relaxed text-mist-400">{job.description}</p>

@@ -5,6 +5,7 @@ type ButtonVariant =
   | 'iris'
   | 'gain'
   | 'warn'
+  | 'warnSoft'
   | 'secondary'
   | 'ghost'
   | 'outline';
@@ -25,6 +26,8 @@ const VARIANTS: Record<ButtonVariant, string> = {
   iris: 'bg-iris-600 text-white shadow-iris hover:bg-iris-500',
   gain: 'bg-gain-600 text-night-950 shadow-gain hover:bg-gain-500',
   warn: 'bg-warn-500 text-night-950 shadow-warn hover:bg-warn-400',
+  warnSoft:
+    'border border-warn-400/25 bg-warn-500/10 text-warn-300 hover:border-warn-400/45 hover:bg-warn-500/20 hover:text-warn-200',
   secondary:
     'border border-white/10 bg-white/[0.04] text-mist-200 shadow-raise ' +
     'hover:border-white/20 hover:bg-white/[0.08] hover:text-white',

@@ -19,6 +19,7 @@ import { ViewHeader } from '../../components/ui/ViewHeader';
 import { Panel } from '../../components/ui/Panel';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
+import { formatNumber } from '../../lib/format';
 
 export const CampusView: React.FC = () => {
   const { citizen, spendMoney, completeCourseModule, addNotification } = useGameStore();
@@ -289,7 +290,7 @@ export const CampusView: React.FC = () => {
                     </span>
                     <span className="metric flex items-center gap-1 font-bold text-gain-400">
                       <Coins className="size-3.5" aria-hidden="true" />
-                      {isCompleted ? 'Validé' : `${course.cost.toLocaleString()} MGA`}
+                      {isCompleted ? 'Validé' : `${formatNumber(course.cost)} MGA`}
                     </span>
                     <span className="metric flex items-center gap-1 font-bold text-warn-300">
                       <Sparkles className="size-3.5" aria-hidden="true" />

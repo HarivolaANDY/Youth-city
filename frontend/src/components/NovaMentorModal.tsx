@@ -6,6 +6,7 @@ import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { IconChip } from './ui/IconChip';
 import { controlClass } from './ui/control';
+import { formatNumber } from '../lib/format';
 
 interface Message {
   sender: 'nova' | 'user';
@@ -53,7 +54,7 @@ export const NovaMentorModal: React.FC = () => {
       const lower = text.toLowerCase();
 
       if (lower.includes('budget') || lower.includes('argent') || lower.includes('épargne')) {
-        reply = `Actuellement, tu as ${citizen.money.toLocaleString()} MGA de trésorerie et ${citizen.savings.toLocaleString()} MGA d'épargne. C'est un bon début ! Veille à toujours conserver au moins 2 mois de loyer en réserve pour ne pas être pris au dépourvu lors d'imprévus.`;
+        reply = `Actuellement, tu as ${formatNumber(citizen.money)} MGA de trésorerie et ${formatNumber(citizen.savings)} MGA d'épargne. C'est un bon début ! Veille à toujours conserver au moins 2 mois de loyer en réserve pour ne pas être pris au dépourvu lors d'imprévus.`;
       } else if (lower.includes('travail') || lower.includes('job') || lower.includes('carrière') || lower.includes('emploi')) {
         if (!citizen.currentJobId) {
           reply = `Tu n'as pas encore de contrat de travail actif. Si ton score en JavaScript est supérieur à 50%, fonce au Business District pour postuler chez TechSolutions. Le salaire de 450 000 MGA par mois t'apportera une solide autonomie !`;

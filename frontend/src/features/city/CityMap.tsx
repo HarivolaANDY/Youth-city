@@ -18,6 +18,7 @@ import { ViewHeader } from '../../components/ui/ViewHeader';
 import { Panel } from '../../components/ui/Panel';
 import { Badge } from '../../components/ui/Badge';
 import { IconChip } from '../../components/ui/IconChip';
+import { formatNumber } from '../../lib/format';
 
 const ICON_MAP = {
   GraduationCap,
@@ -59,7 +60,7 @@ export const CityMap: React.FC = () => {
         return { label: `Logement actuel : ${housing?.title ?? 'aucun'}`, active: !!housing, tag: 'Foyer' };
       case 'finance':
         return {
-          label: `Épargne : ${citizen.savings.toLocaleString()} MGA`,
+          label: `Épargne : ${formatNumber(citizen.savings)} MGA`,
           active: true,
           tag: 'Trésorerie',
         };

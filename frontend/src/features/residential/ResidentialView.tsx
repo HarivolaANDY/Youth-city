@@ -7,6 +7,7 @@ import { Panel } from '../../components/ui/Panel';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { IconChip } from '../../components/ui/IconChip';
+import { formatNumber } from '../../lib/format';
 
 export const ResidentialView: React.FC = () => {
   const { citizen, changeHousing, restAndSleep } = useGameStore();
@@ -69,7 +70,7 @@ export const ResidentialView: React.FC = () => {
                     {housing.title}
                   </h3>
                   <p className="metric mb-3 text-xs font-bold text-gain-400">
-                    {housing.rentMonthly.toLocaleString()} MGA / mois
+                    {formatNumber(housing.rentMonthly)} MGA / mois
                   </p>
                   <p className="mb-4 text-xs leading-relaxed text-mist-400">{housing.description}</p>
 

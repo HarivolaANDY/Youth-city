@@ -17,6 +17,8 @@ import { Progress } from './ui/Progress';
 import { Badge } from './ui/Badge';
 import { IconChip } from './ui/IconChip';
 import { Tooltip } from './ui/Tooltip';
+import { Button } from './ui/Button';
+import { formatNumber } from '../lib/format';
 
 interface VitalProps {
   icon: React.ReactNode;
@@ -150,7 +152,7 @@ export const Navbar: React.FC = () => {
             <Vital
               icon={<Coins className="size-4" />}
               label="Disponible"
-              value={citizen.money.toLocaleString()}
+              value={formatNumber(citizen.money)}
               showUnit
               tone="text-gain-300"
               chipTone="border-gain-400/25 bg-gain-500/12 text-gain-400"
@@ -159,7 +161,7 @@ export const Navbar: React.FC = () => {
             <Vital
               icon={<Landmark className="size-4" />}
               label="Épargne"
-              value={citizen.savings.toLocaleString()}
+              value={formatNumber(citizen.savings)}
               showUnit
               tone="text-cool-300"
               chipTone="border-cool-400/25 bg-cool-500/12 text-cool-400"
@@ -202,55 +204,39 @@ export const Navbar: React.FC = () => {
 
           <div className="ml-auto flex items-center gap-2 lg:ml-0">
             <Tooltip text="Avancer au créneau horaire suivant">
-              <button
-                type="button"
-                onClick={advanceTime}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 text-xs font-semibold text-mist-200 shadow-raise transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 active:scale-95 md:px-3"
-              >
-                <Clock className="size-3.5 text-iris-400" aria-hidden="true" />
+              <Button onClick={advanceTime}>
+                <Clock className="text-iris-400" aria-hidden="true" />
                 <span className="hidden md:inline">Temps +</span>
                 <span className="sr-only md:hidden">Avancer au créneau horaire suivant</span>
-              </button>
+              </Button>
             </Tooltip>
 
             <Tooltip text="Dormir dans ton logement pour régénérer ton énergie">
-              <button
-                type="button"
-                onClick={restAndSleep}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 text-xs font-semibold text-mist-200 shadow-raise transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 active:scale-95 md:px-3"
-              >
-                <Moon className="size-3.5 text-brand-300" aria-hidden="true" />
+              <Button onClick={restAndSleep}>
+                <Moon className="text-brand-300" aria-hidden="true" />
                 <span className="hidden md:inline">Dormir</span>
                 <span className="sr-only md:hidden">Dormir et régénérer ton énergie</span>
-              </button>
+              </Button>
             </Tooltip>
 
             <Tooltip text="Simuler un événement aléatoire / dilemme citoyen">
-              <button
-                type="button"
-                onClick={() => triggerDilemma()}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-warn-400/25 bg-warn-500/10 px-2.5 text-xs font-semibold text-warn-300 transition-colors hover:border-warn-400/45 hover:bg-warn-500/20 hover:text-warn-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 active:scale-95 md:px-3"
-              >
-                <Sparkles className="size-4 text-warn-400" aria-hidden="true" />
+              <Button variant="warnSoft" onClick={() => triggerDilemma()}>
+                <Sparkles className="text-warn-400" aria-hidden="true" />
                 <span className="hidden md:inline">Dilemme</span>
                 <span className="sr-only md:hidden">Lancer un dilemme</span>
-              </button>
+              </Button>
             </Tooltip>
 
-
-            <button
-              type="button"
-              onClick={() => toggleNovaModal(true)}
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-brand-400/40 bg-linear-to-r from-brand-600 to-iris-600 px-3 text-xs font-bold text-white shadow-brand transition-[background-position,transform] hover:from-brand-500 hover:to-iris-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300 active:scale-95"
-            >
-              <Bot className="size-4 text-brand-200" aria-hidden="true" />
+            <Button variant="primary" onClick={() => toggleNovaModal(true)}>
+              <Bot className="text-brand-200" aria-hidden="true" />
               <span className="hidden xl:inline">NOVA</span>
               <span className="xl:hidden sr-only">Ouvrir le mentor NOVA</span>
               <span
                 aria-hidden="true"
                 className="size-1.5 rounded-full bg-gain-400 shadow-[0_0_8px] shadow-gain-400 animate-pulse-soft"
               />
-            </button>
+            </Button>
+
 
             <div className="relative" ref={menuRef}>
               <Tooltip text="Options et réinitialisation" align="end">
@@ -324,12 +310,12 @@ export const Navbar: React.FC = () => {
           <div className="flex items-center gap-1.5">
             <dt className="sr-only">Disponible</dt>
             <Coins className="size-3.5 text-gain-400" aria-hidden="true" />
-            <dd className="metric font-bold text-gain-300">{citizen.money.toLocaleString()}</dd>
+            <dd className="metric font-bold text-gain-300">{formatNumber(citizen.money)}</dd>
           </div>
           <div className="flex items-center gap-1.5">
             <dt className="sr-only">Épargne</dt>
             <Landmark className="size-3.5 text-cool-400" aria-hidden="true" />
-            <dd className="metric font-bold text-cool-300">{citizen.savings.toLocaleString()}</dd>
+            <dd className="metric font-bold text-cool-300">{formatNumber(citizen.savings)}</dd>
           </div>
           <div className="flex items-center gap-1.5">
             <dt className="sr-only">Énergie</dt>

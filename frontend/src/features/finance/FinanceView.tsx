@@ -17,6 +17,7 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { IconChip } from '../../components/ui/IconChip';
 import { controlClass } from '../../components/ui/control';
+import { formatNumber } from '../../lib/format';
 
 const BUDGET_RULE = [
   {
@@ -103,7 +104,7 @@ export const FinanceView: React.FC = () => {
               </h3>
             </div>
             <p className="metric mb-2 text-3xl font-extrabold text-white sm:text-4xl">
-              {citizen.money.toLocaleString()}
+              {formatNumber(citizen.money)}
               <span className="ml-1.5 text-sm font-medium text-gain-400">MGA</span>
             </p>
             <p className="text-xs leading-relaxed text-mist-400">
@@ -148,7 +149,7 @@ export const FinanceView: React.FC = () => {
               </h3>
             </div>
             <p className="metric mb-2 text-3xl font-extrabold text-cool-300 sm:text-4xl">
-              {citizen.savings.toLocaleString()}
+              {formatNumber(citizen.savings)}
               <span className="ml-1.5 text-sm font-medium text-cool-400">MGA</span>
             </p>
             <p className="text-xs leading-relaxed text-mist-400">
@@ -222,7 +223,7 @@ export const FinanceView: React.FC = () => {
             >
               {LOAN_AMOUNTS.map((amount) => (
                 <option key={amount} value={amount}>
-                  {amount.toLocaleString()} MGA
+                  {formatNumber(amount)} MGA
                 </option>
               ))}
             </select>
@@ -249,7 +250,7 @@ export const FinanceView: React.FC = () => {
           <div className="panel-inset flex flex-col justify-center rounded-xl p-3.5">
             <span className="eyebrow">Mensualité estimée</span>
             <span className="metric mt-1.5 text-lg font-extrabold text-warn-300">
-              {monthlyPayment.toLocaleString()} MGA / mois
+              {formatNumber(monthlyPayment)} MGA / mois
             </span>
           </div>
         </div>

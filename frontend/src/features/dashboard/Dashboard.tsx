@@ -24,6 +24,7 @@ import { Progress } from '../../components/ui/Progress';
 import { MeterRow } from '../../components/ui/MeterRow';
 import { HOUSINGS, JOBS, COURSES } from '../../data/mockData';
 import { getGuidance } from '../../lib/guidance';
+import { formatNumber } from '../../lib/format';
 
 export const Dashboard: React.FC = () => {
   const { citizen, day, setActiveTab, toggleNovaModal, workShift, transactions } = useGameStore();
@@ -188,14 +189,14 @@ export const Dashboard: React.FC = () => {
             <div className="min-w-0">
               <span className="block text-2xs tracking-wider text-mist-500 uppercase">Solde liquide</span>
               <span className="metric mt-1 block text-lg font-black text-gain-300">
-                {citizen.money.toLocaleString()}
+                {formatNumber(citizen.money)}
                 <span className="ml-1 text-2xs font-medium text-mist-400">MGA</span>
               </span>
             </div>
             <div className="text-right">
               <span className="block text-2xs tracking-wider text-mist-500 uppercase">Épargne bloquée</span>
               <span className="metric mt-1 block text-sm font-bold text-cool-300">
-                {citizen.savings.toLocaleString()}
+                {formatNumber(citizen.savings)}
                 <span className="ml-1 text-2xs font-medium text-mist-400">MGA</span>
               </span>
             </div>
@@ -204,12 +205,12 @@ export const Dashboard: React.FC = () => {
           <dl className="mt-auto space-y-2 text-xs">
             <div className="flex items-baseline justify-between gap-3">
               <dt className="text-mist-500">Loyer estimé</dt>
-              <dd className="metric font-semibold text-mist-200">&minus;{currentHousing.rentMonthly.toLocaleString()} MGA / mois</dd>
+              <dd className="metric font-semibold text-mist-200">&minus;{formatNumber(currentHousing.rentMonthly)} MGA / mois</dd>
             </div>
             <div className="flex items-baseline justify-between gap-3">
               <dt className="text-mist-500">Emploi actuel</dt>
               <dd className="text-right font-semibold text-gain-400">
-                {currentJob ? `${currentJob.title} (+${currentJob.salary.toLocaleString()} MGA)` : 'Aucun — en recherche'}
+                {currentJob ? `${currentJob.title} (+${formatNumber(currentJob.salary)} MGA)` : 'Aucun — en recherche'}
               </dd>
             </div>
           </dl>
@@ -314,7 +315,7 @@ export const Dashboard: React.FC = () => {
                     tx.amount > 0 ? 'text-gain-400' : 'text-risk-400'
                   }`}
                 >
-                  {tx.amount > 0 ? `+${tx.amount.toLocaleString()} MGA` : `−${Math.abs(tx.amount).toLocaleString()} MGA`}
+                  {tx.amount > 0 ? `+${formatNumber(tx.amount)} MGA` : `−${formatNumber(Math.abs(tx.amount))} MGA`}
                 </span>
               </li>
             ))}
