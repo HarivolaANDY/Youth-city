@@ -12,6 +12,7 @@ from game.models import (
     Transaction,
     Dilemma,
     MarketItem,
+    StartupProject,
 )
 
 class UserSerializer(serializers.ModelSerializer):
@@ -238,3 +239,30 @@ class CitizenDetailSerializer(serializers.ModelSerializer):
 
     def get_certifications(self, obj):
         return list(obj.certifications.values_list('title', flat=True))
+
+
+class StartupProjectSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(source='key')
+    monthlyRevenue = serializers.IntegerField(source='monthly_revenue')
+    usersCount = serializers.IntegerField(source='users_count')
+    hasIncubatorGrant = serializers.BooleanField(source='has_incubator_grant')
+
+    class Meta:
+        model = StartupProject
+        fields = [
+            'id',
+            'key',
+            'name',
+            'sector',
+            'pitch',
+            'stage',
+            'progress',
+            'treasury',
+            'monthlyRevenue',
+            'reputation',
+            'usersCount',
+            'hasIncubatorGrant',
+            'team',
+            'created_at',
+        ]
+

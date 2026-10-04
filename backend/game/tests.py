@@ -292,6 +292,59 @@ class YouthCityBackendAPITests(APITestCase):
         self.assertEqual(self.character.current_job.key, 'job-dev-junior')
         self.assertEqual(self.character.xp, initial_xp + 100)
 
+    def test_14_startup_district_pipeline_flow(self):
+        """Verifies entrepreneurial lifecycle: creation, actions, traction, and incubator grant (§12, §24)."""
+        # 1. List startup projects
+        res_list = self.client.get('/api/startup/projects/')
+        self.assertEqual(res_list.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(len(res_list.json()), 1)
+
+        # 2. Create a new startup venture
+        initial_money = self.character.money
+        res_create = self.client.post('/api/startup/create/', {
+            'name': 'AgriSmart Madagascar',
+            'sector': 'agritech',
+            'pitch': 'Solutions de capteurs IoT solaires pour optimiser l\'irrigation agricole.',
+            'initialCapital': 30000,
+        })
+        self.assertEqual(res_create.status_code, status.HTTP_201_CREATED)
+        new_proj = res_create.json()['project']
+        self.assertEqual(new_proj['name'], 'AgriSmart Madagascar')
+        self.assertEqual(new_proj['sector'], 'agritech')
+        self.assertEqual(new_proj['stage'], 'idea')
+        self.assertEqual(new_proj['treasury'], 30000)
+
+        self.character.refresh_from_db()
+        self.assertEqual(self.character.money, initial_money - 30000)
+        proj_key = new_proj['key']
+
+        # 3. Try to claim incubator grant too early -> rejected
+        res_early_grant = self.client.post(f'/api/startup/{proj_key}/grant/')
+        self.assertEqual(res_early_grant.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Dossier insuffisant", res_early_grant.json().get('error', ''))
+
+        # 4. Advance action: Market study
+        res_action1 = self.client.post(f'/api/startup/{proj_key}/action/', {'actionType': 'market_study'})
+        self.assertEqual(res_action1.status_code, status.HTTP_200_OK)
+        updated_proj = res_action1.json()['project']
+        self.assertGreaterEqual(updated_proj['progress'], 40)
+        self.assertGreaterEqual(updated_proj['reputation'], 25)
+
+        # 5. Advance action: Develop MVP (treasury has 30,000, requires 25,000)
+        res_action2 = self.client.post(f'/api/startup/{proj_key}/action/', {'actionType': 'develop_mvp'})
+        self.assertEqual(res_action2.status_code, status.HTTP_200_OK)
+        mvp_proj = res_action2.json()['project']
+        self.assertEqual(mvp_proj['treasury'], 5000)
+        self.assertGreaterEqual(mvp_proj['reputation'], 40)
+
+        # 6. Now claim incubator grant (reputation >= 30%) -> awarded 200,000 MGA!
+        res_grant = self.client.post(f'/api/startup/{proj_key}/grant/')
+        self.assertEqual(res_grant.status_code, status.HTTP_200_OK)
+        grant_proj = res_grant.json()['project']
+        self.assertTrue(grant_proj['hasIncubatorGrant'])
+        self.assertEqual(grant_proj['treasury'], 205000)
+        self.assertIn("bourse d'amorçage", res_grant.json().get('message', ''))
+
 
 
 

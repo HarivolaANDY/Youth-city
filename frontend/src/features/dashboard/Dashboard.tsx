@@ -13,6 +13,7 @@ import {
   Target,
   ArrowRight,
   Sparkles,
+  Rocket,
 } from 'lucide-react';
 import { useGameStore } from '../../stores/useGameStore';
 import { NextActionBanner } from '../../components/NextActionBanner';
@@ -85,6 +86,10 @@ export const Dashboard: React.FC = () => {
                 <Button variant="secondary" onClick={() => setActiveTab('campus')}>
                   <GraduationCap className="size-4 text-cool-400" aria-hidden="true" />
                   <span>Se former</span>
+                </Button>
+                <Button variant="secondary" onClick={() => setActiveTab('startup')}>
+                  <Rocket className="size-4 text-emerald-400" aria-hidden="true" />
+                  <span>Startup</span>
                 </Button>
               </div>
             </div>

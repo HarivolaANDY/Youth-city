@@ -179,3 +179,38 @@ class MarketItem(models.Model):
     def __str__(self):
         return f"{self.name} ({self.price:,} MGA) - {self.get_category_display()}"
 
+
+class StartupProject(models.Model):
+    """Projet entrepreneurial et startup au Startup District (§12, §24)"""
+    STAGE_CHOICES = (
+        ('idea', 'Idée & Étude de Marché'),
+        ('mvp', 'Prototypage & MVP'),
+        ('launched', 'Lancement & Premiers Clients'),
+        ('growth', 'Croissance & Scalabilité'),
+    )
+    SECTOR_CHOICES = (
+        ('tech', 'Tech & Applications Mobiles'),
+        ('greentech', 'Impact Écologique & Recyclage'),
+        ('agritech', 'AgriTech & Circuits Courts'),
+        ('services', 'Services & Commerce Local'),
+    )
+    character = models.ForeignKey(Character, on_delete=models.CASCADE, related_name='startup_projects')
+    key = models.CharField(max_length=64, unique=True)
+    name = models.CharField(max_length=160)
+    sector = models.CharField(max_length=32, choices=SECTOR_CHOICES, default='tech')
+    pitch = models.TextField(help_text="Proposition de valeur et pitch synthétique")
+    stage = models.CharField(max_length=32, choices=STAGE_CHOICES, default='idea')
+    progress = models.IntegerField(default=10, help_text="Progression globale de la phase (0-100%)")
+    treasury = models.BigIntegerField(default=50000, help_text="Trésorerie de la startup en MGA")
+    monthly_revenue = models.BigIntegerField(default=0, help_text="Revenus mensuels récurrents en MGA")
+    reputation = models.IntegerField(default=15, help_text="Notoriété et confiance clients (0-100%)")
+    users_count = models.IntegerField(default=0, help_text="Nombre de clients ou utilisateurs actifs")
+    has_incubator_grant = models.BooleanField(default=False, help_text="A reçu la subvention d'amorçage de l'incubateur")
+    team = models.JSONField(default=list, blank=True, help_text="Liste des rôles/associés (ex: Développeur, Commercial)")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.get_stage_display()}) — {self.character.name}"
+
+

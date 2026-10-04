@@ -31,7 +31,7 @@ const ICON_MAP = {
 };
 
 export const CityMap: React.FC = () => {
-  const { selectDistrict, citizen } = useGameStore();
+  const { selectDistrict, citizen, startupProjects } = useGameStore();
 
   const housing = HOUSINGS.find((h) => h.id === citizen.currentHousingId);
   const availableCourses = COURSES.filter((c) => !citizen.completedCourses.includes(c.id)).length;
@@ -67,7 +67,11 @@ export const CityMap: React.FC = () => {
       case 'market':
         return { label: 'Équipement PC & Ravitaillement', active: true, tag: 'Commerce' };
       case 'startup':
-        return { label: 'Incubateur & Projets V2', active: false, tag: 'Innovation' };
+        return {
+          label: startupProjects.length > 0 ? `${startupProjects.length} startup active` : 'Incubateur & Amorçage',
+          active: true,
+          tag: 'Incubateur',
+        };
       case 'cityhub':
         return { label: 'Hackathons & Guildes V2', active: false, tag: 'Communauté' };
     }
@@ -168,9 +172,7 @@ export const CityMap: React.FC = () => {
             <Sparkles />
           </IconChip>
           <p className="text-xs leading-relaxed text-mist-400">
-            Les districts <span className="font-bold text-mist-200">Market</span>,{' '}
-            <span className="font-bold text-mist-200">Startup</span> et{' '}
-            <span className="font-bold text-mist-200">City Hub</span> arrivent dans la prochaine version du jeu.
+            Le district <span className="font-bold text-mist-200">City Hub</span> (Guildes & Hackathons multijoueurs) arrive dans le prochain module du jeu.
           </p>
         </div>
         <Badge tone="warn">Bientôt disponible</Badge>

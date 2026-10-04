@@ -197,5 +197,32 @@ export interface InterviewResult {
   message: string;
 }
 
+export type StartupStage = 'idea' | 'mvp' | 'launched' | 'growth';
+export type StartupSector = 'tech' | 'greentech' | 'agritech' | 'services';
+
+export interface StartupProject {
+  id: string;
+  key: string;
+  name: string;
+  sector: StartupSector;
+  pitch: string;
+  stage: StartupStage;
+  progress: number; // 0 - 100
+  treasury: number; // MGA
+  monthlyRevenue: number; // MGA
+  reputation: number; // 0 - 100
+  usersCount: number;
+  hasIncubatorGrant: boolean;
+  team: string[];
+  created_at?: string;
+}
+
+export type StartupActionType = 
+  | 'market_study' 
+  | 'develop_mvp' 
+  | 'launch_campaign' 
+  | 'recruit_partner' 
+  | 'collect_revenue';
+
 
 

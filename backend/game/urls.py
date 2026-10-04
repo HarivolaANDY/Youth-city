@@ -41,6 +41,12 @@ urlpatterns = [
     path('market/items/', views.list_market_items, name='list-market-items'),
     path('market/buy/', views.buy_market_item, name='buy-market-item'),
 
+    # Startup District (§12, §24)
+    path('startup/projects/', views.list_startup_projects, name='list-startup-projects'),
+    path('startup/create/', views.create_startup_project, name='create-startup-project'),
+    path('startup/<str:key>/action/', views.advance_startup_action, name='advance-startup-action'),
+    path('startup/<str:key>/grant/', views.claim_incubator_grant, name='claim-incubator-grant'),
+
     # Dilemmas & Random Events
     path('dilemmas/active/', views.get_active_dilemma, name='active-dilemma'),
     path('dilemmas/resolve/', views.resolve_dilemma, name='resolve-dilemma'),

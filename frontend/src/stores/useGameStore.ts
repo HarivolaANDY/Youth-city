@@ -10,6 +10,8 @@ import type {
   AuthUser,
   CharacterCustomizationPayload,
   InterviewResult,
+  StartupProject,
+  StartupActionType,
 } from '../types/game';
 import { INITIAL_CITIZEN, COURSES, JOBS, HOUSINGS, SAMPLE_DILEMMA, MARKET_ITEMS } from '../data/mockData';
 import { api } from '../services/api';
@@ -19,13 +21,14 @@ interface GameState {
   citizen: Citizen;
   day: number;
   timeSlot: TimeSlot;
-  activeTab: 'dashboard' | 'map' | 'campus' | 'career' | 'market' | 'finance' | 'residential' | 'passport';
+  activeTab: 'dashboard' | 'map' | 'campus' | 'career' | 'market' | 'finance' | 'residential' | 'passport' | 'startup';
   selectedDistrictId: DistrictId | null;
   isNovaModalOpen: boolean;
   activeDilemma: Dilemma | null;
   transactions: Transaction[];
   notifications: ToastNotification[];
   isBackendConnected: boolean;
+  startupProjects: StartupProject[];
 
   // Authentification & Comptes (§42, §47)
   user: AuthUser | null;
@@ -46,12 +49,18 @@ interface GameState {
   initGame: () => Promise<void>;
 
   // Navigation & UI Actions
-  setActiveTab: (tab: 'dashboard' | 'map' | 'campus' | 'career' | 'market' | 'finance' | 'residential' | 'passport') => void;
+  setActiveTab: (tab: 'dashboard' | 'map' | 'campus' | 'career' | 'market' | 'finance' | 'residential' | 'passport' | 'startup') => void;
   selectDistrict: (id: DistrictId | null) => void;
   toggleNovaModal: (open?: boolean) => void;
   dismissDilemma: () => void;
   triggerDilemma: (dilemma?: Dilemma) => void;
   
+  // Startup District (§12, §24)
+  fetchStartupProjects: () => Promise<void>;
+  createStartupProject: (payload: { name: string; sector: string; pitch: string; initialCapital?: number }) => Promise<{ success: boolean; error?: string }>;
+  advanceStartupAction: (projectKey: string, actionType: StartupActionType, role?: string) => Promise<{ success: boolean; error?: string }>;
+  claimIncubatorGrant: (projectKey: string) => Promise<{ success: boolean; error?: string }>;
+
   // Game Actions
   advanceTime: () => void;
   restAndSleep: () => void;
@@ -83,6 +92,24 @@ const TIME_SLOTS: TimeSlot[] = [
   'Nuit (22:00)',
 ];
 
+const DEFAULT_STARTUP_PROJECTS: StartupProject[] = [
+  {
+    id: 'startup-ecotana',
+    key: 'startup-ecotana',
+    name: 'EcoCollect Tana',
+    sector: 'greentech',
+    pitch: 'Plateforme de collecte géolocalisée et valorisation des déchets recyclables à Antananarivo.',
+    stage: 'idea',
+    progress: 25,
+    treasury: 150000,
+    monthlyRevenue: 0,
+    reputation: 20,
+    usersCount: 0,
+    hasIncubatorGrant: false,
+    team: ['Fondateur & Porteur de Projet'],
+  },
+];
+
 export const useGameStore = create<GameState>((set, get) => ({
   citizen: { ...INITIAL_CITIZEN },
   day: 14,
@@ -100,6 +127,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     { id: 'notif-1', title: 'Bienvenue sur Youth City !', message: 'Explore la carte et découvre les opportunités du Campus.', type: 'info' },
   ],
   isBackendConnected: false,
+  startupProjects: DEFAULT_STARTUP_PROJECTS,
 
   // Authentification & Comptes (§42, §47)
   user: null,
@@ -223,6 +251,11 @@ export const useGameStore = create<GameState>((set, get) => ({
           isBackendConnected: true,
         });
       }
+
+      const projects = await api.getStartupProjects();
+      if (projects && projects.length > 0) {
+        set({ startupProjects: projects });
+      }
     } catch {
       // Backend not running, falls back silently to local state
     }
@@ -237,6 +270,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     else if (id === 'finance') set({ activeTab: 'finance' });
     else if (id === 'residential') set({ activeTab: 'residential' });
     else if (id === 'market') set({ activeTab: 'market' });
+    else if (id === 'startup') set({ activeTab: 'startup' });
   },
 
   toggleNovaModal: (open) => set((state) => ({ isNovaModalOpen: open !== undefined ? open : !state.isNovaModalOpen })),
@@ -244,6 +278,224 @@ export const useGameStore = create<GameState>((set, get) => ({
   dismissDilemma: () => set({ activeDilemma: null }),
 
   triggerDilemma: (dilemma = SAMPLE_DILEMMA) => set({ activeDilemma: dilemma }),
+
+  // --- STARTUP DISTRICT (§12, §24) ---
+  fetchStartupProjects: async () => {
+    const projects = await api.getStartupProjects();
+    if (projects) {
+      set({ startupProjects: projects });
+    }
+  },
+
+  createStartupProject: async (payload) => {
+    const { addNotification, citizen, addXp } = get();
+    try {
+      const res = await api.createStartupProject(payload);
+      if ('error' in res) {
+        addNotification('Erreur Startup', res.error, 'warning');
+        return { success: false, error: res.error };
+      }
+      set((state) => ({
+        startupProjects: [res.project, ...state.startupProjects],
+        citizen: res.citizen,
+        transactions: res.transaction ? [res.transaction, ...state.transactions].slice(0, 30) : state.transactions,
+      }));
+      try {
+        confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
+      } catch {
+        // Confetti fallback
+      }
+      addNotification('Venture enregistrée !', res.message, 'success');
+      return { success: true };
+    } catch {
+      // Offline fallback
+      const initialCapital = payload.initialCapital || 30000;
+      if (citizen.money < initialCapital) {
+        addNotification('Fonds insuffisants', `Tu as besoin de ${formatNumber(initialCapital)} MGA de capital.`, 'warning');
+        return { success: false, error: 'Fonds personnels insuffisants.' };
+      }
+      const newProj: StartupProject = {
+        id: `startup-${Date.now()}`,
+        key: `startup-${Date.now()}`,
+        name: payload.name,
+        sector: payload.sector as StartupProject['sector'],
+        pitch: payload.pitch,
+        stage: 'idea',
+        progress: 15,
+        treasury: initialCapital,
+        monthlyRevenue: 0,
+        reputation: 15,
+        usersCount: 0,
+        hasIncubatorGrant: false,
+        team: ['Fondateur'],
+      };
+      set((state) => ({
+        startupProjects: [newProj, ...state.startupProjects],
+        citizen: {
+          ...state.citizen,
+          money: state.citizen.money - initialCapital,
+          completedProjects: state.citizen.completedProjects + 1,
+        },
+      }));
+      addXp(80);
+      try {
+        confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
+      } catch {
+        // Confetti fallback
+      }
+      addNotification('Venture enregistrée !', `La startup "${payload.name}" est créée !`, 'success');
+      return { success: true };
+    }
+  },
+
+  advanceStartupAction: async (projectKey, actionType, role) => {
+    const { addNotification, citizen, addXp } = get();
+    try {
+      const res = await api.advanceStartupAction(projectKey, actionType, role);
+      if ('error' in res) {
+        addNotification('Action impossible', res.error, 'warning');
+        return { success: false, error: res.error };
+      }
+      set((state) => ({
+        startupProjects: state.startupProjects.map((p) => (p.key === projectKey || p.id === projectKey ? res.project : p)),
+        citizen: res.citizen,
+      }));
+      if (res.levelUp) {
+        try {
+          confetti({ particleCount: 75, spread: 60, origin: { y: 0.6 } });
+        } catch {
+          // Confetti fallback
+        }
+      }
+      addNotification('Action entrepreneuriale', res.message, 'success');
+      return { success: true };
+    } catch {
+      // Offline fallback
+      const project = get().startupProjects.find((p) => p.key === projectKey || p.id === projectKey);
+      if (!project) return { success: false, error: 'Projet introuvable.' };
+      if (citizen.energy < 15) {
+        addNotification('Énergie insuffisante', 'Tu es trop épuisé(e) (min. 15%).', 'warning');
+        return { success: false, error: 'Énergie insuffisante.' };
+      }
+
+      const updated = { ...project };
+      let msg = '';
+      if (actionType === 'market_study') {
+        updated.progress = Math.min(100, updated.progress + 25);
+        updated.reputation = Math.min(100, updated.reputation + 10);
+        msg = 'Étude de marché validée !';
+        if (updated.progress >= 70 && updated.stage === 'idea') {
+          updated.stage = 'mvp';
+          updated.progress = 20;
+          msg += ' Passage au stade MVP !';
+        }
+        addXp(50);
+      } else if (actionType === 'develop_mvp') {
+        if (updated.treasury < 25000) {
+          addNotification('Trésorerie insuffisante', '25 000 MGA requis.', 'warning');
+          return { success: false, error: 'Trésorerie insuffisante.' };
+        }
+        updated.treasury -= 25000;
+        updated.progress = Math.min(100, updated.progress + 30);
+        updated.reputation = Math.min(100, updated.reputation + 15);
+        msg = 'Prototype MVP développé !';
+        if (updated.progress >= 70) {
+          updated.stage = 'launched';
+          updated.progress = 25;
+          updated.usersCount += 10;
+          updated.monthlyRevenue += 40000;
+          msg += ' Lancement officiel effectué !';
+        }
+        addXp(70);
+      } else if (actionType === 'launch_campaign') {
+        if (updated.treasury < 20000) {
+          addNotification('Trésorerie insuffisante', '20 000 MGA requis.', 'warning');
+          return { success: false, error: 'Trésorerie insuffisante.' };
+        }
+        updated.treasury -= 20000;
+        updated.usersCount += 25;
+        updated.monthlyRevenue += 60000;
+        updated.reputation = Math.min(100, updated.reputation + 20);
+        updated.progress = Math.min(100, updated.progress + 25);
+        msg = 'Campagne marketing réussie !';
+        if (updated.progress >= 80 && updated.stage === 'launched') {
+          updated.stage = 'growth';
+          msg += ' Phase de forte croissance atteinte !';
+        }
+        addXp(80);
+      } else if (actionType === 'recruit_partner') {
+        const teamRole = role || 'Co-fondateur Tech';
+        updated.team = [...updated.team, teamRole];
+        updated.reputation = Math.min(100, updated.reputation + 10);
+        msg = `Partenaire recruté : ${teamRole} !`;
+        addXp(40);
+      } else if (actionType === 'collect_revenue') {
+        if (updated.monthlyRevenue <= 0) {
+          addNotification('Aucun revenu', 'Ta startup ne génère pas encore de revenus.', 'warning');
+          return { success: false, error: 'Aucun revenu récurrent.' };
+        }
+        const dividend = Math.round(updated.monthlyRevenue * 0.5);
+        updated.treasury += (updated.monthlyRevenue - dividend);
+        get().earnMoney(dividend, `Dividendes : ${updated.name}`, 'Startup');
+        msg = `+${formatNumber(dividend)} MGA de dividendes encaissés !`;
+      }
+
+      set((state) => ({
+        startupProjects: state.startupProjects.map((p) => (p.key === projectKey || p.id === projectKey ? updated : p)),
+        citizen: { ...state.citizen, energy: Math.max(0, state.citizen.energy - 15) },
+      }));
+      addNotification('Startup mise à jour', msg, 'success');
+      return { success: true };
+    }
+  },
+
+  claimIncubatorGrant: async (projectKey) => {
+    const { addNotification, addXp } = get();
+    try {
+      const res = await api.claimIncubatorGrant(projectKey);
+      if ('error' in res) {
+        addNotification('Subvention refusée', res.error, 'warning');
+        return { success: false, error: res.error };
+      }
+      set((state) => ({
+        startupProjects: state.startupProjects.map((p) => (p.key === projectKey || p.id === projectKey ? res.project : p)),
+        citizen: res.citizen,
+      }));
+      try {
+        confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+      } catch {
+        // Confetti fallback
+      }
+      addNotification('Bourse Incubateur obtenue !', res.message, 'success');
+      return { success: true };
+    } catch {
+      const project = get().startupProjects.find((p) => p.key === projectKey || p.id === projectKey);
+      if (!project) return { success: false, error: 'Projet introuvable.' };
+      if (project.hasIncubatorGrant) return { success: false, error: 'Déjà obtenue.' };
+      if (project.reputation < 30 && project.stage === 'idea') {
+        addNotification('Dossier refusé', 'Réputation minimale de 30% ou MVP requis.', 'warning');
+        return { success: false, error: 'Dossier insuffisant.' };
+      }
+
+      const updated = {
+        ...project,
+        hasIncubatorGrant: true,
+        treasury: project.treasury + 200000,
+        reputation: Math.min(100, project.reputation + 25),
+      };
+      set((state) => ({
+        startupProjects: state.startupProjects.map((p) => (p.key === projectKey || p.id === projectKey ? updated : p)),
+      }));
+      addXp(100);
+      try {
+        confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+      } catch {
+        // Confetti fallback
+      }
+      addNotification('Bourse Incubateur obtenue !', `200 000 MGA de subvention versés dans la trésorerie de ${project.name} !`, 'success');
+      return { success: true };
+    }
+  },
 
   addNotification: (title, message, type = 'info') => {
     const newNotif: ToastNotification = {

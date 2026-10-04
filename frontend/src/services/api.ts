@@ -10,6 +10,8 @@ import type {
   CharacterCustomizationPayload,
   MarketItem,
   InterviewResult,
+  StartupProject,
+  StartupActionType,
 } from '../types/game';
 
 const API_BASE_URL = 'http://localhost:8000/api';
@@ -401,6 +403,64 @@ export const api = {
       };
     } catch {
       return null;
+    }
+  },
+
+  // --- STARTUP DISTRICT (§12, §24) ---
+  async getStartupProjects(): Promise<StartupProject[] | null> {
+    try {
+      const res = await fetchAuth(`${API_BASE_URL}/startup/projects/`);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  },
+
+  async createStartupProject(payload: { name: string; sector: string; pitch: string; initialCapital?: number }): Promise<{ project: StartupProject; citizen: Citizen; transaction: Transaction; levelUp?: boolean; message: string } | { error: string }> {
+    try {
+      const res = await fetchAuth(`${API_BASE_URL}/startup/create/`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { error: data.error || 'Erreur lors de la création de la startup.' };
+      }
+      return data;
+    } catch {
+      return { error: 'Impossible de joindre le serveur Youth City.' };
+    }
+  },
+
+  async advanceStartupAction(projectKey: string, actionType: StartupActionType, role?: string): Promise<{ project: StartupProject; citizen: Citizen; levelUp?: boolean; message: string } | { error: string }> {
+    try {
+      const res = await fetchAuth(`${API_BASE_URL}/startup/${projectKey}/action/`, {
+        method: 'POST',
+        body: JSON.stringify({ actionType, role }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { error: data.error || 'Action impossible à exécuter.' };
+      }
+      return data;
+    } catch {
+      return { error: 'Impossible de joindre le serveur Youth City.' };
+    }
+  },
+
+  async claimIncubatorGrant(projectKey: string): Promise<{ project: StartupProject; citizen: Citizen; levelUp?: boolean; message: string } | { error: string }> {
+    try {
+      const res = await fetchAuth(`${API_BASE_URL}/startup/${projectKey}/grant/`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { error: data.error || 'Subvention non éligible.' };
+      }
+      return data;
+    } catch {
+      return { error: 'Impossible de joindre le serveur Youth City.' };
     }
   },
 };

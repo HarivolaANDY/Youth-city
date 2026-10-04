@@ -7,6 +7,7 @@ import {
   Home,
   ShieldCheck,
   ShoppingBag,
+  Rocket,
 } from 'lucide-react';
 
 export const TABS = [
@@ -14,6 +15,7 @@ export const TABS = [
   { id: 'map', label: 'Carte Urbaine', short: 'Ville', icon: Map },
   { id: 'campus', label: 'Campus', short: 'Campus', icon: GraduationCap },
   { id: 'career', label: 'Carrière', short: 'Carrière', icon: Briefcase },
+  { id: 'startup', label: 'Startup District', short: 'Startup', icon: Rocket },
   { id: 'market', label: 'Market District', short: 'Boutique', icon: ShoppingBag },
   { id: 'finance', label: 'Finance', short: 'Finance', icon: Landmark },
   { id: 'residential', label: 'Résidentiel', short: 'Foyer', icon: Home },

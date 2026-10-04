@@ -24,6 +24,7 @@ from game.models import (
     Transaction,
     Dilemma,
     MarketItem,
+    StartupProject,
 )
 from game.serializers import (
     PropertySerializer,
@@ -37,6 +38,7 @@ from game.serializers import (
     RegisterSerializer,
     CharacterCustomizeSerializer,
     MarketItemSerializer,
+    StartupProjectSerializer,
 )
 
 TIME_SLOTS = [
@@ -950,5 +952,229 @@ def buy_market_item(request):
         'transaction': TransactionSerializer(tx).data,
         'item': MarketItemSerializer(item, context={'character': character}).data,
     })
+
+
+# --- STARTUP DISTRICT (§12, §24) ---
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def list_startup_projects(request):
+    """Lists startup ventures of the active citizen (§12, §24)."""
+    character = get_active_character(request)
+    projects = StartupProject.objects.filter(character=character).order_by('-created_at')
+
+    if not projects.exists() and (not character.user or character.name == "Emmanuel"):
+        initial_proj = StartupProject.objects.create(
+            character=character,
+            key="startup-ecotana",
+            name="EcoCollect Tana",
+            sector="greentech",
+            pitch="Plateforme de collecte géolocalisée et valorisation des déchets recyclables à Antananarivo.",
+            stage="idea",
+            progress=25,
+            treasury=150000,
+            monthly_revenue=0,
+            reputation=20,
+            users_count=0,
+            team=["Fondateur & Porteur de Projet"],
+        )
+        projects = [initial_proj]
+
+    serializer = StartupProjectSerializer(projects, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def create_startup_project(request):
+    """Launches a new entrepreneurial project (§12, §24)."""
+    import uuid
+    character = get_active_character(request)
+    name = (request.data.get('name') or '').strip()
+    sector = request.data.get('sector', 'tech')
+    pitch = (request.data.get('pitch') or '').strip()
+
+    try:
+        capital = int(request.data.get('initialCapital', 30000))
+    except (ValueError, TypeError):
+        capital = 30000
+
+    if len(name) < 3:
+        return Response({'error': "Le nom du projet doit comporter au moins 3 caractères."}, status=status.HTTP_400_BAD_REQUEST)
+    if len(pitch) < 10:
+        return Response({'error': "Le pitch doit comporter au moins 10 caractères pour convaincre l'incubateur."}, status=status.HTTP_400_BAD_REQUEST)
+    if capital < 20000:
+        return Response({'error': "Le capital initial minimum est de 20 000 MGA."}, status=status.HTTP_400_BAD_REQUEST)
+    if character.money < capital:
+        return Response({'error': f"Fonds personnels insuffisants. Tu disposes de {character.money:,} MGA."}, status=status.HTTP_400_BAD_REQUEST)
+
+    slug_key = f"startup-{uuid.uuid4().hex[:8]}"
+
+    with db_transaction.atomic():
+        character.money -= capital
+        level_up = add_xp_to_character(character, 80)
+        character.completed_projects += 1
+        character.save()
+
+        tx = Transaction.objects.create(
+            character=character,
+            timestamp=f"J-{character.day} {character.time_slot.split(' ')[0]}",
+            label=f"Apport capital initial : {name}",
+            amount=-capital,
+            transaction_type='expense',
+            category='Startup',
+        )
+
+        project = StartupProject.objects.create(
+            character=character,
+            key=slug_key,
+            name=name,
+            sector=sector,
+            pitch=pitch,
+            stage='idea',
+            progress=15,
+            treasury=capital,
+            monthly_revenue=0,
+            reputation=15,
+            users_count=0,
+            team=["Fondateur"],
+        )
+
+    return Response({
+        'message': f"Félicitations ! La startup '{project.name}' a été enregistrée à l'incubateur du Startup District.",
+        'project': StartupProjectSerializer(project).data,
+        'citizen': CitizenDetailSerializer(character).data,
+        'transaction': TransactionSerializer(tx).data,
+        'levelUp': level_up,
+    }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def advance_startup_action(request, key):
+    """Executes an action in the entrepreneurial pipeline (§12, §24)."""
+    character = get_active_character(request)
+    project = get_object_or_404(StartupProject, key=key, character=character)
+    action_type = request.data.get('actionType')
+
+    if character.energy < 15:
+        return Response({'error': "Énergie vitale insuffisante (min. 15%). Repose-toi au Residential District !"}, status=status.HTTP_400_BAD_REQUEST)
+
+    with db_transaction.atomic():
+        character.energy -= 15
+        level_up = False
+
+        if action_type == 'market_study':
+            project.progress = min(100, project.progress + 25)
+            project.reputation = min(100, project.reputation + 10)
+            level_up = add_xp_to_character(character, 50)
+            message = "Étude de marché et entretiens prospects validés (+25% progression, +10 réputation)."
+            if project.progress >= 70 and project.stage == 'idea':
+                project.stage = 'mvp'
+                project.progress = 20
+                message += " Étape franchie : passage au prototypage MVP !"
+
+        elif action_type == 'develop_mvp':
+            if project.treasury < 25000:
+                return Response({'error': "Trésorerie de startup insuffisante (25 000 MGA requis pour prototyper)."}, status=status.HTTP_400_BAD_REQUEST)
+            project.treasury -= 25000
+            project.progress = min(100, project.progress + 30)
+            project.reputation = min(100, project.reputation + 15)
+            level_up = add_xp_to_character(character, 70)
+            message = "Développement du MVP achevé avec succès (+30% progression, +15 réputation)."
+            if project.progress >= 70 and project.stage in ['idea', 'mvp']:
+                project.stage = 'launched'
+                project.progress = 25
+                project.users_count += 10
+                project.monthly_revenue += 40000
+                message += " Étape franchie : lancement officiel et premiers clients acquis !"
+
+        elif action_type == 'launch_campaign':
+            if project.treasury < 20000:
+                return Response({'error': "Trésorerie de startup insuffisante (20 000 MGA requis pour le marketing)."}, status=status.HTTP_400_BAD_REQUEST)
+            project.treasury -= 20000
+            new_users = 25
+            rev_boost = 60000
+            project.users_count += new_users
+            project.monthly_revenue += rev_boost
+            project.reputation = min(100, project.reputation + 20)
+            project.progress = min(100, project.progress + 25)
+            level_up = add_xp_to_character(character, 80)
+            message = f"Campagne marketing réussie : +{new_users} clients et +{rev_boost:,} MGA de revenus mensuels !"
+            if project.progress >= 80 and project.stage == 'launched':
+                project.stage = 'growth'
+                message += " Étape franchie : phase de croissance & scalabilité atteinte !"
+
+        elif action_type == 'recruit_partner':
+            role = request.data.get('role', 'Co-fondateur Tech')
+            team = list(project.team or [])
+            team.append(role)
+            project.team = team
+            project.reputation = min(100, project.reputation + 10)
+            level_up = add_xp_to_character(character, 40)
+            message = f"Nouveau partenaire intégré à l'équipe : {role} (+10 réputation)."
+
+        elif action_type == 'collect_revenue':
+            if project.monthly_revenue <= 0:
+                return Response({'error': "Aucun revenu récurrent généré pour l'instant. Lance d'abord ton produit !"}, status=status.HTTP_400_BAD_REQUEST)
+            dividend = round(project.monthly_revenue * 0.5)
+            project.treasury += (project.monthly_revenue - dividend)
+            character.money += dividend
+            tx = Transaction.objects.create(
+                character=character,
+                timestamp=f"J-{character.day} {character.time_slot.split(' ')[0]}",
+                label=f"Dividendes Startup : {project.name}",
+                amount=dividend,
+                transaction_type='income',
+                category='Startup',
+            )
+            message = f"Revenus encaissés : +{dividend:,} MGA en dividendes personnels et trésorerie renforcée !"
+
+        else:
+            return Response({'error': "Action entrepreneuriale inconnue."}, status=status.HTTP_400_BAD_REQUEST)
+
+        project.save()
+        character.save()
+
+    return Response({
+        'message': message,
+        'project': StartupProjectSerializer(project).data,
+        'citizen': CitizenDetailSerializer(character).data,
+        'levelUp': level_up,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def claim_incubator_grant(request, key):
+    """Grants incubator seed capital if the project proves traction or MVP (§12, §24)."""
+    character = get_active_character(request)
+    project = get_object_or_404(StartupProject, key=key, character=character)
+
+    if project.has_incubator_grant:
+        return Response({'error': "Cette startup a déjà obtenu la subvention d'amorçage."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if project.reputation < 30 and project.stage == 'idea':
+        return Response({
+            'error': "Dossier insuffisant pour le jury de l'incubateur. Valide ton étude de marché ou obtiens au moins 30% de réputation !"
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    GRANT_AMOUNT = 200000  # 200 000 MGA
+
+    with db_transaction.atomic():
+        project.treasury += GRANT_AMOUNT
+        project.has_incubator_grant = True
+        project.reputation = min(100, project.reputation + 25)
+        level_up = add_xp_to_character(character, 100)
+        project.save()
+        character.save()
+
+    return Response({
+        'message': f"🎉 Félicitations ! Le jury de l'incubateur a accordé une bourse d'amorçage de {GRANT_AMOUNT:,} MGA à {project.name} !",
+        'project': StartupProjectSerializer(project).data,
+        'citizen': CitizenDetailSerializer(character).data,
+        'levelUp': level_up,
+    })
+
 
 
