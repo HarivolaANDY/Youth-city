@@ -1,4 +1,4 @@
-import type { District, Course, Job, Housing, Dilemma, Citizen } from '../types/game';
+import type { District, Course, Job, Housing, Dilemma, Citizen, MarketItem } from '../types/game';
 
 export const INITIAL_CITIZEN: Citizen = {
   id: 'cit-001',
@@ -31,6 +31,7 @@ export const INITIAL_CITIZEN: Citizen = {
   certifications: ['Certification Fondamentaux du Web'],
   completedProjects: 2,
   completedChallenges: 4,
+  inventory: [],
 };
 
 export const DISTRICTS: District[] = [
@@ -357,3 +358,84 @@ export const SAMPLE_DILEMMA: Dilemma = {
     },
   ],
 };
+
+export const MARKET_ITEMS: MarketItem[] = [
+  {
+    id: 'snack-coffee',
+    name: 'Café Robusta & Mofo Gasy énergisant',
+    category: 'food',
+    price: 3000,
+    energyBonus: 12,
+    wellbeingBonus: 3,
+    description: 'Le classique coup de fouet matinal pour attaquer ses études ou son shift.',
+    isConsumable: true,
+    icon: 'Coffee',
+  },
+  {
+    id: 'meal-street',
+    name: 'Vary sy Loka Chaud au Gargote',
+    category: 'food',
+    price: 5000,
+    energyBonus: 20,
+    wellbeingBonus: 5,
+    description: 'Un repas chaud, copieux et économique dans une gargote de quartier.',
+    isConsumable: true,
+    icon: 'Utensils',
+  },
+  {
+    id: 'meal-healthy',
+    name: 'Menu Équilibré & Jus de fruits frais',
+    category: 'food',
+    price: 15000,
+    energyBonus: 35,
+    wellbeingBonus: 15,
+    description: 'Produits frais locaux riches en vitamines pour recharger ses jauges au maximum.',
+    isConsumable: true,
+    icon: 'Apple',
+  },
+  {
+    id: 'item-transport-pass',
+    name: 'Pass Mensuel Bus Urbain',
+    category: 'transport',
+    price: 25000,
+    energyBonus: 10,
+    wellbeingBonus: 10,
+    description: 'Abonnement de bus évitant les trajets éreintants à pied entre les districts.',
+    isConsumable: false,
+    icon: 'Bus',
+  },
+  {
+    id: 'item-desk-chair',
+    name: 'Fauteuil de Bureau Ergonomique',
+    category: 'lifestyle',
+    price: 45000,
+    energyBonus: 10,
+    wellbeingBonus: 15,
+    description: 'Améliore la récupération au repos et permet d\'étudier confortablement chez soi.',
+    isConsumable: false,
+    icon: 'Armchair',
+  },
+  {
+    id: 'item-suit',
+    name: 'Tenue Professionnelle Élégante',
+    category: 'equipment',
+    price: 60000,
+    energyBonus: 0,
+    wellbeingBonus: 20,
+    description: 'Costume/tailleur de qualité renforçant la prestance et la confiance pour les entretiens.',
+    isConsumable: false,
+    icon: 'Shirt',
+  },
+  {
+    id: 'item-laptop',
+    name: 'PC Portable Reconditionné Core i5',
+    category: 'equipment',
+    price: 180000,
+    energyBonus: 0,
+    wellbeingBonus: 15,
+    description: 'Machine performante pour coder, suivre les cours Campus et télétravailler en toute autonomie.',
+    isConsumable: false,
+    icon: 'Laptop',
+  },
+];
+

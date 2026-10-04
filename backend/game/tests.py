@@ -204,5 +204,52 @@ class YouthCityBackendAPITests(APITestCase):
         self.assertEqual(len(data['transactions']), 1)
         self.assertEqual(data['transactions'][0]['category'], 'Bienvenue')
 
+    def test_12_market_items_and_purchase_flow(self):
+        """Verifies market catalog listing, consumable nourishment, and equipment inventory flow (§11, §19)."""
+        # 1. Catalog listing
+        res = self.client.get('/api/market/items/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        items = res.json()
+        self.assertGreaterEqual(len(items), 5)
+        item_keys = [item['id'] for item in items]
+        self.assertIn('meal-street', item_keys)
+        self.assertIn('item-laptop', item_keys)
+
+        # 2. Purchase consumable meal
+        self.character.energy = 40
+        self.character.wellbeing = 70
+        initial_money = self.character.money
+        self.character.save()
+
+        buy_res = self.client.post('/api/market/buy/', {'itemKey': 'meal-street'})
+        self.assertEqual(buy_res.status_code, status.HTTP_200_OK)
+        buy_data = buy_res.json()
+        self.character.refresh_from_db()
+
+        self.assertEqual(self.character.money, initial_money - 5000)
+        self.assertEqual(self.character.energy, 60)  # 40 + 20
+        self.assertEqual(self.character.wellbeing, 75)  # 70 + 5
+        self.assertEqual(buy_data['transaction']['category'], 'Market')
+
+        # 3. Insufficient funds for expensive equipment
+        self.character.money = 10000
+        self.character.save()
+        fail_res = self.client.post('/api/market/buy/', {'itemKey': 'item-laptop'})
+        self.assertEqual(fail_res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Fonds insuffisants", fail_res.json().get('error', ''))
+
+        # 4. Successful equipment purchase and inventory inclusion
+        self.character.money = 300000
+        self.character.save()
+        equip_res = self.client.post('/api/market/buy/', {'itemKey': 'item-laptop'})
+        self.assertEqual(equip_res.status_code, status.HTTP_200_OK)
+        self.character.refresh_from_db()
+        self.assertIn('item-laptop', self.character.inventory)
+
+        # 5. Prevent duplicate purchase of permanent equipment
+        dup_res = self.client.post('/api/market/buy/', {'itemKey': 'item-laptop'})
+        self.assertEqual(dup_res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("déjà cet équipement", dup_res.json().get('error', ''))
+
 
 

@@ -10,7 +10,7 @@ import type {
   AuthUser,
   CharacterCustomizationPayload,
 } from '../types/game';
-import { INITIAL_CITIZEN, COURSES, JOBS, HOUSINGS, SAMPLE_DILEMMA } from '../data/mockData';
+import { INITIAL_CITIZEN, COURSES, JOBS, HOUSINGS, SAMPLE_DILEMMA, MARKET_ITEMS } from '../data/mockData';
 import { api } from '../services/api';
 import { formatNumber } from '../lib/format';
 
@@ -18,7 +18,7 @@ interface GameState {
   citizen: Citizen;
   day: number;
   timeSlot: TimeSlot;
-  activeTab: 'dashboard' | 'map' | 'campus' | 'career' | 'finance' | 'residential' | 'passport';
+  activeTab: 'dashboard' | 'map' | 'campus' | 'career' | 'market' | 'finance' | 'residential' | 'passport';
   selectedDistrictId: DistrictId | null;
   isNovaModalOpen: boolean;
   activeDilemma: Dilemma | null;
@@ -45,7 +45,7 @@ interface GameState {
   initGame: () => Promise<void>;
 
   // Navigation & UI Actions
-  setActiveTab: (tab: 'dashboard' | 'map' | 'campus' | 'career' | 'finance' | 'residential' | 'passport') => void;
+  setActiveTab: (tab: 'dashboard' | 'map' | 'campus' | 'career' | 'market' | 'finance' | 'residential' | 'passport') => void;
   selectDistrict: (id: DistrictId | null) => void;
   toggleNovaModal: (open?: boolean) => void;
   dismissDilemma: () => void;
@@ -59,6 +59,7 @@ interface GameState {
   spendMoney: (amount: number, label: string, category?: string) => boolean;
   depositSavings: (amount: number) => boolean;
   withdrawSavings: (amount: number) => boolean;
+  buyMarketItem: (itemKey: string) => Promise<{ success: boolean; error?: string }>;
   completeCourseModule: (courseId: string) => void;
   hireForJob: (jobId: string) => void;
   workShift: () => boolean;
@@ -233,6 +234,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     else if (id === 'business') set({ activeTab: 'career' });
     else if (id === 'finance') set({ activeTab: 'finance' });
     else if (id === 'residential') set({ activeTab: 'residential' });
+    else if (id === 'market') set({ activeTab: 'market' });
   },
 
   toggleNovaModal: (open) => set((state) => ({ isNovaModalOpen: open !== undefined ? open : !state.isNovaModalOpen })),
@@ -386,6 +388,84 @@ export const useGameStore = create<GameState>((set, get) => ({
     });
 
     return true;
+  },
+
+  buyMarketItem: async (itemKey: string) => {
+    const { citizen, addNotification } = get();
+
+    // 1. Try backend API first
+    try {
+      const res = await api.buyMarketItem(itemKey);
+      if (res && res.citizen) {
+        set((state) => ({
+          citizen: res.citizen,
+          transactions: res.transaction ? [res.transaction, ...state.transactions].slice(0, 30) : state.transactions,
+        }));
+        addNotification(
+          res.item && res.item.isConsumable ? 'Vitalité restaurée !' : 'Équipement acquis !',
+          res.message,
+          'success'
+        );
+        return { success: true };
+      }
+    } catch {
+      // Fallback to local offline logic
+    }
+
+    // 2. Offline fallback logic
+    const item = MARKET_ITEMS.find((it) => it.id === itemKey);
+    if (!item) {
+      return { success: false, error: 'Article introuvable au Market District.' };
+    }
+
+    if (!item.isConsumable && (citizen.inventory || []).includes(item.id)) {
+      return { success: false, error: 'Tu possèdes déjà cet équipement dans ton inventaire.' };
+    }
+
+    if (citizen.money < item.price) {
+      return { success: false, error: `Fonds insuffisants. Cet article coûte ${formatNumber(item.price)} MGA.` };
+    }
+
+    const newInventory = item.isConsumable
+      ? (citizen.inventory || [])
+      : [...(citizen.inventory || []), item.id];
+
+    const newEnergy = item.energyBonus > 0
+      ? Math.min(100, citizen.energy + item.energyBonus)
+      : citizen.energy;
+    const newWellbeing = item.wellbeingBonus > 0
+      ? Math.min(100, citizen.wellbeing + item.wellbeingBonus)
+      : citizen.wellbeing;
+
+    const newTx: Transaction = {
+      id: `tx-${Date.now()}`,
+      timestamp: `J-${get().day} ${get().timeSlot.split(' ')[0]}`,
+      label: `Achat Market : ${item.name}`,
+      amount: -item.price,
+      type: 'expense',
+      category: 'Market',
+    };
+
+    set((state) => ({
+      citizen: {
+        ...state.citizen,
+        money: state.citizen.money - item.price,
+        energy: newEnergy,
+        wellbeing: newWellbeing,
+        inventory: newInventory,
+      },
+      transactions: [newTx, ...state.transactions].slice(0, 30),
+    }));
+
+    addNotification(
+      item.isConsumable ? 'Vitalité restaurée !' : 'Équipement acquis !',
+      item.isConsumable
+        ? `Dégustation terminée : ${item.name}. Vitalité restaurée !`
+        : `Équipement acquis : ${item.name}. Ajouté à ton inventaire !`,
+      'success'
+    );
+
+    return { success: true };
   },
 
   advanceTime: () => {

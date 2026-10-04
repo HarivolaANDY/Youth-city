@@ -91,6 +91,7 @@ class Character(models.Model):
     completed_courses = models.JSONField(default=list, blank=True)
     completed_projects = models.IntegerField(default=0)
     completed_challenges = models.IntegerField(default=0)
+    inventory = models.JSONField(default=list, blank=True, help_text="Liste des clés d'équipements possédés")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -152,3 +153,29 @@ class Dilemma(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class MarketItem(models.Model):
+    """Articles du Market District : Alimentation, Équipements, Mobilier & Transport (§11, §19)"""
+    CATEGORY_CHOICES = (
+        ('food', 'Alimentation & Vitalité'),
+        ('equipment', 'Équipement Pro & High-Tech'),
+        ('transport', 'Mobilité & Transport'),
+        ('lifestyle', 'Confort & Décoration Foyer'),
+    )
+    key = models.CharField(max_length=64, unique=True)
+    name = models.CharField(max_length=128)
+    category = models.CharField(max_length=32, choices=CATEGORY_CHOICES, default='food')
+    price = models.IntegerField(help_text="Prix d'achat en MGA")
+    energy_bonus = models.IntegerField(default=0, help_text="Gain d'énergie vitale (0-100%)")
+    wellbeing_bonus = models.IntegerField(default=0, help_text="Gain de bien-être (0-100%)")
+    description = models.TextField(blank=True)
+    is_consumable = models.BooleanField(
+        default=True,
+        help_text="Vrai si consommable immédiatement (nourriture), faux si équipement permanent (inventaire)"
+    )
+    icon = models.CharField(max_length=64, default="ShoppingBag")
+
+    def __str__(self):
+        return f"{self.name} ({self.price:,} MGA) - {self.get_category_display()}"
+

@@ -9,6 +9,7 @@ from game.models import (
     Certification,
     Transaction,
     Dilemma,
+    MarketItem,
 )
 
 class Command(BaseCommand):
@@ -308,6 +309,102 @@ class Command(BaseCommand):
                 defaults=d
             )
         self.stdout.write("Dilemmas seeded.")
+
+        # 5. Market Items (§11 & §19)
+        market_items_data = [
+            # Alimentation & Énergie
+            {
+                "key": "meal-street",
+                "name": "Plat chaud traditionnel (Vary sy Loka)",
+                "category": "food",
+                "price": 5000,
+                "energy_bonus": 20,
+                "wellbeing_bonus": 5,
+                "description": "Un repas chaud, copieux et économique dans une gargote de quartier.",
+                "is_consumable": True,
+                "icon": "Utensils",
+            },
+            {
+                "key": "meal-healthy",
+                "name": "Menu Équilibré & Jus de fruits frais",
+                "category": "food",
+                "price": 15000,
+                "energy_bonus": 35,
+                "wellbeing_bonus": 15,
+                "description": "Produits frais locaux riches en vitamines pour recharger ses jauges au maximum.",
+                "is_consumable": True,
+                "icon": "Apple",
+            },
+            {
+                "key": "snack-coffee",
+                "name": "Café Robusta & Mofo Gasy énergisant",
+                "category": "food",
+                "price": 3000,
+                "energy_bonus": 12,
+                "wellbeing_bonus": 3,
+                "description": "Le classique coup de fouet matinal pour attaquer ses études ou son shift.",
+                "is_consumable": True,
+                "icon": "Coffee",
+            },
+
+            # Équipements Pro & High-Tech
+            {
+                "key": "item-laptop",
+                "name": "PC Portable Reconditionné Core i5",
+                "category": "equipment",
+                "price": 180000,
+                "energy_bonus": 0,
+                "wellbeing_bonus": 15,
+                "description": "Machine performante pour coder, suivre les cours Campus et télétravailler en toute autonomie.",
+                "is_consumable": False,
+                "icon": "Laptop",
+            },
+            {
+                "key": "item-suit",
+                "name": "Tenue Professionnelle Élégante",
+                "category": "equipment",
+                "price": 60000,
+                "energy_bonus": 0,
+                "wellbeing_bonus": 20,
+                "description": "Costume/tailleur de qualité renforçant la prestance et la confiance pour les entretiens.",
+                "is_consumable": False,
+                "icon": "Shirt",
+            },
+
+            # Mobilité & Transport
+            {
+                "key": "item-transport-pass",
+                "name": "Pass Mensuel Bus Urbain",
+                "category": "transport",
+                "price": 25000,
+                "energy_bonus": 10,
+                "wellbeing_bonus": 10,
+                "description": "Abonnement de bus évitant les trajets éreintants à pied entre les districts.",
+                "is_consumable": False,
+                "icon": "Bus",
+            },
+
+            # Confort Foyer & Décoration
+            {
+                "key": "item-desk-chair",
+                "name": "Fauteuil de Bureau Ergonomique",
+                "category": "lifestyle",
+                "price": 45000,
+                "energy_bonus": 10,
+                "wellbeing_bonus": 15,
+                "description": "Améliore la récupération au repos et permet d'étudier confortablement chez soi.",
+                "is_consumable": False,
+                "icon": "Armchair",
+            },
+        ]
+        created_market_items = {}
+        for m in market_items_data:
+            item, _ = MarketItem.objects.update_or_create(
+                key=m["key"],
+                defaults=m
+            )
+            created_market_items[m["key"]] = item
+        self.stdout.write(f"Market items seeded: {len(created_market_items)}")
 
         # 6. Default Demo Character: Emmanuel
         character, _ = Character.objects.update_or_create(

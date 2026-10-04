@@ -23,6 +23,7 @@ from game.models import (
     Certification,
     Transaction,
     Dilemma,
+    MarketItem,
 )
 from game.serializers import (
     PropertySerializer,
@@ -35,6 +36,7 @@ from game.serializers import (
     UserSerializer,
     RegisterSerializer,
     CharacterCustomizeSerializer,
+    MarketItemSerializer,
 )
 
 TIME_SLOTS = [
@@ -796,4 +798,76 @@ def customize_character(request):
         'citizen': CitizenDetailSerializer(character).data,
         'transactions': TransactionSerializer([initial_tx], many=True).data,
     })
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def list_market_items(request):
+    """Returns the market catalog of nourishment, equipment, and mobility goods (§11, §19)."""
+    character = get_active_character(request)
+    category = request.query_params.get('category')
+    items = MarketItem.objects.all().order_by('price')
+    if category:
+        items = items.filter(category=category)
+    serializer = MarketItemSerializer(items, many=True, context={'character': character})
+    return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def buy_market_item(request):
+    """Purchases an item: immediate vitality effect or permanent equipment inventory (§11, §19)."""
+    item_key = request.data.get('itemKey') or request.data.get('item_key')
+    if not item_key:
+        return Response({'error': "Clé d'article manquante."}, status=status.HTTP_400_BAD_REQUEST)
+
+    item = MarketItem.objects.filter(key=item_key).first()
+    if not item:
+        return Response({'error': "Article introuvable au Market District."}, status=status.HTTP_404_NOT_FOUND)
+
+    character = get_active_character(request)
+
+    if not item.is_consumable:
+        inventory = list(character.inventory or [])
+        if item.key in inventory:
+            return Response({'error': "Tu possèdes déjà cet équipement dans ton inventaire."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if character.money < item.price:
+        return Response({
+            'error': f"Fonds insuffisants. Tu as {character.money:,} MGA mais cet article coûte {item.price:,} MGA."
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    with db_transaction.atomic():
+        if not item.is_consumable:
+            inventory = list(character.inventory or [])
+            inventory.append(item.key)
+            character.inventory = inventory
+            message = f"Équipement acquis : {item.name}. Ajouté à ton inventaire !"
+        else:
+            message = f"Dégustation terminée : {item.name}. Vitalité restaurée !"
+
+        character.money -= item.price
+        if item.energy_bonus > 0:
+            character.energy = min(100, character.energy + item.energy_bonus)
+        if item.wellbeing_bonus > 0:
+            character.wellbeing = min(100, character.wellbeing + item.wellbeing_bonus)
+
+        time_label = character.time_slot.split(' ')[0] if character.time_slot else "Matin"
+        tx = Transaction.objects.create(
+            character=character,
+            timestamp=f"J-{character.day} {time_label}",
+            label=f"Achat Market : {item.name}",
+            amount=-item.price,
+            transaction_type='expense',
+            category='Market',
+        )
+        character.save()
+
+    return Response({
+        'message': message,
+        'citizen': CitizenDetailSerializer(character).data,
+        'transaction': TransactionSerializer(tx).data,
+        'item': MarketItemSerializer(item, context={'character': character}).data,
+    })
+
 

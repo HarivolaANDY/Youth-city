@@ -11,6 +11,7 @@ from game.models import (
     Certification,
     Transaction,
     Dilemma,
+    MarketItem,
 )
 
 class UserSerializer(serializers.ModelSerializer):
@@ -156,6 +157,35 @@ class TransactionSerializer(serializers.ModelSerializer):
         fields = ['id', 'timestamp', 'label', 'amount', 'type', 'category']
 
 
+class MarketItemSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(source='key')
+    energyBonus = serializers.IntegerField(source='energy_bonus')
+    wellbeingBonus = serializers.IntegerField(source='wellbeing_bonus')
+    isConsumable = serializers.BooleanField(source='is_consumable')
+    isOwned = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MarketItem
+        fields = [
+            'id',
+            'name',
+            'category',
+            'price',
+            'energyBonus',
+            'wellbeingBonus',
+            'description',
+            'isConsumable',
+            'icon',
+            'isOwned',
+        ]
+
+    def get_isOwned(self, obj):
+        char = self.context.get('character')
+        if not char or not char.inventory:
+            return False
+        return obj.key in char.inventory
+
+
 class CitizenDetailSerializer(serializers.ModelSerializer):
     """Formats character into the exact Citizen schema consumed by the frontend"""
     avatarSeed = serializers.CharField(source='avatar_seed')
@@ -191,6 +221,7 @@ class CitizenDetailSerializer(serializers.ModelSerializer):
             'certifications',
             'completedProjects',
             'completedChallenges',
+            'inventory',
         ]
 
     def get_currentHousingId(self, obj):

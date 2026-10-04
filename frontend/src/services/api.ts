@@ -8,6 +8,7 @@ import type {
   AuthUser,
   AuthResponse,
   CharacterCustomizationPayload,
+  MarketItem,
 } from '../types/game';
 
 const API_BASE_URL = 'http://localhost:8000/api';
@@ -358,4 +359,31 @@ export const api = {
       return null;
     }
   },
+
+  async getMarketItems(category?: string): Promise<MarketItem[] | null> {
+    try {
+      const url = category
+        ? `${API_BASE_URL}/market/items/?category=${encodeURIComponent(category)}`
+        : `${API_BASE_URL}/market/items/`;
+      const res = await fetchAuth(url);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  },
+
+  async buyMarketItem(itemKey: string): Promise<{ citizen: Citizen; transaction: Transaction; item: MarketItem; message: string } | null> {
+    try {
+      const res = await fetchAuth(`${API_BASE_URL}/market/buy/`, {
+        method: 'POST',
+        body: JSON.stringify({ itemKey }),
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  },
 };
+

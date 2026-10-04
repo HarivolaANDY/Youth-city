@@ -37,6 +37,20 @@ export interface Citizen {
   certifications: string[];
   completedProjects: number;
   completedChallenges: number;
+  inventory: string[];
+}
+
+export interface MarketItem {
+  id: string;
+  name: string;
+  category: 'food' | 'equipment' | 'transport' | 'lifestyle';
+  price: number;
+  energyBonus: number;
+  wellbeingBonus: number;
+  description: string;
+  isConsumable: boolean;
+  icon: string;
+  isOwned?: boolean;
 }
 
 export interface District {

@@ -36,7 +36,12 @@ urlpatterns = [
     # Residential District
     path('residential/properties/', views.list_properties, name='list-properties'),
 
+    # Market District (§11, §19)
+    path('market/items/', views.list_market_items, name='list-market-items'),
+    path('market/buy/', views.buy_market_item, name='buy-market-item'),
+
     # Dilemmas & Random Events
     path('dilemmas/active/', views.get_active_dilemma, name='active-dilemma'),
     path('dilemmas/resolve/', views.resolve_dilemma, name='resolve-dilemma'),
 ]
+
