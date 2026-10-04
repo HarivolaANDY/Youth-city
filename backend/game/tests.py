@@ -135,3 +135,28 @@ class YouthCityBackendAPITests(APITestCase):
         state_data = state_res.json()
         self.assertEqual(state_data['citizen']['name'], 'Harivola Citoyen')
 
+    def test_10_auth_throttling_and_security_controls(self):
+        """Verifies generic error responses and brute-force throttling on login."""
+        # 1. Non-existent account returns generic 401
+        res = self.client.post('/api/auth/login/', {
+            'username': 'ghost_user',
+            'password': 'WrongPassword123!',
+        })
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(res.json().get('error'), "Nom d'utilisateur ou mot de passe incorrect.")
+
+        # 2. Trigger throttle limit (auth_login limit is 10/minute)
+        for _ in range(9):
+            self.client.post('/api/auth/login/', {
+                'username': 'ghost_user',
+                'password': 'WrongPassword123!',
+            })
+
+        # 11th request must be throttled with HTTP 429
+        throttled_res = self.client.post('/api/auth/login/', {
+            'username': 'ghost_user',
+            'password': 'WrongPassword123!',
+        })
+        self.assertEqual(throttled_res.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+

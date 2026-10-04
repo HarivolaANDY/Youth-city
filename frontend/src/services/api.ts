@@ -38,6 +38,66 @@ const getHeaders = (extraHeaders?: Record<string, string>): Record<string, strin
   return headers;
 };
 
+let isRefreshing = false;
+let refreshPromise: Promise<string | null> | null = null;
+
+export const refreshAccessToken = async (): Promise<string | null> => {
+  const refreshToken = tokenStorage.getRefresh();
+  if (!refreshToken) return null;
+
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise;
+  }
+
+  isRefreshing = true;
+  refreshPromise = (async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/token/refresh/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh: refreshToken }),
+      });
+      if (!res.ok) {
+        tokenStorage.clear();
+        return null;
+      }
+      const data = await res.json();
+      if (data.access) {
+        tokenStorage.setTokens(data.access, data.refresh || refreshToken);
+        return data.access;
+      }
+      return null;
+    } catch {
+      return null;
+    } finally {
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+};
+
+const fetchAuth = async (url: string, options: RequestInit = {}): Promise<Response> => {
+  const customHeaders = (options.headers as Record<string, string>) || {};
+  let res = await fetch(url, {
+    ...options,
+    headers: getHeaders(customHeaders),
+  });
+
+  if (res.status === 401 && tokenStorage.getRefresh()) {
+    const newAccess = await refreshAccessToken();
+    if (newAccess) {
+      res = await fetch(url, {
+        ...options,
+        headers: getHeaders(customHeaders),
+      });
+    }
+  }
+
+  return res;
+};
+
 export interface GameStateResponse {
   citizen: Citizen;
   day: number;
@@ -102,9 +162,7 @@ export const api = {
     const token = tokenStorage.getAccess();
     if (!token) return null;
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/me/`, {
-        headers: getHeaders(),
-      });
+      const res = await fetchAuth(`${API_BASE_URL}/auth/me/`);
       if (!res.ok) {
         if (res.status === 401) {
           tokenStorage.clear();
@@ -124,9 +182,7 @@ export const api = {
   // --- GAMEPLAY & STATE ---
   async getGameState(): Promise<GameStateResponse | null> {
     try {
-      const res = await fetch(`${API_BASE_URL}/game/state/`, {
-        headers: getHeaders(),
-      });
+      const res = await fetchAuth(`${API_BASE_URL}/game/state/`);
       if (!res.ok) return null;
       return await res.json();
     } catch {
@@ -136,9 +192,8 @@ export const api = {
 
   async advanceTime(): Promise<{ day: number; timeSlot: string; energy: number; citizen: Citizen } | null> {
     try {
-      const res = await fetch(`${API_BASE_URL}/game/advance_time/`, {
+      const res = await fetchAuth(`${API_BASE_URL}/game/advance_time/`, {
         method: 'POST',
-        headers: getHeaders(),
       });
       if (!res.ok) return null;
       return await res.json();
@@ -149,9 +204,8 @@ export const api = {
 
   async restAndSleep(): Promise<{ energy: number; citizen: Citizen } | null> {
     try {
-      const res = await fetch(`${API_BASE_URL}/game/sleep/`, {
+      const res = await fetchAuth(`${API_BASE_URL}/game/sleep/`, {
         method: 'POST',
-        headers: getHeaders(),
       });
       if (!res.ok) return null;
       return await res.json();
@@ -162,9 +216,8 @@ export const api = {
 
   async changeHousing(housingId: string): Promise<{ citizen: Citizen } | null> {
     try {
-      const res = await fetch(`${API_BASE_URL}/game/housing/`, {
+      const res = await fetchAuth(`${API_BASE_URL}/game/housing/`, {
         method: 'POST',
-        headers: getHeaders(),
         body: JSON.stringify({ housing_id: housingId }),
       });
       if (!res.ok) return null;
@@ -176,9 +229,7 @@ export const api = {
 
   async getCourses(): Promise<Course[] | null> {
     try {
-      const res = await fetch(`${API_BASE_URL}/campus/courses/`, {
-        headers: getHeaders(),
-      });
+      const res = await fetchAuth(`${API_BASE_URL}/campus/courses/`);
       if (!res.ok) return null;
       return await res.json();
     } catch {
@@ -188,9 +239,8 @@ export const api = {
 
   async completeCourse(courseKey: string): Promise<{ citizen: Citizen; xpAwarded: number; levelUp: boolean } | null> {
     try {
-      const res = await fetch(`${API_BASE_URL}/campus/courses/${courseKey}/complete/`, {
+      const res = await fetchAuth(`${API_BASE_URL}/campus/courses/${courseKey}/complete/`, {
         method: 'POST',
-        headers: getHeaders(),
       });
       if (!res.ok) return null;
       return await res.json();
@@ -201,9 +251,7 @@ export const api = {
 
   async getJobs(): Promise<Job[] | null> {
     try {
-      const res = await fetch(`${API_BASE_URL}/business/jobs/`, {
-        headers: getHeaders(),
-      });
+      const res = await fetchAuth(`${API_BASE_URL}/business/jobs/`);
       if (!res.ok) return null;
       return await res.json();
     } catch {
@@ -213,9 +261,8 @@ export const api = {
 
   async hireJob(jobKey: string): Promise<{ citizen: Citizen; levelUp: boolean } | null> {
     try {
-      const res = await fetch(`${API_BASE_URL}/business/jobs/${jobKey}/hire/`, {
+      const res = await fetchAuth(`${API_BASE_URL}/business/jobs/${jobKey}/hire/`, {
         method: 'POST',
-        headers: getHeaders(),
       });
       if (!res.ok) return null;
       return await res.json();
@@ -226,9 +273,8 @@ export const api = {
 
   async workShift(): Promise<{ citizen: Citizen; salaryEarned: number; transaction: Transaction; levelUp: boolean } | null> {
     try {
-      const res = await fetch(`${API_BASE_URL}/business/work_shift/`, {
+      const res = await fetchAuth(`${API_BASE_URL}/business/work_shift/`, {
         method: 'POST',
-        headers: getHeaders(),
       });
       if (!res.ok) return null;
       return await res.json();
@@ -239,9 +285,8 @@ export const api = {
 
   async depositSavings(amount: number): Promise<{ citizen: Citizen; transaction: Transaction } | null> {
     try {
-      const res = await fetch(`${API_BASE_URL}/finance/deposit/`, {
+      const res = await fetchAuth(`${API_BASE_URL}/finance/deposit/`, {
         method: 'POST',
-        headers: getHeaders(),
         body: JSON.stringify({ amount }),
       });
       if (!res.ok) return null;
@@ -253,9 +298,8 @@ export const api = {
 
   async withdrawSavings(amount: number): Promise<{ citizen: Citizen; transaction: Transaction } | null> {
     try {
-      const res = await fetch(`${API_BASE_URL}/finance/withdraw/`, {
+      const res = await fetchAuth(`${API_BASE_URL}/finance/withdraw/`, {
         method: 'POST',
-        headers: getHeaders(),
         body: JSON.stringify({ amount }),
       });
       if (!res.ok) return null;
@@ -267,9 +311,7 @@ export const api = {
 
   async getProperties(): Promise<Housing[] | null> {
     try {
-      const res = await fetch(`${API_BASE_URL}/residential/properties/`, {
-        headers: getHeaders(),
-      });
+      const res = await fetchAuth(`${API_BASE_URL}/residential/properties/`);
       if (!res.ok) return null;
       return await res.json();
     } catch {
@@ -279,9 +321,8 @@ export const api = {
 
   async resolveDilemma(optionId: string, dilemmaKey = 'dilemma-broken-laptop'): Promise<{ citizen: Citizen; message: string } | null> {
     try {
-      const res = await fetch(`${API_BASE_URL}/dilemmas/resolve/`, {
+      const res = await fetchAuth(`${API_BASE_URL}/dilemmas/resolve/`, {
         method: 'POST',
-        headers: getHeaders(),
         body: JSON.stringify({ dilemma_key: dilemmaKey, option_id: optionId }),
       });
       if (!res.ok) return null;
@@ -293,9 +334,8 @@ export const api = {
 
   async resetGame(preset: 'demo' | 'new'): Promise<GameStateResponse | null> {
     try {
-      const res = await fetch(`${API_BASE_URL}/game/reset/`, {
+      const res = await fetchAuth(`${API_BASE_URL}/game/reset/`, {
         method: 'POST',
-        headers: getHeaders(),
         body: JSON.stringify({ preset }),
       });
       if (!res.ok) return null;

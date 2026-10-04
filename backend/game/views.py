@@ -1,4 +1,5 @@
-from rest_framework.decorators import api_view, permission_classes
+import logging
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
@@ -7,6 +8,10 @@ from django.db import transaction as db_transaction
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.tokens import RefreshToken
+
+from game.throttles import LoginRateThrottle, RegisterRateThrottle
+
+logger = logging.getLogger('game.auth')
 
 from game.models import (
     Property,
@@ -576,6 +581,7 @@ def reset_game(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([RegisterRateThrottle])
 def register_user(request):
     """Registers a new user account, creates their citizen character, and returns JWT tokens."""
     serializer = RegisterSerializer(data=request.data)
@@ -592,6 +598,8 @@ def register_user(request):
         character = create_initial_character_for_user(user, name=citizen_name)
 
     refresh = RefreshToken.for_user(user)
+    client_ip = request.META.get('REMOTE_ADDR', 'unknown')
+    logger.info("Nouveau compte créé : '%s' (ID %d) depuis IP %s", user.username, user.id, client_ip)
 
     return Response({
         'user': UserSerializer(user).data,
@@ -605,10 +613,12 @@ def register_user(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([LoginRateThrottle])
 def login_user(request):
     """Authenticates user credentials and returns JWT tokens with citizen data."""
     username = request.data.get('username', '').strip()
     password = request.data.get('password', '')
+    client_ip = request.META.get('REMOTE_ADDR', 'unknown')
 
     if not username or not password:
         return Response(
@@ -618,10 +628,22 @@ def login_user(request):
 
     user = authenticate(request, username=username, password=password)
     if not user:
+        logger.warning(
+            "Échec d'authentification pour le compte '%s' depuis l'IP %s",
+            username,
+            client_ip
+        )
         return Response(
             {'error': 'Nom d\'utilisateur ou mot de passe incorrect.'},
             status=status.HTTP_401_UNAUTHORIZED
         )
+
+    logger.info(
+        "Connexion réussie pour le compte '%s' (ID %d) depuis l'IP %s",
+        user.username,
+        user.id,
+        client_ip
+    )
 
     character = Character.objects.filter(user=user).first()
     if not character:
