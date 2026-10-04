@@ -1,8 +1,21 @@
 import React, { useState } from 'react';
-import { Briefcase, Zap, CheckCircle2, XCircle, Building, UserCheck, Bot, X } from 'lucide-react';
+import {
+  Briefcase,
+  Zap,
+  CheckCircle2,
+  XCircle,
+  Building,
+  UserCheck,
+  Bot,
+  X,
+  Star,
+  Sparkles,
+  Shirt,
+  GraduationCap,
+} from 'lucide-react';
 import { JOBS } from '../../data/mockData';
 import { useGameStore } from '../../stores/useGameStore';
-import type { Job } from '../../types/game';
+import type { Job, InterviewResult } from '../../types/game';
 import { ViewHeader } from '../../components/ui/ViewHeader';
 import { Panel } from '../../components/ui/Panel';
 import { Button } from '../../components/ui/Button';
@@ -11,11 +24,13 @@ import { IconChip } from '../../components/ui/IconChip';
 import { formatNumber } from '../../lib/format';
 
 export const CareerView: React.FC = () => {
-  const { citizen, hireForJob, workShift, addNotification } = useGameStore();
+  const { citizen, workShift, addNotification, simulateInterview, setActiveTab } = useGameStore();
   const [interviewJob, setInterviewJob] = useState<Job | null>(null);
   const [selectedAnswerIndex, setSelectedAnswerIndex] = useState<number | null>(null);
-  const [interviewResult, setInterviewResult] = useState<{ score: number; feedback: string } | null>(null);
+  const [interviewResult, setInterviewResult] = useState<InterviewResult | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const hasSuit = (citizen.inventory || []).includes('item-suit');
   const activeJob = JOBS.find((j) => j.id === citizen.currentJobId);
 
   const checkEligibility = (job: Job) => {
@@ -35,13 +50,16 @@ export const CareerView: React.FC = () => {
     setInterviewResult(null);
   };
 
-  const handleSubmitInterview = () => {
+  const handleSubmitInterview = async () => {
     if (selectedAnswerIndex === null || !interviewJob) return;
-    const answer = interviewJob.sampleAnswers[selectedAnswerIndex];
-    setInterviewResult({ score: answer.score, feedback: answer.feedback });
-
-    if (answer.score >= 70) {
-      hireForJob(interviewJob.id);
+    setIsSubmitting(true);
+    try {
+      const res = await simulateInterview(interviewJob.id, selectedAnswerIndex);
+      if (res) {
+        setInterviewResult(res);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -119,22 +137,34 @@ export const CareerView: React.FC = () => {
             </div>
             <Button variant="secondary" size="sm" onClick={() => setInterviewJob(null)}>
               <X className="size-3.5" aria-hidden="true" />
-              Annuler
+              Fermer
             </Button>
           </div>
 
-          <div className="panel-inset space-y-2 p-4">
+          {/* Outfit bonus indicator (§11, §22) */}
+          {hasSuit && (
+            <div className="flex items-center gap-2 rounded-xl border border-brand-400/30 bg-brand-500/10 px-3.5 py-2.5 text-xs text-brand-200">
+              <Shirt className="size-4 shrink-0 text-brand-300" />
+              <span>
+                <strong>Tenue Professionnelle équipée :</strong> Bonus de prestance <strong>+5%</strong> pris en compte par le jury !
+              </span>
+            </div>
+          )}
+
+          {/* 👔 Recruiter Virtual Question */}
+          <div className="panel-inset space-y-2.5 p-4 sm:p-5">
             <span className="eyebrow flex items-center gap-2 text-brand-300">
               <Bot className="size-4" aria-hidden="true" />
-              Recruteur virtuel
+              👔 Le Recruteur Virtuel ({interviewJob.company})
             </span>
             <p className="text-sm leading-relaxed font-semibold text-white italic">
               &laquo;&nbsp;{interviewJob.interviewQuestion}&nbsp;&raquo;
             </p>
           </div>
 
+          {/* Candidates Answers Choice */}
           <fieldset className="space-y-3">
-            <legend className="eyebrow mb-3">Choisis ta réponse</legend>
+            <legend className="eyebrow mb-2">Choisis ton argumentation :</legend>
             {interviewJob.sampleAnswers.map((ans, idx) => {
               const isSelected = selectedAnswerIndex === idx;
 
@@ -143,7 +173,7 @@ export const CareerView: React.FC = () => {
                   key={idx}
                   className={`flex w-full cursor-pointer items-start gap-3 rounded-xl border p-3.5 text-left text-xs transition-all duration-200 ${
                     interviewResult !== null
-                      ? 'cursor-default border-white/[0.06] bg-night-950/40 opacity-60'
+                      ? 'cursor-default border-white/[0.06] bg-night-950/40 opacity-70'
                       : isSelected
                         ? 'border-brand-400/60 bg-brand-500/12 text-white'
                         : 'border-white/[0.08] bg-white/[0.02] text-mist-300 hover:border-brand-400/40 hover:bg-white/[0.05]'
@@ -154,7 +184,7 @@ export const CareerView: React.FC = () => {
                     name="interview-answer"
                     value={idx}
                     checked={isSelected}
-                    disabled={interviewResult !== null}
+                    disabled={interviewResult !== null || isSubmitting}
                     onChange={() => setSelectedAnswerIndex(idx)}
                     className="peer sr-only"
                   />
@@ -172,34 +202,174 @@ export const CareerView: React.FC = () => {
             })}
           </fieldset>
 
+          {/* 🤖 ANALYSE PÉDAGOGIQUE DU MENTOR (§22) */}
           {interviewResult && (
-            <div
-              role="status"
-              className={`space-y-2 rounded-xl border p-4 text-xs ${
-                interviewResult.score >= 70
-                  ? 'border-gain-400/35 bg-gain-500/10 text-gain-200'
-                  : 'border-risk-400/35 bg-risk-500/10 text-risk-200'
-              }`}
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-bold">
-                <span>
-                  {interviewResult.score >= 70 ? 'Félicitations, tu es embauché(e) !' : 'Candidature non retenue'}
+            <div className="space-y-4 rounded-xl border border-white/10 bg-night-950/60 p-4 sm:p-5 animate-rise-in">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.08] pb-3">
+                <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-iris-300">
+                  <Bot className="size-4" />
+                  🤖 Analyse Pédagogique du Mentor
                 </span>
-                <span className="metric">Note : {interviewResult.score}/100</span>
+                <div className="flex items-center gap-2">
+                  {interviewResult.suitBonus > 0 && (
+                    <Badge tone="brand" icon={<Shirt className="size-3" />}>
+                      +5% Tenue Pro
+                    </Badge>
+                  )}
+                  <Badge tone={interviewResult.hired ? 'gain' : 'risk'}>
+                    Note : {interviewResult.score}/100
+                  </Badge>
+                </div>
               </div>
-              <p className="leading-relaxed opacity-90">{interviewResult.feedback}</p>
+
+              {/* 3 Criteria Bars */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {/* Pertinence Thématique */}
+                <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3 text-xs">
+                  <div className="flex items-center justify-between text-mist-300">
+                    <span>Pertinence thématique</span>
+                    <span className="font-bold text-white">{interviewResult.thematicScore}/10</span>
+                  </div>
+                  <div className="mt-2 flex gap-1">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`size-3.5 ${
+                          i < Math.round(interviewResult.thematicScore / 2)
+                            ? 'fill-amber-400 text-amber-400'
+                            : 'text-mist-600'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Clarté & Structure */}
+                <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3 text-xs">
+                  <div className="flex items-center justify-between text-mist-300">
+                    <span>Clarté & Structure</span>
+                    <span className="font-bold text-white">{interviewResult.clarityScore}/10</span>
+                  </div>
+                  <div className="mt-2 flex gap-1">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`size-3.5 ${
+                          i < Math.round(interviewResult.clarityScore / 2)
+                            ? 'fill-amber-400 text-amber-400'
+                            : 'text-mist-600'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Valorisation des Acquis */}
+                <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3 text-xs">
+                  <div className="flex items-center justify-between text-mist-300">
+                    <span>Valorisation des acquis</span>
+                    <span className="font-bold text-white">{interviewResult.acquisScore}/10</span>
+                  </div>
+                  <div className="mt-2 flex gap-1">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`size-3.5 ${
+                          i < Math.round(interviewResult.acquisScore / 2)
+                            ? 'fill-amber-400 text-amber-400'
+                            : 'text-mist-600'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* 💡 Conseil pour progresser */}
+              <div className="rounded-xl border border-iris-500/20 bg-iris-500/10 p-3.5 text-xs text-iris-200">
+                <div className="flex items-start gap-2">
+                  <Sparkles className="size-4 shrink-0 text-iris-400 mt-0.5" />
+                  <div className="space-y-1">
+                    <span className="font-bold text-iris-100">💡 Conseil pour progresser :</span>
+                    <p className="leading-relaxed">{interviewResult.advice}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recruiter specific feedback */}
+              <div className="rounded-xl border border-white/5 bg-night-900/60 p-3 text-xs text-mist-300">
+                <span className="font-semibold text-mist-200">Avis du recruteur : </span>
+                <span className="italic">&laquo; {interviewResult.feedback} &raquo;</span>
+              </div>
+
+              {/* Final Decision Banner */}
+              <div
+                className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 text-xs font-semibold ${
+                  interviewResult.hired
+                    ? 'border-gain-400/35 bg-gain-500/15 text-gain-200'
+                    : 'border-risk-400/35 bg-risk-500/15 text-risk-200'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  {interviewResult.hired ? (
+                    <CheckCircle2 className="size-5 shrink-0 text-gain-400" />
+                  ) : (
+                    <XCircle className="size-5 shrink-0 text-risk-400" />
+                  )}
+                  <div>
+                    <p className="font-bold text-sm text-white">
+                      {interviewResult.hired
+                        ? `🎉 Félicitations, contrat de travail signé chez ${interviewJob.company} !`
+                        : '❌ Candidature non retenue pour cette session'}
+                    </p>
+                    <p className="text-[11px] opacity-90">
+                      {interviewResult.hired
+                        ? '+100 XP enregistrés ! Tu peux désormais effectuer tes shifts quotidiens.'
+                        : 'Progresse au Campus District ou retente l\'entretien avec une réponse plus convaincante.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
-          <div className="flex justify-end gap-3 pt-1">
+          {/* Bottom Actions */}
+          <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
             {!interviewResult ? (
-              <Button variant="primary" disabled={selectedAnswerIndex === null} onClick={handleSubmitInterview}>
-                Soumettre ma réponse
+              <Button
+                variant="primary"
+                disabled={selectedAnswerIndex === null || isSubmitting}
+                onClick={handleSubmitInterview}
+              >
+                {isSubmitting ? 'Évaluation en cours…' : 'Soumettre ma réponse au recruteur'}
+              </Button>
+            ) : interviewResult.hired ? (
+              <Button variant="gain" onClick={() => setInterviewJob(null)}>
+                <CheckCircle2 className="size-4" />
+                Accéder à mon poste
               </Button>
             ) : (
-              <Button variant="secondary" onClick={() => setInterviewJob(null)}>
-                Fermer
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setInterviewResult(null);
+                    setSelectedAnswerIndex(null);
+                  }}
+                >
+                  Réessayer l'entretien
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    setInterviewJob(null);
+                    setActiveTab('campus');
+                  }}
+                >
+                  <GraduationCap className="size-4" />
+                  Se former au Campus
+                </Button>
+              </div>
             )}
           </div>
         </Panel>

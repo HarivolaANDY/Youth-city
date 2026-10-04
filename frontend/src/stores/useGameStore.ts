@@ -9,6 +9,7 @@ import type {
   Dilemma,
   AuthUser,
   CharacterCustomizationPayload,
+  InterviewResult,
 } from '../types/game';
 import { INITIAL_CITIZEN, COURSES, JOBS, HOUSINGS, SAMPLE_DILEMMA, MARKET_ITEMS } from '../data/mockData';
 import { api } from '../services/api';
@@ -62,6 +63,7 @@ interface GameState {
   buyMarketItem: (itemKey: string) => Promise<{ success: boolean; error?: string }>;
   completeCourseModule: (courseId: string) => void;
   hireForJob: (jobId: string) => void;
+  simulateInterview: (jobId: string, answerIndex: number) => Promise<InterviewResult | null>;
   workShift: () => boolean;
   changeHousing: (housingId: string) => void;
   resolveDilemmaOption: (optionId: string) => void;
@@ -591,6 +593,113 @@ export const useGameStore = create<GameState>((set, get) => ({
         set({ citizen: res.citizen });
       }
     });
+  },
+
+  simulateInterview: async (jobId: string, answerIndex: number) => {
+    const { citizen, addNotification, addXp } = get();
+    const job = JOBS.find((j) => j.id === jobId);
+
+    // 1. Try backend API first
+    try {
+      const res = await api.simulateInterview(jobId, answerIndex);
+      if (res && res.result) {
+        if (res.result.hired) {
+          set({ citizen: res.citizen });
+          try {
+            confetti({
+              particleCount: 100,
+              spread: 70,
+              origin: { y: 0.6 },
+            });
+          } catch {
+            // Confetti fallback
+          }
+          addNotification(
+            '🎉 Embauché(e) !',
+            `Félicitations, tu as réussi l'entretien chez ${job?.company || "l'entreprise"} ! (+100 XP)`,
+            'success'
+          );
+        } else {
+          addNotification(
+            'Candidature ajournée',
+            `Note : ${res.result.score}/100. Consulte l'analyse pédagogique pour progresser.`,
+            'warning'
+          );
+        }
+        return res.result;
+      }
+    } catch {
+      // Offline fallback
+    }
+
+    // 2. Offline fallback logic
+    if (!job) return null;
+    const sample = job.sampleAnswers[answerIndex];
+    if (!sample) return null;
+
+    const hasSuit = (citizen.inventory || []).includes('item-suit');
+    const suitBonus = hasSuit ? 5 : 0;
+    const finalScore = Math.min(100, sample.score + suitBonus);
+
+    const thematicScore = Math.min(10, Math.max(1, Math.round(finalScore / 10)));
+    const clarityScore = Math.min(10, Math.max(1, Math.round((finalScore + (finalScore > 60 ? 3 : -5)) / 10)));
+    const acquisScore = Math.min(10, Math.max(1, Math.round((finalScore + suitBonus * 2) / 10)));
+
+    let advice = "Candidature insuffisamment préparée. Prends le temps de valider des formations au Campus District avant de te représenter.";
+    if (finalScore >= 80) {
+      advice = "Excellente prestation ! Ton argumentation technique est solide et ton aisance professionnelle a convaincu le recruteur.";
+    } else if (finalScore >= 70) {
+      advice = "Prestation convaincante. Pour viser l'excellence, pense à illustrer ton propos avec un exemple chiffré de projet réalisé.";
+    } else if (finalScore >= 50) {
+      advice = "Des bases intéressantes mais ta réponse manque de structure. Revois tes projets pratiques et illustre avec des exemples concrets.";
+    }
+
+    const hired = finalScore >= 70;
+
+    if (hired) {
+      set((state) => ({
+        citizen: {
+          ...state.citizen,
+          currentJobId: jobId,
+        },
+      }));
+      addXp(100);
+      try {
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 },
+        });
+      } catch {
+        // Confetti fallback
+      }
+      addNotification(
+        '🎉 Embauché(e) !',
+        `Félicitations, tu as réussi l'entretien chez ${job.company} ! (+100 XP)`,
+        'success'
+      );
+    } else {
+      addNotification(
+        'Candidature ajournée',
+        `Note : ${finalScore}/100. Consulte l'analyse pédagogique pour progresser.`,
+        'warning'
+      );
+    }
+
+    return {
+      hired,
+      score: finalScore,
+      baseScore: sample.score,
+      suitBonus,
+      thematicScore,
+      clarityScore,
+      acquisScore,
+      advice,
+      feedback: sample.feedback,
+      message: hired
+        ? `Félicitations, tu as réussi l'entretien avec une note de ${finalScore}/100 ! Contrat signé chez ${job.company}.`
+        : `Entretien ajourné avec une note de ${finalScore}/100. Suis les conseils du mentor pour retenter ta chance !`,
+    };
   },
 
   workShift: () => {

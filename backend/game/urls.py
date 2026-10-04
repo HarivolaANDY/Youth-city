@@ -26,6 +26,7 @@ urlpatterns = [
     # Business District
     path('business/jobs/', views.list_jobs, name='list-jobs'),
     path('business/jobs/<str:key>/hire/', views.hire_job, name='hire-job'),
+    path('business/jobs/<str:key>/interview/', views.simulate_interview, name='simulate-interview'),
     path('business/work_shift/', views.work_shift, name='work-shift'),
 
     # Finance District

@@ -251,5 +251,47 @@ class YouthCityBackendAPITests(APITestCase):
         self.assertEqual(dup_res.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("déjà cet équipement", dup_res.json().get('error', ''))
 
+    def test_13_job_interview_simulation_flow(self):
+        """Verifies interview simulation, pedagogical criteria scoring, suit bonus, and hiring decision (§8, §22)."""
+        # 1. Candidate with insufficient skills fails before interview
+        self.character.skills.filter(skill__key='javascript').update(level_percent=20)
+        res_fail_req = self.client.post('/api/business/jobs/job-dev-junior/interview/', {'answerIndex': 0})
+        self.assertEqual(res_fail_req.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Compétence insuffisante", res_fail_req.json().get('error', ''))
+
+        # Restore skill level
+        self.character.skills.filter(skill__key='javascript').update(level_percent=60)
+
+        # 2. Candidate answers poorly (answerIndex 1, score 25) -> not hired
+        res_poor = self.client.post('/api/business/jobs/job-dev-junior/interview/', {'answerIndex': 1})
+        self.assertEqual(res_poor.status_code, status.HTTP_200_OK)
+        data_poor = res_poor.json()
+        self.assertFalse(data_poor['hired'])
+        self.assertEqual(data_poor['score'], 25)
+        self.assertIn('advice', data_poor)
+        self.character.refresh_from_db()
+        self.assertIsNone(self.character.current_job)
+
+        # 3. Candidate buys professional suit from market -> gets suit bonus (+5%)
+        self.character.inventory = ['item-suit']
+        self.character.save()
+        initial_xp = self.character.xp
+
+        # 4. Candidate gives excellent answer (answerIndex 0, base score 95 + 5 suit bonus = 100) -> hired with +100 XP
+        res_good = self.client.post('/api/business/jobs/job-dev-junior/interview/', {'answerIndex': 0})
+        self.assertEqual(res_good.status_code, status.HTTP_200_OK)
+        data_good = res_good.json()
+        self.assertTrue(data_good['hired'])
+        self.assertEqual(data_good['score'], 100)
+        self.assertEqual(data_good['suitBonus'], 5)
+        self.assertGreaterEqual(data_good['thematicScore'], 8)
+        self.assertGreaterEqual(data_good['clarityScore'], 8)
+        self.assertGreaterEqual(data_good['acquisScore'], 8)
+
+        self.character.refresh_from_db()
+        self.assertEqual(self.character.current_job.key, 'job-dev-junior')
+        self.assertEqual(self.character.xp, initial_xp + 100)
+
+
 
 

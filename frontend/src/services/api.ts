@@ -9,6 +9,7 @@ import type {
   AuthResponse,
   CharacterCustomizationPayload,
   MarketItem,
+  InterviewResult,
 } from '../types/game';
 
 const API_BASE_URL = 'http://localhost:8000/api';
@@ -381,6 +382,23 @@ export const api = {
       });
       if (!res.ok) return null;
       return await res.json();
+    } catch {
+      return null;
+    }
+  },
+
+  async simulateInterview(jobKey: string, answerIndex: number): Promise<{ citizen: Citizen; result: InterviewResult } | null> {
+    try {
+      const res = await fetchAuth(`${API_BASE_URL}/business/jobs/${jobKey}/interview/`, {
+        method: 'POST',
+        body: JSON.stringify({ answerIndex }),
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return {
+        citizen: data.citizen,
+        result: data as InterviewResult,
+      };
     } catch {
       return null;
     }

@@ -348,6 +348,87 @@ def hire_job(request, key):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+def simulate_interview(request, key):
+    """Simulates a job interview with pedagogical criteria analysis and hiring decision (§8, §22)."""
+    character = get_active_character(request)
+    job = get_object_or_404(Job, key=key)
+
+    # 1. Check prerequisite skills
+    char_skills = {cs.skill.key: cs.level_percent for cs in character.skills.select_related('skill')}
+    for req in job.requirements or []:
+        skill_key = req.get('skillKey')
+        req_val = req.get('requiredPercent', 0)
+        curr_val = char_skills.get(skill_key, 0)
+        if curr_val < req_val:
+            return Response({
+                'error': f"Compétence insuffisante en {req.get('skillName', skill_key)} ({curr_val}% actuel vs {req_val}% requis). Révise au Campus District !"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    # 2. Get answer index
+    try:
+        answer_idx = int(request.data.get('answerIndex'))
+    except (ValueError, TypeError):
+        return Response({'error': "Index de réponse requis."}, status=status.HTTP_400_BAD_REQUEST)
+
+    sample_answers = job.sample_answers or []
+    if answer_idx < 0 or answer_idx >= len(sample_answers):
+        return Response({'error': "Réponse invalide."}, status=status.HTTP_400_BAD_REQUEST)
+
+    chosen_answer = sample_answers[answer_idx]
+    base_score = int(chosen_answer.get('score', 50))
+    feedback = chosen_answer.get('feedback', '')
+
+    # 3. Professional outfit bonus (§11, §22)
+    has_suit = 'item-suit' in (character.inventory or [])
+    suit_bonus = 5 if has_suit else 0
+    final_score = min(100, base_score + suit_bonus)
+
+    # 4. Pedagogical criteria breakdown (§22)
+    thematic_score = min(10, max(1, round(final_score / 10)))
+    clarity_score = min(10, max(1, round((final_score + (3 if final_score > 60 else -5)) / 10)))
+    acquis_score = min(10, max(1, round((final_score + (suit_bonus * 2)) / 10)))
+
+    if final_score >= 80:
+        advice = "Excellente prestation ! Ton argumentation technique est solide et ton aisance professionnelle a convaincu le recruteur."
+    elif final_score >= 70:
+        advice = "Prestation convaincante. Pour viser l'excellence, pense à illustrer ton propos avec un exemple chiffré de projet réalisé."
+    elif final_score >= 50:
+        advice = "Des bases intéressantes mais ta réponse manque de structure. Revois tes projets pratiques et illustre avec des exemples concrets."
+    else:
+        advice = "Candidature insuffisamment préparée. Prends le temps de valider des formations au Campus District avant de te représenter."
+
+    hired = final_score >= 70
+    level_up = False
+
+    with db_transaction.atomic():
+        if hired:
+            character.current_job = job
+            level_up = add_xp_to_character(character, 100)  # +100 XP per Section 15
+            character.save()
+
+    return Response({
+        'hired': hired,
+        'score': final_score,
+        'baseScore': base_score,
+        'suitBonus': suit_bonus,
+        'thematicScore': thematic_score,
+        'clarityScore': clarity_score,
+        'acquisScore': acquis_score,
+        'advice': advice,
+        'feedback': feedback,
+        'levelUp': level_up,
+        'citizen': CitizenDetailSerializer(character).data,
+        'message': (
+            f"Félicitations, tu as réussi l'entretien avec une note de {final_score}/100 ! Contrat signé chez {job.company}."
+            if hired else
+            f"Entretien ajourné avec une note de {final_score}/100. Suis les conseils du mentor pour retenter ta chance !"
+        )
+    })
+
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def work_shift(request):
     """Executes a work shift, earning daily salary in MGA and consuming energy."""
     character = get_active_character(request)

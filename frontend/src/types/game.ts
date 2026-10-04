@@ -183,4 +183,19 @@ export interface CharacterCustomizationPayload {
   vocation: CharacterVocation;
 }
 
+export interface InterviewResult {
+  hired: boolean;
+  score: number;
+  baseScore: number;
+  suitBonus: number;
+  thematicScore: number;
+  clarityScore: number;
+  acquisScore: number;
+  advice: string;
+  feedback: string;
+  levelUp?: boolean;
+  message: string;
+}
+
+
 
