@@ -16,6 +16,8 @@ import type {
   Hackathon,
   HackathonParticipation,
   CommunityLeaderboard,
+  ModerationReport,
+  AdminOverviewData,
 } from '../types/game';
 
 const API_BASE_URL = 'http://localhost:8000/api';
@@ -542,6 +544,78 @@ export const api = {
       return await res.json();
     } catch {
       return null;
+    }
+  },
+
+  // --- ADMIN BACK-OFFICE & MODERATION (§43, §45, §46) ---
+  async getAdminOverview(): Promise<AdminOverviewData | null> {
+    try {
+      const res = await fetchAuth(`${API_BASE_URL}/admin/overview/`);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  },
+
+  async getModerationReports(statusFilter?: string): Promise<ModerationReport[] | null> {
+    try {
+      const url = statusFilter 
+        ? `${API_BASE_URL}/moderation/reports/?status=${encodeURIComponent(statusFilter)}`
+        : `${API_BASE_URL}/moderation/reports/`;
+      const res = await fetchAuth(url);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  },
+
+  async createModerationReport(payload: { targetType: string; targetId: string; targetName: string; reason: string; details: string }): Promise<{ report: ModerationReport; message: string } | { error: string }> {
+    try {
+      const res = await fetchAuth(`${API_BASE_URL}/moderation/reports/create/`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { error: data.error || 'Impossible d\'enregistrer le signalement.' };
+      }
+      return data;
+    } catch {
+      return { error: 'Impossible de joindre le serveur Youth City.' };
+    }
+  },
+
+  async resolveModerationReport(reportId: number, payload: { action: string; status: string; notes?: string }): Promise<{ report: ModerationReport; message: string } | { error: string }> {
+    try {
+      const res = await fetchAuth(`${API_BASE_URL}/moderation/reports/${reportId}/resolve/`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { error: data.error || 'Impossible de traiter le signalement.' };
+      }
+      return data;
+    } catch {
+      return { error: 'Impossible de joindre le serveur Youth City.' };
+    }
+  },
+
+  async grantAdminStipend(payload: { characterId?: number; amount: number; reason: string }): Promise<{ citizen: Citizen; transaction: Transaction; message: string } | { error: string }> {
+    try {
+      const res = await fetchAuth(`${API_BASE_URL}/admin/grant_stipend/`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { error: data.error || 'Impossible d\'octroyer la bourse administrative.' };
+      }
+      return data;
+    } catch {
+      return { error: 'Impossible de joindre le serveur Youth City.' };
     }
   },
 };

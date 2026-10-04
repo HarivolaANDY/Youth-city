@@ -29,6 +29,7 @@ from game.models import (
     GuildMembership,
     Hackathon,
     HackathonParticipation,
+    ModerationReport,
 )
 from game.serializers import (
     PropertySerializer,
@@ -46,6 +47,7 @@ from game.serializers import (
     GuildSerializer,
     HackathonSerializer,
     HackathonParticipationSerializer,
+    ModerationReportSerializer,
 )
 
 TIME_SLOTS = [
@@ -1439,6 +1441,227 @@ def get_community_leaderboard(request):
         'topCitizens': citizens_data,
         'topGuilds': guilds_data,
     })
+
+
+# ============================================================
+# 🛡️ Back-Office d'Administration, Modération & Analytics d'Impact (§43, §45, §46)
+# ============================================================
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_admin_overview(request):
+    """
+    Tableau de bord d'administration et indicateurs d'impact pédagogique (§45, §46).
+    Agrège en temps réel les données de la ville virtuelle :
+    - Démographie & insertion des citoyens
+    - Masse monétaire en circulation & épargne
+    - Éducation, certifications & projets d'entrepreneuriat
+    - Indicateur de santé économique & inclusion
+    - File de modération citoyenne
+    """
+    total_citizens = Character.objects.count()
+    total_money = sum(c.money for c in Character.objects.all())
+    total_savings = sum(c.savings for c in Character.objects.all())
+    avg_wealth = round((total_money + total_savings) / total_citizens) if total_citizens > 0 else 0
+
+    all_completed = sum(len(c.completed_courses or []) for c in Character.objects.all())
+    total_certs = Certification.objects.count()
+    total_startups = StartupProject.objects.count()
+    funded_startups = StartupProject.objects.filter(has_incubator_grant=True).count()
+    total_hackathons = HackathonParticipation.objects.count()
+    total_guilds = Guild.objects.count()
+
+    pending_reports = ModerationReport.objects.filter(status='pending').count()
+    resolved_reports = ModerationReport.objects.filter(status='resolved').count()
+
+    savings_ratio = min(1.0, (total_savings / (total_money + 1)))
+    health_index = min(100, int(50 + (savings_ratio * 30) + min(20, all_completed * 2)))
+
+    recent_citizens = [
+        {
+            'id': c.id,
+            'name': c.name,
+            'title': c.title,
+            'level': c.level,
+            'xp': c.xp,
+            'money': c.money,
+            'savings': c.savings,
+            'currentJob': c.current_job.title if c.current_job else "En recherche",
+            'day': c.day,
+            'completedCoursesCount': len(c.completed_courses or []),
+        }
+        for c in Character.objects.all().order_by('-id')[:10]
+    ]
+
+    return Response({
+        'overview': {
+            'totalCitizens': total_citizens,
+            'totalMoneyCirculation': total_money,
+            'totalSavings': total_savings,
+            'avgWealth': avg_wealth,
+            'totalCompletedCourses': all_completed,
+            'totalCertifications': total_certs,
+            'totalStartups': total_startups,
+            'fundedStartups': funded_startups,
+            'totalHackathonParticipations': total_hackathons,
+            'totalGuilds': total_guilds,
+            'pendingReports': pending_reports,
+            'resolvedReports': resolved_reports,
+            'economicHealthScore': health_index,
+        },
+        'recentCitizens': recent_citizens,
+    })
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def list_moderation_reports(request):
+    """
+    Liste les signalements citoyens pour examen et modération éthique (§43).
+    Graine automatiquement des cas didactiques initiaux si vide.
+    """
+    if ModerationReport.objects.count() == 0:
+        char = Character.objects.first()
+        ModerationReport.objects.create(
+            reporter=char,
+            target_type='chat_message',
+            target_id='msg-101',
+            target_name='Canal Entraide Campus',
+            reason='spam',
+            details='Un utilisateur fait la promotion répétée d\'un lien externe non vérifié promettant des gains faciles.',
+            status='pending',
+            action_taken='none',
+            moderator_notes='',
+        )
+        ModerationReport.objects.create(
+            reporter=char,
+            target_type='project_pitch',
+            target_id='pitch-42',
+            target_name='Projet AgroQuick',
+            reason='inappropriate',
+            details='Description de projet contenant des propos agressifs envers les autres équipes candidates au concours.',
+            status='investigating',
+            action_taken='none',
+            moderator_notes='Signalement pris en charge par l\'équipe pédagogique.',
+        )
+        ModerationReport.objects.create(
+            reporter=char,
+            target_type='citizen_profile',
+            target_id='cit-99',
+            target_name='Profil Testeur',
+            reason='fraud',
+            details='Soupçon d\'utilisation de macro automatisée pour valider des shifts de travail en continu.',
+            status='resolved',
+            action_taken='warning',
+            moderator_notes='Avertissement officiel envoyé avec réinitialisation des quotas horaires.',
+        )
+
+    status_filter = request.query_params.get('status')
+    queryset = ModerationReport.objects.all().order_by('-created_at')
+    if status_filter:
+        queryset = queryset.filter(status=status_filter)
+
+    serializer = ModerationReportSerializer(queryset, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def create_moderation_report(request):
+    """
+    Dépose un nouveau signalement citoyen (§43).
+    """
+    character = get_active_character(request)
+    target_type = request.data.get('targetType', 'general')
+    target_id = str(request.data.get('targetId', ''))
+    target_name = request.data.get('targetName', 'Contenu ou Citoyen')
+    reason = request.data.get('reason', 'other')
+    details = request.data.get('details', '').strip()
+
+    if not details:
+        return Response({'error': "Merci de décrire la raison du signalement."}, status=status.HTTP_400_BAD_REQUEST)
+
+    report = ModerationReport.objects.create(
+        reporter=character,
+        target_type=target_type,
+        target_id=target_id,
+        target_name=target_name,
+        reason=reason,
+        details=details,
+        status='pending',
+        action_taken='none',
+    )
+
+    return Response({
+        'message': "Signalement transmis avec succès aux modérateurs de Youth City. Merci pour votre vigilance citoyenne.",
+        'report': ModerationReportSerializer(report).data,
+    }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def resolve_moderation_report(request, report_id):
+    """
+    Modère et clôture un signalement avec sanction ou classement (§43).
+    Actions possibles : warning, quarantine, ban, none.
+    Statuts : resolved, dismissed, investigating.
+    """
+    report = get_object_or_404(ModerationReport, id=report_id)
+    action = request.data.get('action', 'none')
+    new_status = request.data.get('status', 'resolved')
+    moderator_notes = request.data.get('notes', '').strip()
+
+    report.action_taken = action
+    report.status = new_status
+    if moderator_notes:
+        report.moderator_notes = moderator_notes
+    report.save()
+
+    return Response({
+        'message': f"Signalement #{report.id} traité avec succès. Action appliquée : {report.get_action_taken_display()}.",
+        'report': ModerationReportSerializer(report).data,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def grant_admin_stipend(request):
+    """
+    Octroie une bourse d'encouragement ou subvention d'urgence administrative à un citoyen (§45).
+    """
+    character_id = request.data.get('characterId')
+    try:
+        amount = int(request.data.get('amount', 50000))
+    except (ValueError, TypeError):
+        amount = 50000
+    reason = request.data.get('reason', 'Bourse d\'encouragement pédagogique Youth City').strip()
+
+    if amount <= 0:
+        return Response({'error': "Le montant de la bourse doit être supérieur à 0 MGA."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if character_id:
+        target_character = get_object_or_404(Character, id=character_id)
+    else:
+        target_character = get_active_character(request)
+
+    target_character.money += amount
+    target_character.save()
+
+    tx = Transaction.objects.create(
+        character=target_character,
+        timestamp=f"J-{target_character.day} {target_character.time_slot.split(' ')[0]}",
+        label=reason,
+        amount=amount,
+        transaction_type='income',
+        category='Bourse Administrative',
+    )
+
+    return Response({
+        'message': f"Bourse administrative de {amount:,} MGA accordée avec succès à {target_character.name}.",
+        'citizen': CitizenDetailSerializer(target_character).data,
+        'transaction': TransactionSerializer(tx).data,
+    })
+
 
 
 

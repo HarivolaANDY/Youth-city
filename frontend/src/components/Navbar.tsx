@@ -15,6 +15,7 @@ import {
   User,
   LogIn,
   LogOut,
+  ShieldAlert,
 } from 'lucide-react';
 import { useGameStore } from '../stores/useGameStore';
 import { Progress } from './ui/Progress';
@@ -67,6 +68,8 @@ export const Navbar: React.FC = () => {
     toggleAuthModal,
     logout,
     toggleCharacterCreation,
+    toggleAdminModal,
+    moderationReports,
   } = useGameStore();
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -283,6 +286,20 @@ export const Navbar: React.FC = () => {
               </Tooltip>
             )}
 
+            <Tooltip text="Console d'Administration & Modération (§43, §45, §46)">
+              <button
+                type="button"
+                onClick={() => toggleAdminModal(true)}
+                aria-label="Ouvrir la Console d'Administration et Modération"
+                className="relative grid size-9 place-items-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-300 transition-colors hover:bg-amber-500/20 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400 active:scale-95"
+              >
+                <ShieldAlert className="size-4" aria-hidden="true" />
+                {moderationReports.some((r) => r.status === 'pending') && (
+                  <span className="absolute -top-1 -right-1 size-2 rounded-full bg-amber-400 ring-2 ring-night-950 animate-pulse" />
+                )}
+              </button>
+            </Tooltip>
+
             <div className="relative" ref={menuRef}>
               <Tooltip text="Options et réinitialisation" align="end">
                 <button
@@ -347,7 +364,20 @@ export const Navbar: React.FC = () => {
                     </div>
                   )}
 
-                  <div className="border-b border-white/[0.06] pb-1.5 mb-1.5 pt-0.5">
+                  <div className="border-b border-white/[0.06] pb-1.5 mb-1.5 pt-0.5 space-y-1">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        toggleAdminModal(true);
+                        setMenuOpen(false);
+                      }}
+                      className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-bold text-amber-300 transition-colors hover:bg-amber-500/15 focus-visible:outline-none"
+                    >
+                      <ShieldAlert className="size-3.5 text-amber-400" aria-hidden="true" />
+                      <span>Console d'Administration (§43)</span>
+                    </button>
+
                     <button
                       type="button"
                       role="menuitem"

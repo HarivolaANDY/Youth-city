@@ -9,7 +9,7 @@ export interface ModalProps {
   onClose: () => void;
   labelledBy: string;
   describedBy?: string;
-  size?: 'md' | 'lg';
+  size?: 'md' | 'lg' | '2xl';
   /** Si false, un clic sur l'arrière-plan ne ferme pas la modale (Échap et le bouton de fermeture restent actifs). */
   dismissOnBackdrop?: boolean;
   children: React.ReactNode;
@@ -79,7 +79,7 @@ export const Modal: React.FC<ModalProps> = ({
 
   if (!open) return null;
 
-  const width = { md: 'max-w-lg', lg: 'max-w-xl' }[size];
+  const width = { md: 'max-w-lg', lg: 'max-w-xl', '2xl': 'max-w-4xl' }[size];
 
   return (
     <div

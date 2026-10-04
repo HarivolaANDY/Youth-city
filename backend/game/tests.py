@@ -406,6 +406,63 @@ class YouthCityBackendAPITests(APITestCase):
         self.assertEqual(res_leave.status_code, status.HTTP_200_OK)
         self.assertIn("Tu as quitté la guilde", res_leave.json()['message'])
 
+    def test_16_admin_backoffice_and_moderation_flow(self):
+        """Verifies Admin Back-Office, Moderation queue, Impact Analytics and Stipend Grant (§43, §45, §46)."""
+        # 1. Admin Overview & Impact Analytics (§46)
+        res_overview = self.client.get('/api/admin/overview/')
+        self.assertEqual(res_overview.status_code, status.HTTP_200_OK)
+        overview_data = res_overview.json()
+        self.assertIn('overview', overview_data)
+        self.assertIn('recentCitizens', overview_data)
+        metrics = overview_data['overview']
+        self.assertGreaterEqual(metrics['totalCitizens'], 1)
+        self.assertGreater(metrics['totalMoneyCirculation'], 0)
+        self.assertGreaterEqual(metrics['economicHealthScore'], 50)
+        self.assertGreaterEqual(len(overview_data['recentCitizens']), 1)
+
+        # 2. List Moderation Reports (§43)
+        res_reports = self.client.get('/api/moderation/reports/')
+        self.assertEqual(res_reports.status_code, status.HTTP_200_OK)
+        reports = res_reports.json()
+        self.assertGreaterEqual(len(reports), 1)
+
+        # 3. Create a citizen moderation report (§43)
+        res_create_rep = self.client.post('/api/moderation/reports/create/', {
+            'targetType': 'chat_message',
+            'targetId': 'msg-999',
+            'targetName': 'Salon Public',
+            'reason': 'inappropriate',
+            'details': 'Propos agressifs répétés envers un autre joueur lors d\'une session de travail collaboratif.',
+        })
+        self.assertEqual(res_create_rep.status_code, status.HTTP_201_CREATED)
+        new_report = res_create_rep.json()['report']
+        report_id = new_report['id']
+        self.assertEqual(new_report['status'], 'pending')
+
+        # 4. Resolve the report (§43)
+        res_resolve = self.client.post(f'/api/moderation/reports/{report_id}/resolve/', {
+            'action': 'warning',
+            'status': 'resolved',
+            'notes': 'Rappel à l\'ordre officiel envoyé à l\'auteur des faits.',
+        })
+        self.assertEqual(res_resolve.status_code, status.HTTP_200_OK)
+        resolved_rep = res_resolve.json()['report']
+        self.assertEqual(resolved_rep['status'], 'resolved')
+        self.assertEqual(resolved_rep['actionTaken'], 'warning')
+
+        # 5. Grant Admin Stipend to citizen (§45)
+        initial_money = self.character.money
+        res_stipend = self.client.post('/api/admin/grant_stipend/', {
+            'characterId': self.character.id,
+            'amount': 60000,
+            'reason': 'Subvention d\'encouragement à la formation continue',
+        })
+        self.assertEqual(res_stipend.status_code, status.HTTP_200_OK)
+        self.character.refresh_from_db()
+        self.assertEqual(self.character.money, initial_money + 60000)
+        self.assertIn('Bourse administrative de 60,000 MGA accordée', res_stipend.json()['message'])
+
+
 
 
 

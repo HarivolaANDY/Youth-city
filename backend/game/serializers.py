@@ -17,6 +17,7 @@ from game.models import (
     GuildMembership,
     Hackathon,
     HackathonParticipation,
+    ModerationReport,
 )
 
 class UserSerializer(serializers.ModelSerializer):
@@ -361,4 +362,33 @@ class HackathonSerializer(serializers.ModelSerializer):
         if not part:
             return None
         return HackathonParticipationSerializer(part).data
+
+
+class ModerationReportSerializer(serializers.ModelSerializer):
+    reporterName = serializers.SerializerMethodField()
+    targetType = serializers.CharField(source='target_type')
+    targetId = serializers.CharField(source='target_id')
+    targetName = serializers.CharField(source='target_name')
+    actionTaken = serializers.CharField(source='action_taken')
+    moderatorNotes = serializers.CharField(source='moderator_notes')
+    createdAt = serializers.DateTimeField(source='created_at', format='%d/%m/%Y %H:%M', read_only=True)
+
+    class Meta:
+        model = ModerationReport
+        fields = [
+            'id',
+            'reporterName',
+            'targetType',
+            'targetId',
+            'targetName',
+            'reason',
+            'details',
+            'status',
+            'actionTaken',
+            'moderatorNotes',
+            'createdAt',
+        ]
+
+    def get_reporterName(self, obj):
+        return obj.reporter.name if obj.reporter else "Système Citoyen"
 

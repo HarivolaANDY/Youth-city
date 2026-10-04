@@ -290,3 +290,40 @@ class HackathonParticipation(models.Model):
         return f"{self.team_name} — {self.hackathon.title} (Score: {self.score}/100)"
 
 
+class ModerationReport(models.Model):
+    """Signalement et modération citoyenne pour un environnement bienveillant (§43)"""
+    STATUS_CHOICES = (
+        ('pending', 'En attente'),
+        ('investigating', 'En cours d\'examen'),
+        ('resolved', 'Traité / Résolu'),
+        ('dismissed', 'Rejeté / Sans suite'),
+    )
+    REASON_CHOICES = (
+        ('harassment', 'Harcèlement ou propos haineux'),
+        ('spam', 'Spam ou publicité non autorisée'),
+        ('inappropriate', 'Contenu inapproprié ou vulgaire'),
+        ('fraud', 'Triche ou fraude économique simulée'),
+        ('other', 'Autre signalement éthique'),
+    )
+    ACTION_CHOICES = (
+        ('none', 'Aucune action'),
+        ('warning', 'Avertissement officiel'),
+        ('quarantine', 'Mise en quarantaine du contenu'),
+        ('ban', 'Suspension du compte citoyen'),
+    )
+    reporter = models.ForeignKey(Character, on_delete=models.CASCADE, related_name='filed_reports', null=True, blank=True)
+    target_type = models.CharField(max_length=64, default='message')
+    target_id = models.CharField(max_length=128, default='general')
+    target_name = models.CharField(max_length=160, blank=True)
+    reason = models.CharField(max_length=32, choices=REASON_CHOICES, default='spam')
+    details = models.TextField(help_text="Précisions apportées par le signalant")
+    status = models.CharField(max_length=32, choices=STATUS_CHOICES, default='pending')
+    action_taken = models.CharField(max_length=32, choices=ACTION_CHOICES, default='none')
+    moderator_notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Report #{self.id} [{self.get_reason_display()}] - {self.get_status_display()}"
+
+

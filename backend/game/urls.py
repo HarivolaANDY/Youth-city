@@ -58,5 +58,12 @@ urlpatterns = [
     # Dilemmas & Random Events
     path('dilemmas/active/', views.get_active_dilemma, name='active-dilemma'),
     path('dilemmas/resolve/', views.resolve_dilemma, name='resolve-dilemma'),
+
+    # Admin Back-Office, Moderation & Impact Analytics (§43, §45, §46)
+    path('admin/overview/', views.get_admin_overview, name='admin-overview'),
+    path('admin/grant_stipend/', views.grant_admin_stipend, name='admin-grant-stipend'),
+    path('moderation/reports/', views.list_moderation_reports, name='moderation-reports'),
+    path('moderation/reports/create/', views.create_moderation_report, name='moderation-create-report'),
+    path('moderation/reports/<int:report_id>/resolve/', views.resolve_moderation_report, name='moderation-resolve-report'),
 ]
 

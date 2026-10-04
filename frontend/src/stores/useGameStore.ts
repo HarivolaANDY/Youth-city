@@ -16,6 +16,8 @@ import type {
   Hackathon,
   HackathonParticipation,
   CommunityLeaderboard,
+  ModerationReport,
+  AdminOverviewData,
 } from '../types/game';
 import { INITIAL_CITIZEN, COURSES, JOBS, HOUSINGS, SAMPLE_DILEMMA, MARKET_ITEMS } from '../data/mockData';
 import { api } from '../services/api';
@@ -73,6 +75,16 @@ interface GameState {
   joinGuild: (guildKey: string) => Promise<{ success: boolean; error?: string }>;
   leaveGuild: (guildKey: string) => Promise<{ success: boolean; error?: string }>;
   participateHackathon: (hackathonKey: string, payload: { teamName: string; submissionPitch: string; teamMembers?: string[] }) => Promise<{ success: boolean; error?: string }>;
+
+  // Back-Office d'Administration, Modération & Analytics d'Impact (§43, §45, §46)
+  isAdminModalOpen: boolean;
+  adminOverview: AdminOverviewData | null;
+  moderationReports: ModerationReport[];
+  toggleAdminModal: (open?: boolean) => void;
+  fetchAdminData: () => Promise<void>;
+  createModerationReport: (payload: { targetType: string; targetId: string; targetName: string; reason: string; details: string }) => Promise<{ success: boolean; error?: string }>;
+  resolveModerationReport: (reportId: number, payload: { action: string; status: string; notes?: string }) => Promise<{ success: boolean; error?: string }>;
+  grantAdminStipend: (payload: { characterId?: number; amount: number; reason: string }) => Promise<{ success: boolean; error?: string }>;
 
   // Game Actions
   advanceTime: () => void;
@@ -249,6 +261,104 @@ const DEFAULT_HACKATHONS: Hackathon[] = [
   },
 ];
 
+const DEFAULT_MODERATION_REPORTS: ModerationReport[] = [
+  {
+    id: 101,
+    reporterName: 'Aina (Campus)',
+    targetType: 'chat_message',
+    targetId: 'msg-101',
+    targetName: 'Canal Entraide Campus',
+    reason: 'spam',
+    details: 'Un utilisateur fait la promotion répétée d\'un lien externe non vérifié promettant des gains faciles.',
+    status: 'pending',
+    actionTaken: 'none',
+    moderatorNotes: '',
+    createdAt: '04/10/2026 14:15',
+  },
+  {
+    id: 102,
+    reporterName: 'Système Citoyen',
+    targetType: 'project_pitch',
+    targetId: 'pitch-42',
+    targetName: 'Projet AgroQuick',
+    reason: 'inappropriate',
+    details: 'Description de projet contenant des propos agressifs envers les autres équipes candidates au concours.',
+    status: 'investigating',
+    actionTaken: 'none',
+    moderatorNotes: 'Signalement pris en charge par l\'équipe pédagogique.',
+    createdAt: '04/10/2026 11:30',
+  },
+  {
+    id: 103,
+    reporterName: 'Hery (Finance)',
+    targetType: 'citizen_profile',
+    targetId: 'cit-99',
+    targetName: 'Profil Testeur',
+    reason: 'fraud',
+    details: 'Soupçon d\'utilisation de macro automatisée pour valider des shifts de travail en continu.',
+    status: 'resolved',
+    actionTaken: 'warning',
+    moderatorNotes: 'Avertissement officiel envoyé avec réinitialisation des quotas horaires.',
+    createdAt: '03/10/2026 16:45',
+  },
+];
+
+const DEFAULT_ADMIN_OVERVIEW: AdminOverviewData = {
+  overview: {
+    totalCitizens: 128,
+    totalMoneyCirculation: 42500000,
+    totalSavings: 18900000,
+    avgWealth: 479687,
+    totalCompletedCourses: 342,
+    totalCertifications: 118,
+    totalStartups: 24,
+    fundedStartups: 9,
+    totalHackathonParticipations: 45,
+    totalGuilds: 5,
+    pendingReports: 1,
+    resolvedReports: 1,
+    economicHealthScore: 88,
+  },
+  recentCitizens: [
+    {
+      id: 1,
+      name: 'Emmanuel',
+      title: 'Citoyen Émérite & Bâtisseur',
+      level: 4,
+      xp: 2450,
+      money: 425000,
+      savings: 150000,
+      currentJob: 'Développeur Frontend Junior',
+      day: 14,
+      completedCoursesCount: 2,
+    },
+    {
+      id: 2,
+      name: 'Rova',
+      title: 'Tech Founder',
+      level: 5,
+      xp: 3200,
+      money: 820000,
+      savings: 400000,
+      currentJob: 'CTO Fondateur',
+      day: 22,
+      completedCoursesCount: 4,
+    },
+    {
+      id: 3,
+      name: 'Andry',
+      title: 'Apprenti Comptable',
+      level: 2,
+      xp: 850,
+      money: 180000,
+      savings: 90000,
+      currentJob: 'Assistant Gestion',
+      day: 7,
+      completedCoursesCount: 1,
+    },
+  ],
+};
+
 export const useGameStore = create<GameState>((set, get) => ({
   citizen: { ...INITIAL_CITIZEN },
   day: 14,
@@ -270,6 +380,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   guilds: DEFAULT_GUILDS,
   hackathons: DEFAULT_HACKATHONS,
   leaderboard: null,
+  isAdminModalOpen: false,
+  adminOverview: DEFAULT_ADMIN_OVERVIEW,
+  moderationReports: DEFAULT_MODERATION_REPORTS,
 
   // Authentification & Comptes (§42, §47)
   user: null,
@@ -790,6 +903,126 @@ export const useGameStore = create<GameState>((set, get) => ({
         // Confetti fallback
       }
       addNotification('🏆 Victoire au Hackathon !', `Score 88/100 ! +${wonXp} XP et +${formatNumber(wonMoney)} MGA remportés !`, 'success');
+      return { success: true };
+    }
+  },
+
+  // --- ADMIN BACK-OFFICE & MODERATION (§43, §45, §46) ---
+  toggleAdminModal: (open) => {
+    const nextState = open !== undefined ? open : !get().isAdminModalOpen;
+    set({ isAdminModalOpen: nextState });
+    if (nextState) {
+      get().fetchAdminData();
+    }
+  },
+
+  fetchAdminData: async () => {
+    try {
+      const [overview, reports] = await Promise.all([
+        api.getAdminOverview(),
+        api.getModerationReports(),
+      ]);
+      if (overview) set({ adminOverview: overview });
+      if (reports && reports.length > 0) set({ moderationReports: reports });
+    } catch {
+      // offline fallback retained
+    }
+  },
+
+  createModerationReport: async (payload) => {
+    const { addNotification } = get();
+    try {
+      const res = await api.createModerationReport(payload);
+      if ('error' in res) {
+        addNotification('Signalement', res.error, 'warning');
+        return { success: false, error: res.error };
+      }
+      set((state) => ({
+        moderationReports: [res.report, ...state.moderationReports],
+      }));
+      addNotification('Signalement transmis', res.message, 'info');
+      return { success: true };
+    } catch {
+      const newReport: ModerationReport = {
+        id: Date.now(),
+        reporterName: get().citizen.name,
+        targetType: payload.targetType,
+        targetId: payload.targetId,
+        targetName: payload.targetName,
+        reason: payload.reason as any,
+        details: payload.details,
+        status: 'pending',
+        actionTaken: 'none',
+        moderatorNotes: '',
+        createdAt: 'À l\'instant',
+      };
+      set((state) => ({
+        moderationReports: [newReport, ...state.moderationReports],
+      }));
+      addNotification('Signalement transmis', 'Votre signalement a été enregistré.', 'info');
+      return { success: true };
+    }
+  },
+
+  resolveModerationReport: async (reportId, payload) => {
+    const { addNotification } = get();
+    try {
+      const res = await api.resolveModerationReport(reportId, payload);
+      if ('error' in res) {
+        addNotification('Modération', res.error, 'warning');
+        return { success: false, error: res.error };
+      }
+      set((state) => ({
+        moderationReports: state.moderationReports.map((r) => (r.id === reportId ? res.report : r)),
+      }));
+      addNotification('Modération appliquée', res.message, 'success');
+      return { success: true };
+    } catch {
+      set((state) => ({
+        moderationReports: state.moderationReports.map((r) =>
+          r.id === reportId
+            ? {
+                ...r,
+                status: payload.status as any,
+                actionTaken: payload.action as any,
+                moderatorNotes: payload.notes || r.moderatorNotes,
+              }
+            : r
+        ),
+      }));
+      addNotification('Modération appliquée', 'Le dossier a été mis à jour.', 'success');
+      return { success: true };
+    }
+  },
+
+  grantAdminStipend: async (payload) => {
+    const { addNotification, earnMoney } = get();
+    try {
+      const res = await api.grantAdminStipend(payload);
+      if ('error' in res) {
+        addNotification('Bourse Administrative', res.error, 'warning');
+        return { success: false, error: res.error };
+      }
+      set((state) => ({
+        citizen: res.citizen,
+        transactions: res.transaction ? [res.transaction, ...state.transactions].slice(0, 30) : state.transactions,
+      }));
+      addNotification('Bourse accordée !', res.message, 'success');
+      try {
+        confetti({ particleCount: 60, spread: 60, origin: { y: 0.6 } });
+      } catch {
+        // Confetti fallback
+      }
+      get().fetchAdminData();
+      return { success: true };
+    } catch {
+      earnMoney(payload.amount, payload.reason, 'Bourse Administrative');
+      addNotification('Bourse accordée !', `Bourse d'encouragement de ${formatNumber(payload.amount)} MGA accordée.`, 'success');
+      try {
+        confetti({ particleCount: 60, spread: 60, origin: { y: 0.6 } });
+      } catch {
+        // Confetti fallback
+      }
       return { success: true };
     }
   },

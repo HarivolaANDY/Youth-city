@@ -290,5 +290,56 @@ export interface CommunityLeaderboard {
   topGuilds: LeaderboardGuild[];
 }
 
+export type ModerationReason = 'harassment' | 'spam' | 'inappropriate' | 'fraud' | 'other';
+export type ModerationStatus = 'pending' | 'investigating' | 'resolved' | 'dismissed';
+export type ModerationAction = 'none' | 'warning' | 'quarantine' | 'ban';
+
+export interface ModerationReport {
+  id: number;
+  reporterName: string;
+  targetType: string;
+  targetId: string;
+  targetName: string;
+  reason: ModerationReason;
+  details: string;
+  status: ModerationStatus;
+  actionTaken: ModerationAction;
+  moderatorNotes: string;
+  createdAt: string;
+}
+
+export interface AdminCitizenItem {
+  id: number;
+  name: string;
+  title: string;
+  level: number;
+  xp: number;
+  money: number;
+  savings: number;
+  currentJob: string;
+  day: number;
+  completedCoursesCount: number;
+}
+
+export interface AdminOverviewData {
+  overview: {
+    totalCitizens: number;
+    totalMoneyCirculation: number;
+    totalSavings: number;
+    avgWealth: number;
+    totalCompletedCourses: number;
+    totalCertifications: number;
+    totalStartups: number;
+    fundedStartups: number;
+    totalHackathonParticipations: number;
+    totalGuilds: number;
+    pendingReports: number;
+    resolvedReports: number;
+    economicHealthScore: number;
+  };
+  recentCitizens: AdminCitizenItem[];
+}
+
+
 
 

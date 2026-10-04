@@ -36,6 +36,7 @@ import { DecisionModal } from './components/DecisionModal';
 import { ToastContainer } from './components/ToastContainer';
 import { AuthModal } from './components/AuthModal';
 import { CharacterCreationModal } from './components/CharacterCreationModal';
+import { AdminBackOfficeModal } from './components/AdminBackOfficeModal';
 
 export const App: React.FC = () => {
   const { activeTab, initGame } = useGameStore();
@@ -126,6 +127,7 @@ export const App: React.FC = () => {
       <DecisionModal />
       <AuthModal />
       <CharacterCreationModal />
+      <AdminBackOfficeModal />
       <ToastContainer />
     </div>
   );
