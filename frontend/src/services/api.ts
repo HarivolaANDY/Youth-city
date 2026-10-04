@@ -7,6 +7,7 @@ import type {
   Housing,
   AuthUser,
   AuthResponse,
+  CharacterCustomizationPayload,
 } from '../types/game';
 
 const API_BASE_URL = 'http://localhost:8000/api';
@@ -337,6 +338,19 @@ export const api = {
       const res = await fetchAuth(`${API_BASE_URL}/game/reset/`, {
         method: 'POST',
         body: JSON.stringify({ preset }),
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  },
+
+  async customizeCharacter(payload: CharacterCustomizationPayload): Promise<{ citizen: Citizen; message: string; transactions: Transaction[] } | null> {
+    try {
+      const res = await fetchAuth(`${API_BASE_URL}/character/customize/`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
       });
       if (!res.ok) return null;
       return await res.json();

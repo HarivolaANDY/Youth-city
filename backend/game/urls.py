@@ -9,6 +9,9 @@ urlpatterns = [
     path('auth/me/', views.get_current_user, name='auth-me'),
     path('auth/token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
 
+    # Character Creation & Customization (§14, §47)
+    path('character/customize/', views.customize_character, name='character-customize'),
+
     # Game Loop & Citizen Status
     path('game/state/', views.get_game_state, name='game-state'),
     path('game/advance_time/', views.advance_time, name='advance-time'),

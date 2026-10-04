@@ -38,6 +38,33 @@ class RegisterSerializer(serializers.Serializer):
         return value
 
 
+class CharacterCustomizeSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=64, required=True)
+    avatarSeed = serializers.CharField(max_length=64, required=False, default='felix')
+    archetype = serializers.ChoiceField(
+        choices=[
+            ('ambitious_student', 'Étudiant Ambitieux'),
+            ('resourceful_self_taught', 'Autodidacte Débrouillard'),
+            ('pragmatic_saver', 'Pragmatique Économe'),
+        ],
+        default='ambitious_student',
+    )
+    vocation = serializers.ChoiceField(
+        choices=[
+            ('tech', 'Tech & Développement Web'),
+            ('finance', 'Finance & Gestion de Trésorerie'),
+            ('business', 'Business, Vente & Entrepreneuriat'),
+        ],
+        default='tech',
+    )
+
+    def validate_name(self, value):
+        val = value.strip()
+        if len(val) < 2:
+            raise serializers.ValidationError("Le prénom doit comporter au moins 2 caractères.")
+        return val
+
+
 class PropertySerializer(serializers.ModelSerializer):
     id = serializers.CharField(source='key')
     title = serializers.CharField(source='name')

@@ -159,3 +159,14 @@ export interface AuthResponse {
   citizen: Citizen;
 }
 
+export type CharacterArchetype = 'ambitious_student' | 'resourceful_self_taught' | 'pragmatic_saver';
+export type CharacterVocation = 'tech' | 'finance' | 'business';
+
+export interface CharacterCustomizationPayload {
+  name: string;
+  avatarSeed?: string;
+  archetype: CharacterArchetype;
+  vocation: CharacterVocation;
+}
+
+

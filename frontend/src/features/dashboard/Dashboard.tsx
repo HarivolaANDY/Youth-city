@@ -12,6 +12,7 @@ import {
   History,
   Target,
   ArrowRight,
+  Sparkles,
 } from 'lucide-react';
 import { useGameStore } from '../../stores/useGameStore';
 import { NextActionBanner } from '../../components/NextActionBanner';
@@ -27,7 +28,7 @@ import { getGuidance } from '../../lib/guidance';
 import { formatNumber } from '../../lib/format';
 
 export const Dashboard: React.FC = () => {
-  const { citizen, day, setActiveTab, toggleNovaModal, workShift, transactions } = useGameStore();
+  const { citizen, day, setActiveTab, toggleNovaModal, workShift, transactions, toggleCharacterCreation } = useGameStore();
 
   const currentHousing = HOUSINGS.find((h) => h.id === citizen.currentHousingId) || HOUSINGS[0];
   const currentJob = JOBS.find((j) => j.id === citizen.currentJobId);
@@ -44,13 +45,22 @@ export const Dashboard: React.FC = () => {
           <div className="relative">
             <div className="flex flex-col gap-4 border-b border-white/[0.07] pb-5 md:flex-row md:items-center md:justify-between">
               <div className="flex min-w-0 items-center gap-4">
-                <Avatar name={citizen.name} />
+                <Avatar name={citizen.name} seed={citizen.avatarSeed} />
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 id="cockpit-title" className="text-xl font-black tracking-tight text-white md:text-2xl">
                       Bonjour, {citizen.name} !
                     </h2>
                     <Badge tone="brand">Niveau {citizen.level}</Badge>
+                    <button
+                      type="button"
+                      onClick={() => toggleCharacterCreation(true)}
+                      title="Personnaliser ton prénom, ton avatar et ton archétype (§14)"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1 text-2xs font-semibold text-mist-300 transition-colors hover:border-brand-400/40 hover:bg-brand-500/15 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 active:scale-95"
+                    >
+                      <Sparkles className="size-3 text-brand-400" aria-hidden="true" />
+                      <span>Personnaliser</span>
+                    </button>
                   </div>
                   <p className="mt-1 text-xs text-mist-400">
                     {citizen.title} &bull; Citoyen actif depuis {day} jours

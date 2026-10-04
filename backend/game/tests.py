@@ -159,4 +159,50 @@ class YouthCityBackendAPITests(APITestCase):
         })
         self.assertEqual(throttled_res.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
 
+    def test_11_character_creation_and_customization(self):
+        """Verifies character onboarding and customization with archetype and vocation (§14, §47)."""
+        # Register user
+        reg_res = self.client.post('/api/auth/register/', {
+            'username': 'aina_maker',
+            'password': 'SecurePassword2026!',
+            'citizenName': 'Initial Name',
+        })
+        self.assertEqual(reg_res.status_code, status.HTTP_201_CREATED)
+        access_token = reg_res.json()['tokens']['access']
+
+        # 1. Validation error on too short name
+        bad_res = self.client.post(
+            '/api/character/customize/',
+            {'name': 'A', 'archetype': 'pragmatic_saver'},
+            HTTP_AUTHORIZATION=f'Bearer {access_token}'
+        )
+        self.assertEqual(bad_res.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # 2. Successful customization with archetype 'pragmatic_saver' and vocation 'finance'
+        custom_payload = {
+            'name': 'Aina Razafy',
+            'avatarSeed': 'anita',
+            'archetype': 'pragmatic_saver',
+            'vocation': 'finance',
+        }
+        res = self.client.post(
+            '/api/character/customize/',
+            custom_payload,
+            HTTP_AUTHORIZATION=f'Bearer {access_token}'
+        )
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        data = res.json()
+        citizen = data['citizen']
+
+        self.assertEqual(citizen['name'], 'Aina Razafy')
+        self.assertEqual(citizen['avatarSeed'], 'anita')
+        self.assertEqual(citizen['money'], 180000)
+        self.assertEqual(citizen['savings'], 170000)
+        self.assertEqual(citizen['energy'], 80)
+        self.assertEqual(citizen['skills']['budget'], 35)
+        self.assertIn("épargne", citizen['currentObjective']['title'].lower())
+        self.assertEqual(len(data['transactions']), 1)
+        self.assertEqual(data['transactions'][0]['category'], 'Bienvenue')
+
+
 

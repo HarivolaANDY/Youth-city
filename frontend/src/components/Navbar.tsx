@@ -66,6 +66,7 @@ export const Navbar: React.FC = () => {
     isAuthenticated,
     toggleAuthModal,
     logout,
+    toggleCharacterCreation,
   } = useGameStore();
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -345,6 +346,21 @@ export const Navbar: React.FC = () => {
                       </button>
                     </div>
                   )}
+
+                  <div className="border-b border-white/[0.06] pb-1.5 mb-1.5 pt-0.5">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        toggleCharacterCreation(true);
+                        setMenuOpen(false);
+                      }}
+                      className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-bold text-white transition-colors hover:bg-brand-500/15 focus-visible:outline-none"
+                    >
+                      <Sparkles className="size-3.5 text-brand-400" aria-hidden="true" />
+                      <span>Personnaliser mon Citoyen</span>
+                    </button>
+                  </div>
 
                   <p className="px-2.5 pt-1.5 pb-2 text-2xs font-bold tracking-wider text-mist-500 uppercase">
                     Réinitialiser la simulation

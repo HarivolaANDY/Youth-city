@@ -34,6 +34,7 @@ from game.serializers import (
     CitizenDetailSerializer,
     UserSerializer,
     RegisterSerializer,
+    CharacterCustomizeSerializer,
 )
 
 TIME_SLOTS = [
@@ -42,6 +43,72 @@ TIME_SLOTS = [
     'Soir (18:00)',
     'Nuit (22:00)',
 ]
+
+ARCHETYPES = {
+    'ambitious_student': {
+        'title': 'Étudiant Ambitieux & Citoyen du Campus',
+        'money': 200000,
+        'savings': 100000,
+        'energy': 85,
+        'wellbeing': 80,
+        'skills': {
+            'communication': 30,
+            'javascript': 25,
+            'git': 20,
+            'budget': 20,
+            'react': 15,
+            'entrepreneuriat': 15,
+        },
+    },
+    'resourceful_self_taught': {
+        'title': 'Autodidacte Débrouillard & Maker',
+        'money': 280000,
+        'savings': 20000,
+        'energy': 75,
+        'wellbeing': 85,
+        'skills': {
+            'entrepreneuriat': 35,
+            'javascript': 30,
+            'git': 25,
+            'react': 20,
+            'communication': 20,
+            'budget': 15,
+        },
+    },
+    'pragmatic_saver': {
+        'title': 'Gestionnaire Prévoyant & Économe',
+        'money': 180000,
+        'savings': 170000,
+        'energy': 80,
+        'wellbeing': 80,
+        'skills': {
+            'budget': 35,
+            'communication': 25,
+            'entrepreneuriat': 20,
+            'javascript': 15,
+            'git': 15,
+            'react': 10,
+        },
+    },
+}
+
+VOCATIONS = {
+    'tech': {
+        'title': 'Découvrir Youth City & Devenir Développeur',
+        'target': 'Visiter le Campus District et valider le module Développeur Web Junior',
+        'progress': 10,
+    },
+    'finance': {
+        'title': 'Bâtir son socle d\'épargne & Maîtriser son budget',
+        'target': 'Explorer le Finance District et déposer ses premiers intérêts d\'épargne BOA',
+        'progress': 10,
+    },
+    'business': {
+        'title': 'Intégrer le Business District & Générer des revenus',
+        'target': 'Effectuer un premier quart de travail et sécuriser son loyer',
+        'progress': 10,
+    },
+}
 
 def create_initial_character_for_user(user, name=None):
     """Initialise un profil citoyen complet pour un nouvel utilisateur."""
@@ -669,5 +736,64 @@ def get_current_user(request):
     return Response({
         'user': UserSerializer(request.user).data,
         'citizen': CitizenDetailSerializer(character).data,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def customize_character(request):
+    """Customizes active citizen avatar with chosen archetype, appearance, and initial vocation (§14, §47)."""
+    serializer = CharacterCustomizeSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    data = serializer.validated_data
+    character = get_active_character(request)
+    archetype_data = ARCHETYPES.get(data['archetype'], ARCHETYPES['ambitious_student'])
+    vocation_data = VOCATIONS.get(data['vocation'], VOCATIONS['tech'])
+
+    with db_transaction.atomic():
+        character.name = data['name'].strip()
+        character.avatar_seed = data.get('avatarSeed', 'felix').strip()
+        character.title = archetype_data['title']
+        character.level = 1
+        character.xp = 0
+        character.xp_to_next_level = 500
+        character.money = archetype_data['money']
+        character.savings = archetype_data['savings']
+        character.energy = archetype_data['energy']
+        character.wellbeing = archetype_data['wellbeing']
+        character.day = 1
+        character.time_slot = TIME_SLOTS[0]
+        character.current_objective = vocation_data
+
+        # Configure skills according to archetype
+        for skill_key, level in archetype_data['skills'].items():
+            skill_obj = Skill.objects.filter(key=skill_key).first()
+            if skill_obj:
+                char_skill, _ = CharacterSkill.objects.get_or_create(
+                    character=character,
+                    skill=skill_obj,
+                    defaults={'level_percent': level}
+                )
+                char_skill.level_percent = level
+                char_skill.save()
+
+        # Reset transactions & record initial stipend
+        Transaction.objects.filter(character=character).delete()
+        initial_tx = Transaction.objects.create(
+            character=character,
+            timestamp="J-1 Matin",
+            label=f"Dotation d'accueil ({archetype_data['title']})",
+            amount=character.money,
+            transaction_type='income',
+            category='Bienvenue',
+        )
+        character.save()
+
+    return Response({
+        'message': f"Bienvenue à Youth City, {character.name} ! Ton profil de citoyen est prêt.",
+        'citizen': CitizenDetailSerializer(character).data,
+        'transactions': TransactionSerializer([initial_tx], many=True).data,
     })
 

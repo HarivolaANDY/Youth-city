@@ -1,6 +1,15 @@
 import { create } from 'zustand';
 import confetti from 'canvas-confetti';
-import type { Citizen, DistrictId, TimeSlot, Transaction, ToastNotification, Dilemma, AuthUser } from '../types/game';
+import type {
+  Citizen,
+  DistrictId,
+  TimeSlot,
+  Transaction,
+  ToastNotification,
+  Dilemma,
+  AuthUser,
+  CharacterCustomizationPayload,
+} from '../types/game';
 import { INITIAL_CITIZEN, COURSES, JOBS, HOUSINGS, SAMPLE_DILEMMA } from '../data/mockData';
 import { api } from '../services/api';
 import { formatNumber } from '../lib/format';
@@ -26,6 +35,11 @@ interface GameState {
   login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
   register: (payload: { username: string; email?: string; password: string; citizenName?: string }) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
+
+  // Création guidée & Onboarding Citoyen (§14, §47)
+  isCharacterCreationOpen: boolean;
+  toggleCharacterCreation: (open?: boolean) => void;
+  customizeCharacter: (payload: CharacterCustomizationPayload) => Promise<{ success: boolean; error?: string }>;
   
   // Lifecycle
   initGame: () => Promise<void>;
@@ -129,11 +143,12 @@ export const useGameStore = create<GameState>((set, get) => ({
       citizen,
       isAuthenticated: true,
       isAuthModalOpen: false,
+      isCharacterCreationOpen: true,
       isBackendConnected: true,
     });
     get().addNotification(
       'Bienvenue dans Youth City !',
-      `Ton compte et ton citoyen ${citizen.name} sont créés.`,
+      `Ton compte est créé. Personnalisons maintenant ton avatar citoyen !`,
       'success'
     );
     confetti({ particleCount: 75, spread: 60, origin: { y: 0.6 } });
@@ -146,6 +161,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({
       user: null,
       isAuthenticated: false,
+      isCharacterCreationOpen: false,
     });
     get().addNotification(
       'Déconnexion',
@@ -153,6 +169,34 @@ export const useGameStore = create<GameState>((set, get) => ({
       'info'
     );
     get().initGame();
+  },
+
+  // Création guidée & Onboarding Citoyen (§14, §47)
+  isCharacterCreationOpen: false,
+
+  toggleCharacterCreation: (open) =>
+    set((state) => ({
+      isCharacterCreationOpen: open !== undefined ? open : !state.isCharacterCreationOpen,
+    })),
+
+  customizeCharacter: async (payload) => {
+    const res = await api.customizeCharacter(payload);
+    if (!res) {
+      return { success: false, error: 'Impossible de personnaliser le profil.' };
+    }
+    set({
+      citizen: res.citizen,
+      transactions: res.transactions,
+      isCharacterCreationOpen: false,
+      isBackendConnected: true,
+    });
+    get().addNotification(
+      'Profil Citoyen activé !',
+      `Bienvenue ${res.citizen.name} ! Ton profil (${res.citizen.title}) et ta dotation de départ sont prêts.`,
+      'success'
+    );
+    confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 } });
+    return { success: true };
   },
 
   initGame: async () => {
