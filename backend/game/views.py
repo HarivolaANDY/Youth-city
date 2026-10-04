@@ -25,6 +25,10 @@ from game.models import (
     Dilemma,
     MarketItem,
     StartupProject,
+    Guild,
+    GuildMembership,
+    Hackathon,
+    HackathonParticipation,
 )
 from game.serializers import (
     PropertySerializer,
@@ -39,6 +43,9 @@ from game.serializers import (
     CharacterCustomizeSerializer,
     MarketItemSerializer,
     StartupProjectSerializer,
+    GuildSerializer,
+    HackathonSerializer,
+    HackathonParticipationSerializer,
 )
 
 TIME_SLOTS = [
@@ -1174,6 +1181,263 @@ def claim_incubator_grant(request, key):
         'project': StartupProjectSerializer(project).data,
         'citizen': CitizenDetailSerializer(character).data,
         'levelUp': level_up,
+    })
+
+
+# --- CITY HUB : GUILDES, HACKATHONS & COMMUNAUTÉ (§13, §29, §30, §31, §33) ---
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def list_guilds(request):
+    """Lists professional guilds in City Hub with membership status (§13, §30)."""
+    character = get_active_character(request)
+    if Guild.objects.count() == 0:
+        Guild.objects.bulk_create([
+            Guild(key="guild-devs", name="Developers Guild", category="tech", motto="Code is Poetry, Impact is Real", description="Entraide entre développeurs, revues de code et hackathons logiciels.", icon="Code", member_count=48, xp_bonus_percent=10, badge_reward="Master Coder"),
+            Guild(key="guild-designers", name="Designers Collective", category="design", motto="L'élégance au service de l'utilisateur", description="Critiques d'interfaces, défis artistiques et ateliers UI/UX pour Madagascar.", icon="Palette", member_count=32, xp_bonus_percent=8, badge_reward="Pixel Master"),
+            Guild(key="guild-entrepreneurs", name="Entrepreneurs Club", category="business", motto="De l'idée à la licorne malgache", description="Pitchs, recherche d'associés, mentorat et structuration de business plans.", icon="Rocket", member_count=55, xp_bonus_percent=10, badge_reward="Venture Builder"),
+            Guild(key="guild-finance", name="Business & Finance League", category="finance", motto="Rigueur comptable & investissements avisés", description="Stratégie patrimoniale, comptabilité d'entreprise et micro-investissement.", icon="TrendingUp", member_count=27, xp_bonus_percent=8, badge_reward="Capital Architect"),
+            Guild(key="guild-green", name="Social & Green Impact", category="green", motto="Pour un développement durable et inclusif", description="Initiatives écologiques, recyclage, AgriTech et impact sociétal à Antananarivo.", icon="Leaf", member_count=41, xp_bonus_percent=8, badge_reward="Eco Champion"),
+        ])
+    guilds = Guild.objects.all().order_by('-member_count')
+    serializer = GuildSerializer(guilds, many=True, context={'character': character})
+    return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def join_guild(request, key):
+    """Joins a guild, gaining guild perks and welcome XP (§13, §30)."""
+    character = get_active_character(request)
+    guild = get_object_or_404(Guild, key=key)
+
+    with db_transaction.atomic():
+        membership, created = GuildMembership.objects.get_or_create(
+            character=character,
+            defaults={'guild': guild, 'role': 'member'}
+        )
+        if not created and membership.guild_id != guild.id:
+            old_guild = membership.guild
+            old_guild.member_count = max(0, old_guild.member_count - 1)
+            old_guild.save()
+            membership.guild = guild
+            membership.save()
+            guild.member_count += 1
+            guild.save()
+            message = f"Tu as changé de guilde pour rejoindre : {guild.name} !"
+        elif created:
+            guild.member_count += 1
+            guild.save()
+            message = f"Bienvenue dans la guilde {guild.name} ! Bonus d'adhésion : +{guild.xp_bonus_percent}% XP sur tes prochaines actions."
+        else:
+            return Response({'error': "Tu es déjà membre de cette guilde."}, status=status.HTTP_400_BAD_REQUEST)
+
+        level_up = add_xp_to_character(character, 50)
+        character.save()
+
+    return Response({
+        'message': message,
+        'guild': GuildSerializer(guild, context={'character': character}).data,
+        'citizen': CitizenDetailSerializer(character).data,
+        'levelUp': level_up,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def leave_guild(request, key):
+    """Leaves active guild membership (§30)."""
+    character = get_active_character(request)
+    membership = GuildMembership.objects.filter(character=character, guild__key=key).first()
+    if not membership:
+        return Response({'error': "Tu n'es pas membre de cette guilde."}, status=status.HTTP_400_BAD_REQUEST)
+
+    with db_transaction.atomic():
+        guild = membership.guild
+        guild.member_count = max(0, guild.member_count - 1)
+        guild.save()
+        membership.delete()
+
+    return Response({
+        'message': f"Tu as quitté la guilde {guild.name}.",
+        'citizen': CitizenDetailSerializer(character).data,
+    })
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def list_hackathons(request):
+    """Lists collaborative hackathons and challenges at City Hub (§13, §31)."""
+    character = get_active_character(request)
+    if Hackathon.objects.count() == 0:
+        Hackathon.objects.bulk_create([
+            Hackathon(
+                key="hackathon-madainnov-2026",
+                title="Mada Innov 2026 : Tech for Good",
+                theme="Impact Écologique & Inclusion Numérique",
+                status="open",
+                team_size=4,
+                duration_hours=48,
+                xp_pool=5000,
+                prize_money=500000,
+                description="48 heures de sprint intensif en équipe de 4 pour prototyper une solution numérique répondant aux défis environnementaux et d'inclusion à Madagascar.",
+                evaluation_criteria=["Innovation & Originalité (25%)", "Faisabilité Technique (25%)", "Impact Local Madagascar (30%)", "Qualité du Pitch (20%)"]
+            ),
+            Hackathon(
+                key="hackathon-fintech-mada",
+                title="Sprint FinTech & Mobile Money",
+                theme="Inclusion Financière & Paiement Mobile",
+                status="open",
+                team_size=3,
+                duration_hours=36,
+                xp_pool=3500,
+                prize_money=350000,
+                description="Conçois un module de micro-épargne et de paiement mobile ultra-léger adapté aux commerçants et aux jeunes d'Antananarivo.",
+                evaluation_criteria=["Sécurité & Fiabilité (30%)", "Simplicité Ergonomique (30%)", "Modèle Économique (40%)"]
+            ),
+            Hackathon(
+                key="hackathon-agritech-challenge",
+                title="AgriTech Challenge Madagascar",
+                theme="Circuits Courts & Agriculture Connectée",
+                status="open",
+                team_size=3,
+                duration_hours=48,
+                xp_pool=4000,
+                prize_money=400000,
+                description="Bâtis une passerelle directe entre paysans ruraux et marchés urbains pour sécuriser l'approvisionnement alimentaire local.",
+                evaluation_criteria=["Impact Producteurs (35%)", "Accessibilité Téléphone Basique (35%)", "Viabilité Opérationnelle (30%)"]
+            ),
+        ])
+    hackathons = Hackathon.objects.all().order_by('-created_at')
+    serializer = HackathonSerializer(hackathons, many=True, context={'character': character})
+    return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def participate_hackathon(request, key):
+    """Submits a collaborative hackathon project, evaluates with jury, and rewards team (§13, §31)."""
+    character = get_active_character(request)
+    hackathon = get_object_or_404(Hackathon, key=key)
+
+    if hackathon.participations.filter(character=character).exists():
+        return Response({'error': "Ton équipe a déjà soumis son projet pour ce hackathon."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if character.energy < 20:
+        return Response({'error': "Énergie insuffisante pour un sprint de 48h (min. 20%). Repose-toi au Residential District !"}, status=status.HTTP_400_BAD_REQUEST)
+
+    team_name = (request.data.get('teamName') or f"Team {character.name}").strip()
+    submission_pitch = (request.data.get('submissionPitch') or '').strip()
+
+    if len(submission_pitch) < 15:
+        return Response({'error': "Le descriptif de votre solution doit comporter au moins 15 caractères pour le jury."}, status=status.HTTP_400_BAD_REQUEST)
+
+    team_members = request.data.get('teamMembers')
+    if not team_members or not isinstance(team_members, list):
+        team_members = [
+            f"{character.name} (Team Lead & Développeur)",
+            "Aina R. (Designer UI/UX)",
+            "Hery T. (Business & Pitch)",
+        ]
+
+    # Pedagogical jury scoring logic (§13, §31)
+    base_score = 75
+    # Skills bonus
+    char_skills = dict(character.skills.values_list('skill__key', 'level_percent'))
+    avg_skill = sum(char_skills.values()) / max(1, len(char_skills)) if char_skills else 50
+    skill_bonus = min(15, round(avg_skill / 7))
+    # Guild membership bonus (+5%)
+    guild_bonus = 5 if hasattr(character, 'guild_membership') else 0
+    pitch_bonus = min(8, round(len(submission_pitch) / 30))
+
+    final_score = min(100, base_score + skill_bonus + guild_bonus + pitch_bonus)
+    is_winner = final_score >= 82
+
+    # Rewards calculation
+    individual_xp = round(hackathon.xp_pool / hackathon.team_size * (1.2 if is_winner else 0.8))
+    individual_money = round(hackathon.prize_money / hackathon.team_size * (1.2 if is_winner else 0.5))
+
+    with db_transaction.atomic():
+        character.energy = max(5, character.energy - 20)
+        character.money += individual_money
+        character.completed_challenges += 1
+        level_up = add_xp_to_character(character, individual_xp)
+        character.save()
+
+        tx = Transaction.objects.create(
+            character=character,
+            timestamp=f"J-{character.day} {character.time_slot.split(' ')[0]}",
+            label=f"Hackathon : {hackathon.title} ({'1er Prix' if is_winner else 'Prix d\'Honneur'})",
+            amount=individual_money,
+            transaction_type='income',
+            category='Hackathon',
+        )
+
+        part = HackathonParticipation.objects.create(
+            hackathon=hackathon,
+            character=character,
+            team_name=team_name,
+            team_members=team_members,
+            submission_pitch=submission_pitch,
+            score=final_score,
+            awarded_xp=individual_xp,
+            awarded_money=individual_money,
+            is_winner=is_winner,
+            feedback=(
+                "Félicitations ! Le jury a salué la pertinence de votre prototype, l'impact direct pour Madagascar et votre belle cohésion d'équipe."
+                if is_winner else
+                "Très belle prestation de l'équipe ! Le prototype est prometteur, travaillez l'ergonomie et la viabilité économique pour la prochaine édition."
+            )
+        )
+
+    return Response({
+        'message': (
+            f"🏆 Victoire au Hackathon ! Score de {final_score}/100. Ton équipe remporte le 1er Prix : +{individual_xp} XP et +{individual_money:,} MGA pour ta part !"
+            if is_winner else
+            f"👏 Finaliste du Hackathon ! Score de {final_score}/100. Mention honorable et récompense : +{individual_xp} XP et +{individual_money:,} MGA !"
+        ),
+        'participation': HackathonParticipationSerializer(part).data,
+        'hackathon': HackathonSerializer(hackathon, context={'character': character}).data,
+        'citizen': CitizenDetailSerializer(character).data,
+        'transaction': TransactionSerializer(tx).data,
+        'levelUp': level_up,
+    })
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_community_leaderboard(request):
+    """Returns healthy thematic leaderboards without anxiety-inducing metrics (§33)."""
+    top_citizens = Character.objects.all().order_by('-xp')[:10]
+    citizens_data = [
+        {
+            'id': c.id,
+            'name': c.name,
+            'title': c.title,
+            'level': c.level,
+            'xp': c.xp,
+            'completedChallenges': c.completed_challenges,
+            'completedProjects': c.completed_projects,
+            'savings': c.savings,
+        }
+        for c in top_citizens
+    ]
+
+    top_guilds = Guild.objects.all().order_by('-member_count')[:5]
+    guilds_data = [
+        {
+            'id': g.key,
+            'name': g.name,
+            'category': g.get_category_display(),
+            'memberCount': g.member_count,
+            'motto': g.motto,
+        }
+        for g in top_guilds
+    ]
+
+    return Response({
+        'topCitizens': citizens_data,
+        'topGuilds': guilds_data,
     })
 
 

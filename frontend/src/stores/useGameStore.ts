@@ -12,6 +12,10 @@ import type {
   InterviewResult,
   StartupProject,
   StartupActionType,
+  Guild,
+  Hackathon,
+  HackathonParticipation,
+  CommunityLeaderboard,
 } from '../types/game';
 import { INITIAL_CITIZEN, COURSES, JOBS, HOUSINGS, SAMPLE_DILEMMA, MARKET_ITEMS } from '../data/mockData';
 import { api } from '../services/api';
@@ -21,7 +25,7 @@ interface GameState {
   citizen: Citizen;
   day: number;
   timeSlot: TimeSlot;
-  activeTab: 'dashboard' | 'map' | 'campus' | 'career' | 'market' | 'finance' | 'residential' | 'passport' | 'startup';
+  activeTab: 'dashboard' | 'map' | 'campus' | 'career' | 'market' | 'finance' | 'residential' | 'passport' | 'startup' | 'cityhub';
   selectedDistrictId: DistrictId | null;
   isNovaModalOpen: boolean;
   activeDilemma: Dilemma | null;
@@ -29,6 +33,9 @@ interface GameState {
   notifications: ToastNotification[];
   isBackendConnected: boolean;
   startupProjects: StartupProject[];
+  guilds: Guild[];
+  hackathons: Hackathon[];
+  leaderboard: CommunityLeaderboard | null;
 
   // Authentification & Comptes (§42, §47)
   user: AuthUser | null;
@@ -49,7 +56,7 @@ interface GameState {
   initGame: () => Promise<void>;
 
   // Navigation & UI Actions
-  setActiveTab: (tab: 'dashboard' | 'map' | 'campus' | 'career' | 'market' | 'finance' | 'residential' | 'passport' | 'startup') => void;
+  setActiveTab: (tab: 'dashboard' | 'map' | 'campus' | 'career' | 'market' | 'finance' | 'residential' | 'passport' | 'startup' | 'cityhub') => void;
   selectDistrict: (id: DistrictId | null) => void;
   toggleNovaModal: (open?: boolean) => void;
   dismissDilemma: () => void;
@@ -60,6 +67,12 @@ interface GameState {
   createStartupProject: (payload: { name: string; sector: string; pitch: string; initialCapital?: number }) => Promise<{ success: boolean; error?: string }>;
   advanceStartupAction: (projectKey: string, actionType: StartupActionType, role?: string) => Promise<{ success: boolean; error?: string }>;
   claimIncubatorGrant: (projectKey: string) => Promise<{ success: boolean; error?: string }>;
+
+  // City Hub (§13, §29, §30, §31, §33)
+  fetchCityHubData: () => Promise<void>;
+  joinGuild: (guildKey: string) => Promise<{ success: boolean; error?: string }>;
+  leaveGuild: (guildKey: string) => Promise<{ success: boolean; error?: string }>;
+  participateHackathon: (hackathonKey: string, payload: { teamName: string; submissionPitch: string; teamMembers?: string[] }) => Promise<{ success: boolean; error?: string }>;
 
   // Game Actions
   advanceTime: () => void;
@@ -110,6 +123,132 @@ const DEFAULT_STARTUP_PROJECTS: StartupProject[] = [
   },
 ];
 
+const DEFAULT_GUILDS: Guild[] = [
+  {
+    id: 'guild-devs',
+    key: 'guild-devs',
+    name: 'Developers Guild',
+    category: 'tech',
+    motto: 'Code is Poetry, Impact is Real',
+    description: 'Entraide entre développeurs, revues de code et hackathons logiciels.',
+    icon: 'Code',
+    memberCount: 48,
+    xpBonusPercent: 10,
+    badgeReward: 'Master Coder',
+    isJoined: false,
+  },
+  {
+    id: 'guild-designers',
+    key: 'guild-designers',
+    name: 'Designers Collective',
+    category: 'design',
+    motto: "L'élégance au service de l'utilisateur",
+    description: 'Critiques d\'interfaces, défis artistiques et ateliers UI/UX pour Madagascar.',
+    icon: 'Palette',
+    memberCount: 32,
+    xpBonusPercent: 8,
+    badgeReward: 'Pixel Master',
+    isJoined: false,
+  },
+  {
+    id: 'guild-entrepreneurs',
+    key: 'guild-entrepreneurs',
+    name: 'Entrepreneurs Club',
+    category: 'business',
+    motto: "De l'idée à la licorne malgache",
+    description: 'Pitchs, recherche d\'associés, mentorat et structuration de business plans.',
+    icon: 'Rocket',
+    memberCount: 55,
+    xpBonusPercent: 10,
+    badgeReward: 'Venture Builder',
+    isJoined: false,
+  },
+  {
+    id: 'guild-finance',
+    key: 'guild-finance',
+    name: 'Business & Finance League',
+    category: 'finance',
+    motto: 'Rigueur comptable & investissements avisés',
+    description: 'Stratégie patrimoniale, comptabilité d\'entreprise et micro-investissement.',
+    icon: 'TrendingUp',
+    memberCount: 27,
+    xpBonusPercent: 8,
+    badgeReward: 'Capital Architect',
+    isJoined: false,
+  },
+  {
+    id: 'guild-green',
+    key: 'guild-green',
+    name: 'Social & Green Impact',
+    category: 'green',
+    motto: 'Pour un développement durable et inclusif',
+    description: 'Initiatives écologiques, recyclage, AgriTech et impact sociétal à Antananarivo.',
+    icon: 'Leaf',
+    memberCount: 41,
+    xpBonusPercent: 8,
+    badgeReward: 'Eco Champion',
+    isJoined: false,
+  },
+];
+
+const DEFAULT_HACKATHONS: Hackathon[] = [
+  {
+    id: 'hackathon-madainnov-2026',
+    key: 'hackathon-madainnov-2026',
+    title: 'Mada Innov 2026 : Tech for Good',
+    theme: 'Impact Écologique & Inclusion Numérique',
+    status: 'open',
+    teamSize: 4,
+    durationHours: 48,
+    xpPool: 5000,
+    prizeMoney: 500000,
+    description: '48 heures de sprint intensif en équipe de 4 pour prototyper une solution numérique répondant aux défis environnementaux et d\'assainissement à Madagascar.',
+    evaluationCriteria: [
+      'Innovation & Originalité (25%)',
+      'Faisabilité Technique (25%)',
+      'Impact Local Madagascar (30%)',
+      'Qualité du Pitch (20%)',
+    ],
+    myParticipation: null,
+  },
+  {
+    id: 'hackathon-fintech-mada',
+    key: 'hackathon-fintech-mada',
+    title: 'Sprint FinTech & Mobile Money',
+    theme: 'Inclusion Financière & Paiement Mobile',
+    status: 'open',
+    teamSize: 3,
+    durationHours: 36,
+    xpPool: 3500,
+    prizeMoney: 350000,
+    description: 'Conçois un module de micro-épargne et de paiement mobile ultra-léger adapté aux commerçants et aux jeunes d\'Antananarivo.',
+    evaluationCriteria: [
+      'Sécurité & Fiabilité (30%)',
+      'Simplicité Ergonomique (30%)',
+      'Modèle Économique (40%)',
+    ],
+    myParticipation: null,
+  },
+  {
+    id: 'hackathon-agritech-challenge',
+    key: 'hackathon-agritech-challenge',
+    title: 'AgriTech Challenge Madagascar',
+    theme: 'Circuits Courts & Agriculture Connectée',
+    status: 'open',
+    teamSize: 3,
+    durationHours: 48,
+    xpPool: 4000,
+    prizeMoney: 400000,
+    description: 'Bâtis une passerelle directe entre paysans ruraux et marchés urbains pour sécuriser l\'approvisionnement alimentaire local.',
+    evaluationCriteria: [
+      'Impact Producteurs (35%)',
+      'Accessibilité Mobile (35%)',
+      'Viabilité Opérationnelle (30%)',
+    ],
+    myParticipation: null,
+  },
+];
+
 export const useGameStore = create<GameState>((set, get) => ({
   citizen: { ...INITIAL_CITIZEN },
   day: 14,
@@ -128,6 +267,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   ],
   isBackendConnected: false,
   startupProjects: DEFAULT_STARTUP_PROJECTS,
+  guilds: DEFAULT_GUILDS,
+  hackathons: DEFAULT_HACKATHONS,
+  leaderboard: null,
 
   // Authentification & Comptes (§42, §47)
   user: null,
@@ -252,10 +394,16 @@ export const useGameStore = create<GameState>((set, get) => ({
         });
       }
 
-      const projects = await api.getStartupProjects();
-      if (projects && projects.length > 0) {
-        set({ startupProjects: projects });
-      }
+      const [projects, guilds, hackathons, lb] = await Promise.all([
+        api.getStartupProjects(),
+        api.getGuilds(),
+        api.getHackathons(),
+        api.getCommunityLeaderboard(),
+      ]);
+      if (projects && projects.length > 0) set({ startupProjects: projects });
+      if (guilds && guilds.length > 0) set({ guilds });
+      if (hackathons && hackathons.length > 0) set({ hackathons });
+      if (lb) set({ leaderboard: lb });
     } catch {
       // Backend not running, falls back silently to local state
     }
@@ -271,6 +419,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     else if (id === 'residential') set({ activeTab: 'residential' });
     else if (id === 'market') set({ activeTab: 'market' });
     else if (id === 'startup') set({ activeTab: 'startup' });
+    else if (id === 'cityhub') set({ activeTab: 'cityhub' });
   },
 
   toggleNovaModal: (open) => set((state) => ({ isNovaModalOpen: open !== undefined ? open : !state.isNovaModalOpen })),
@@ -493,6 +642,154 @@ export const useGameStore = create<GameState>((set, get) => ({
         // Confetti fallback
       }
       addNotification('Bourse Incubateur obtenue !', `200 000 MGA de subvention versés dans la trésorerie de ${project.name} !`, 'success');
+      return { success: true };
+    }
+  },
+
+  // --- CITY HUB (§13, §29, §30, §31, §33) ---
+  fetchCityHubData: async () => {
+    try {
+      const [guilds, hackathons, lb] = await Promise.all([
+        api.getGuilds(),
+        api.getHackathons(),
+        api.getCommunityLeaderboard(),
+      ]);
+      if (guilds) set({ guilds });
+      if (hackathons) set({ hackathons });
+      if (lb) set({ leaderboard: lb });
+    } catch {
+      // offline fallback
+    }
+  },
+
+  joinGuild: async (guildKey) => {
+    const { addNotification } = get();
+    try {
+      const res = await api.joinGuild(guildKey);
+      if ('error' in res) {
+        addNotification('Guilde', res.error, 'warning');
+        return { success: false, error: res.error };
+      }
+      set((state) => ({
+        guilds: state.guilds.map((g) => ({
+          ...g,
+          isJoined: g.key === guildKey,
+          memberCount: g.key === guildKey ? g.memberCount + 1 : (g.isJoined ? Math.max(0, g.memberCount - 1) : g.memberCount),
+        })),
+        citizen: res.citizen,
+      }));
+      try {
+        confetti({ particleCount: 75, spread: 60, origin: { y: 0.6 } });
+      } catch {
+        // Confetti fallback
+      }
+      addNotification('Guilde rejointe !', res.message, 'success');
+      return { success: true };
+    } catch {
+      set((state) => ({
+        guilds: state.guilds.map((g) => ({
+          ...g,
+          isJoined: g.key === guildKey,
+        })),
+      }));
+      get().addXp(50);
+      try {
+        confetti({ particleCount: 75, spread: 60, origin: { y: 0.6 } });
+      } catch {
+        // Confetti fallback
+      }
+      addNotification('Guilde rejointe !', 'Tu as rejoint la guilde ! (+50 XP)', 'success');
+      return { success: true };
+    }
+  },
+
+  leaveGuild: async (guildKey) => {
+    const { addNotification } = get();
+    try {
+      const res = await api.leaveGuild(guildKey);
+      if ('error' in res) {
+        addNotification('Guilde', res.error, 'warning');
+        return { success: false, error: res.error };
+      }
+      set((state) => ({
+        guilds: state.guilds.map((g) => (g.key === guildKey ? { ...g, isJoined: false, memberCount: Math.max(0, g.memberCount - 1) } : g)),
+        citizen: res.citizen,
+      }));
+      addNotification('Guilde quittée', res.message, 'info');
+      return { success: true };
+    } catch {
+      set((state) => ({
+        guilds: state.guilds.map((g) => (g.key === guildKey ? { ...g, isJoined: false } : g)),
+      }));
+      addNotification('Guilde quittée', 'Tu as quitté la guilde.', 'info');
+      return { success: true };
+    }
+  },
+
+  participateHackathon: async (hackathonKey, payload) => {
+    const { addNotification, citizen, addXp, earnMoney } = get();
+    try {
+      const res = await api.participateHackathon(hackathonKey, payload);
+      if ('error' in res) {
+        addNotification('Hackathon', res.error, 'warning');
+        return { success: false, error: res.error };
+      }
+      set((state) => ({
+        hackathons: state.hackathons.map((h) => (h.key === hackathonKey ? res.hackathon : h)),
+        citizen: res.citizen,
+        transactions: res.transaction ? [res.transaction, ...state.transactions].slice(0, 30) : state.transactions,
+      }));
+      try {
+        confetti({ particleCount: 110, spread: 75, origin: { y: 0.6 } });
+      } catch {
+        // Confetti fallback
+      }
+      addNotification('Résultat Hackathon !', res.message, 'success');
+      return { success: true };
+    } catch {
+      const hackathon = get().hackathons.find((h) => h.key === hackathonKey);
+      if (!hackathon) return { success: false, error: 'Hackathon introuvable.' };
+      if (citizen.energy < 20) {
+        addNotification('Énergie insuffisante', "20% d'énergie requis.", 'warning');
+        return { success: false, error: 'Énergie insuffisante.' };
+      }
+      const score = 88;
+      const isWinner = true;
+      const wonXp = Math.round(hackathon.xpPool / hackathon.teamSize * 1.2);
+      const wonMoney = Math.round(hackathon.prizeMoney / hackathon.teamSize * 1.2);
+
+      const part: HackathonParticipation = {
+        id: Date.now(),
+        teamName: payload.teamName,
+        teamMembers: payload.teamMembers || [
+          `${citizen.name} (Lead)`,
+          'Aina (UI/UX)',
+          'Hery (Dev)',
+        ],
+        submissionPitch: payload.submissionPitch,
+        score,
+        awardedXp: wonXp,
+        awardedMoney: wonMoney,
+        isWinner,
+        feedback: "Bravo ! Le jury a salué la pertinence et l'impact de votre prototype pour Madagascar.",
+      };
+
+      earnMoney(wonMoney, `Hackathon : ${hackathon.title}`, 'Hackathon');
+      addXp(wonXp);
+      set((state) => ({
+        hackathons: state.hackathons.map((h) => (h.key === hackathonKey ? { ...h, myParticipation: part } : h)),
+        citizen: {
+          ...state.citizen,
+          energy: Math.max(5, state.citizen.energy - 20),
+          completedChallenges: state.citizen.completedChallenges + 1,
+        },
+      }));
+      try {
+        confetti({ particleCount: 110, spread: 75, origin: { y: 0.6 } });
+      } catch {
+        // Confetti fallback
+      }
+      addNotification('🏆 Victoire au Hackathon !', `Score 88/100 ! +${wonXp} XP et +${formatNumber(wonMoney)} MGA remportés !`, 'success');
       return { success: true };
     }
   },

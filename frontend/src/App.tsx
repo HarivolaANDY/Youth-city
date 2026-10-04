@@ -17,6 +17,7 @@ const CareerPassportView = lazy(() =>
 );
 const MarketView = lazy(() => import('./features/market/MarketView').then((m) => ({ default: m.MarketView })));
 const StartupView = lazy(() => import('./features/startup/StartupView').then((m) => ({ default: m.StartupView })));
+const CityHubView = lazy(() => import('./features/hub/CityHubView').then((m) => ({ default: m.CityHubView })));
 
 const ViewSkeleton: React.FC = () => (
   <div role="status" aria-busy="true" className="space-y-5">
@@ -65,6 +66,8 @@ export const App: React.FC = () => {
         return <CareerView />;
       case 'startup':
         return <StartupView />;
+      case 'cityhub':
+        return <CityHubView />;
       case 'market':
         return <MarketView />;
       case 'finance':

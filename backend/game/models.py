@@ -214,3 +214,79 @@ class StartupProject(models.Model):
         return f"{self.name} ({self.get_stage_display()}) — {self.character.name}"
 
 
+class Guild(models.Model):
+    """Guilde professionnelle et communauté thématique au City Hub (§13, §30)"""
+    CATEGORY_CHOICES = (
+        ('tech', 'Développeurs & Ingénieurs'),
+        ('design', 'Designers & Créatifs UI/UX'),
+        ('business', 'Entrepreneurs & Innovateurs'),
+        ('finance', 'Finance & Investissement'),
+        ('green', 'Impact Social & Écologie'),
+    )
+    key = models.CharField(max_length=64, unique=True)
+    name = models.CharField(max_length=160)
+    category = models.CharField(max_length=32, choices=CATEGORY_CHOICES, default='tech')
+    description = models.TextField()
+    motto = models.CharField(max_length=255, blank=True)
+    icon = models.CharField(max_length=64, default="Users")
+    member_count = models.IntegerField(default=12)
+    xp_bonus_percent = models.IntegerField(default=5, help_text="Bonus de gain d'XP pour les membres actifs (%)")
+    badge_reward = models.CharField(max_length=100, blank=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.get_category_display()})"
+
+
+class GuildMembership(models.Model):
+    """Adhésion d'un citoyen à une guilde thématique (§30)"""
+    character = models.OneToOneField(Character, on_delete=models.CASCADE, related_name='guild_membership')
+    guild = models.ForeignKey(Guild, on_delete=models.CASCADE, related_name='memberships')
+    role = models.CharField(max_length=32, default='member')
+    contributed_xp = models.IntegerField(default=0)
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.character.name} in {self.guild.name} ({self.role})"
+
+
+class Hackathon(models.Model):
+    """Challenge collaboratif et hackathon inter-quartiers au City Hub (§13, §31)"""
+    STATUS_CHOICES = (
+        ('open', 'Inscriptions Ouvertes'),
+        ('in_progress', 'En Cours'),
+        ('completed', 'Terminé'),
+    )
+    key = models.CharField(max_length=64, unique=True)
+    title = models.CharField(max_length=160)
+    theme = models.CharField(max_length=120)
+    status = models.CharField(max_length=32, choices=STATUS_CHOICES, default='open')
+    team_size = models.IntegerField(default=3, help_text="Taille recommandée d'équipe (3 à 5)")
+    duration_hours = models.IntegerField(default=48)
+    xp_pool = models.IntegerField(default=3000, help_text="Pool d'XP à remporter")
+    prize_money = models.BigIntegerField(default=300000, help_text="Prix en MGA virtuels pour l'équipe")
+    description = models.TextField()
+    evaluation_criteria = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.title} ({self.theme}) - {self.get_status_display()}"
+
+
+class HackathonParticipation(models.Model):
+    """Participation et rendu d'une équipe de citoyens à un hackathon (§13, §31)"""
+    hackathon = models.ForeignKey(Hackathon, on_delete=models.CASCADE, related_name='participations')
+    character = models.ForeignKey(Character, on_delete=models.CASCADE, related_name='hackathon_participations')
+    team_name = models.CharField(max_length=120)
+    team_members = models.JSONField(default=list)
+    submission_pitch = models.TextField()
+    score = models.IntegerField(default=0)
+    awarded_xp = models.IntegerField(default=0)
+    awarded_money = models.BigIntegerField(default=0)
+    is_winner = models.BooleanField(default=False)
+    feedback = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.team_name} — {self.hackathon.title} (Score: {self.score}/100)"
+
+

@@ -12,6 +12,10 @@ import type {
   InterviewResult,
   StartupProject,
   StartupActionType,
+  Guild,
+  Hackathon,
+  HackathonParticipation,
+  CommunityLeaderboard,
 } from '../types/game';
 
 const API_BASE_URL = 'http://localhost:8000/api';
@@ -461,6 +465,83 @@ export const api = {
       return data;
     } catch {
       return { error: 'Impossible de joindre le serveur Youth City.' };
+    }
+  },
+
+  // --- CITY HUB : GUILDES, HACKATHONS & COMMUNAUTÉ (§13, §29, §30, §31, §33) ---
+  async getGuilds(): Promise<Guild[] | null> {
+    try {
+      const res = await fetchAuth(`${API_BASE_URL}/hub/guilds/`);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  },
+
+  async joinGuild(guildKey: string): Promise<{ guild: Guild; citizen: Citizen; levelUp?: boolean; message: string } | { error: string }> {
+    try {
+      const res = await fetchAuth(`${API_BASE_URL}/hub/guilds/${guildKey}/join/`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { error: data.error || 'Impossible de rejoindre la guilde.' };
+      }
+      return data;
+    } catch {
+      return { error: 'Impossible de joindre le serveur Youth City.' };
+    }
+  },
+
+  async leaveGuild(guildKey: string): Promise<{ citizen: Citizen; message: string } | { error: string }> {
+    try {
+      const res = await fetchAuth(`${API_BASE_URL}/hub/guilds/${guildKey}/leave/`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { error: data.error || 'Impossible de quitter la guilde.' };
+      }
+      return data;
+    } catch {
+      return { error: 'Impossible de joindre le serveur Youth City.' };
+    }
+  },
+
+  async getHackathons(): Promise<Hackathon[] | null> {
+    try {
+      const res = await fetchAuth(`${API_BASE_URL}/hub/hackathons/`);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  },
+
+  async participateHackathon(hackathonKey: string, payload: { teamName: string; submissionPitch: string; teamMembers?: string[] }): Promise<{ participation: HackathonParticipation; hackathon: Hackathon; citizen: Citizen; transaction: Transaction; levelUp?: boolean; message: string } | { error: string }> {
+    try {
+      const res = await fetchAuth(`${API_BASE_URL}/hub/hackathons/${hackathonKey}/participate/`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { error: data.error || 'Impossible de soumettre le projet de hackathon.' };
+      }
+      return data;
+    } catch {
+      return { error: 'Impossible de joindre le serveur Youth City.' };
+    }
+  },
+
+  async getCommunityLeaderboard(): Promise<CommunityLeaderboard | null> {
+    try {
+      const res = await fetchAuth(`${API_BASE_URL}/hub/leaderboard/`);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
     }
   },
 };

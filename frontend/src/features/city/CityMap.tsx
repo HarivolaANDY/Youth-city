@@ -31,7 +31,7 @@ const ICON_MAP = {
 };
 
 export const CityMap: React.FC = () => {
-  const { selectDistrict, citizen, startupProjects } = useGameStore();
+  const { selectDistrict, citizen, startupProjects, guilds, hackathons } = useGameStore();
 
   const housing = HOUSINGS.find((h) => h.id === citizen.currentHousingId);
   const availableCourses = COURSES.filter((c) => !citizen.completedCourses.includes(c.id)).length;
@@ -73,7 +73,11 @@ export const CityMap: React.FC = () => {
           tag: 'Incubateur',
         };
       case 'cityhub':
-        return { label: 'Hackathons & Guildes V2', active: false, tag: 'Communauté' };
+        return {
+          label: `${guilds.length} guildes & ${hackathons.length} hackathons`,
+          active: true,
+          tag: 'Communauté',
+        };
     }
   };
 
@@ -166,16 +170,16 @@ export const CityMap: React.FC = () => {
         })}
       </ul>
 
-      <Panel tone="neutral" className="flex flex-wrap items-center justify-between gap-4 p-5">
+      <Panel tone="gain" className="flex flex-wrap items-center justify-between gap-4 p-5">
         <div className="flex min-w-0 items-center gap-3">
-          <IconChip tone="brand">
+          <IconChip tone="gain">
             <Sparkles />
           </IconChip>
-          <p className="text-xs leading-relaxed text-mist-400">
-            Le district <span className="font-bold text-mist-200">City Hub</span> (Guildes & Hackathons multijoueurs) arrive dans le prochain module du jeu.
+          <p className="text-xs leading-relaxed text-mist-300">
+            Tous les quartiers de <span className="font-bold text-white">YOUTH CITY</span> sont désormais interconnectés : Campus, Business, Startup District, City Hub, Market, Finance et Résidentiel.
           </p>
         </div>
-        <Badge tone="warn">Bientôt disponible</Badge>
+        <Badge tone="gain">Cité 100% Active</Badge>
       </Panel>
     </div>
   );

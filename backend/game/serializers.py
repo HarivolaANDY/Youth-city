@@ -13,6 +13,10 @@ from game.models import (
     Dilemma,
     MarketItem,
     StartupProject,
+    Guild,
+    GuildMembership,
+    Hackathon,
+    HackathonParticipation,
 )
 
 class UserSerializer(serializers.ModelSerializer):
@@ -265,4 +269,96 @@ class StartupProjectSerializer(serializers.ModelSerializer):
             'team',
             'created_at',
         ]
+
+
+class GuildSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(source='key')
+    key = serializers.CharField()
+    memberCount = serializers.IntegerField(source='member_count')
+    xpBonusPercent = serializers.IntegerField(source='xp_bonus_percent')
+    badgeReward = serializers.CharField(source='badge_reward')
+    isJoined = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Guild
+        fields = [
+            'id',
+            'key',
+            'name',
+            'category',
+            'description',
+            'motto',
+            'icon',
+            'memberCount',
+            'xpBonusPercent',
+            'badgeReward',
+            'isJoined',
+        ]
+
+    def get_isJoined(self, obj):
+        character = self.context.get('character')
+        if not character:
+            return False
+        return hasattr(character, 'guild_membership') and character.guild_membership.guild_id == obj.id
+
+
+class HackathonParticipationSerializer(serializers.ModelSerializer):
+    teamName = serializers.CharField(source='team_name')
+    teamMembers = serializers.JSONField(source='team_members')
+    submissionPitch = serializers.CharField(source='submission_pitch')
+    awardedXp = serializers.IntegerField(source='awarded_xp')
+    awardedMoney = serializers.IntegerField(source='awarded_money')
+    isWinner = serializers.BooleanField(source='is_winner')
+
+    class Meta:
+        model = HackathonParticipation
+        fields = [
+            'id',
+            'teamName',
+            'teamMembers',
+            'submissionPitch',
+            'score',
+            'awardedXp',
+            'awardedMoney',
+            'isWinner',
+            'feedback',
+            'created_at',
+        ]
+
+
+class HackathonSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(source='key')
+    key = serializers.CharField()
+    teamSize = serializers.IntegerField(source='team_size')
+    durationHours = serializers.IntegerField(source='duration_hours')
+    xpPool = serializers.IntegerField(source='xp_pool')
+    prizeMoney = serializers.IntegerField(source='prize_money')
+    evaluationCriteria = serializers.JSONField(source='evaluation_criteria')
+    myParticipation = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Hackathon
+        fields = [
+            'id',
+            'key',
+            'title',
+            'theme',
+            'status',
+            'teamSize',
+            'durationHours',
+            'xpPool',
+            'prizeMoney',
+            'description',
+            'evaluationCriteria',
+            'myParticipation',
+        ]
+
+    def get_myParticipation(self, obj):
+        character = self.context.get('character')
+        if not character:
+            return None
+        part = obj.participations.filter(character=character).first()
+        if not part:
+            return None
+        return HackathonParticipationSerializer(part).data
 

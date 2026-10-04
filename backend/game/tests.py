@@ -345,6 +345,67 @@ class YouthCityBackendAPITests(APITestCase):
         self.assertEqual(grant_proj['treasury'], 205000)
         self.assertIn("bourse d'amorçage", res_grant.json().get('message', ''))
 
+    def test_15_city_hub_guilds_hackathons_leaderboard(self):
+        """Verifies City Hub: Guild joining/leaving, Hackathon participation & scoring, and Leaderboard (§13, §30, §31, §33)."""
+        # 1. List professional guilds
+        res_guilds = self.client.get('/api/hub/guilds/')
+        self.assertEqual(res_guilds.status_code, status.HTTP_200_OK)
+        guilds = res_guilds.json()
+        self.assertGreaterEqual(len(guilds), 5)
+        dev_guild = next(g for g in guilds if g['key'] == 'guild-devs')
+        self.assertFalse(dev_guild['isJoined'])
+
+        # 2. Join Developers Guild
+        res_join = self.client.post('/api/hub/guilds/guild-devs/join/')
+        self.assertEqual(res_join.status_code, status.HTTP_200_OK)
+        self.assertTrue(res_join.json()['guild']['isJoined'])
+        self.assertIn("Bienvenue dans la guilde", res_join.json()['message'])
+
+        # 3. List collaborative hackathons
+        res_hackathons = self.client.get('/api/hub/hackathons/')
+        self.assertEqual(res_hackathons.status_code, status.HTTP_200_OK)
+        hackathons = res_hackathons.json()
+        self.assertGreaterEqual(len(hackathons), 3)
+        mada_hack = next(h for h in hackathons if h['key'] == 'hackathon-madainnov-2026')
+        self.assertIsNone(mada_hack['myParticipation'])
+
+        # 4. Participate in Hackathon
+        initial_money = self.character.money
+        initial_challenges = self.character.completed_challenges
+        res_part = self.client.post('/api/hub/hackathons/hackathon-madainnov-2026/participate/', {
+            'teamName': 'Madagasikara Tech Solvers',
+            'submissionPitch': 'Plateforme mobile offline-first permettant la gestion décentralisée des points d\'eau solaires.',
+            'teamMembers': [
+                'Emmanuel (Team Lead)',
+                'Aina (UI/UX Designer)',
+                'Hery (Backend Dev)',
+                'Mialy (Pitch & Business)',
+            ]
+        })
+        self.assertEqual(res_part.status_code, status.HTTP_200_OK)
+        part_data = res_part.json()['participation']
+        self.assertGreaterEqual(part_data['score'], 75)
+        self.assertGreater(part_data['awardedXp'], 0)
+        self.assertGreater(part_data['awardedMoney'], 0)
+
+        self.character.refresh_from_db()
+        self.assertEqual(self.character.completed_challenges, initial_challenges + 1)
+        self.assertGreater(self.character.money, initial_money)
+
+        # 5. Get Community Leaderboard
+        res_lb = self.client.get('/api/hub/leaderboard/')
+        self.assertEqual(res_lb.status_code, status.HTTP_200_OK)
+        lb_data = res_lb.json()
+        self.assertIn('topCitizens', lb_data)
+        self.assertIn('topGuilds', lb_data)
+        self.assertGreaterEqual(len(lb_data['topCitizens']), 1)
+        self.assertGreaterEqual(len(lb_data['topGuilds']), 1)
+
+        # 6. Leave Guild
+        res_leave = self.client.post('/api/hub/guilds/guild-devs/leave/')
+        self.assertEqual(res_leave.status_code, status.HTTP_200_OK)
+        self.assertIn("Tu as quitté la guilde", res_leave.json()['message'])
+
 
 
 

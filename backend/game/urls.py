@@ -47,6 +47,14 @@ urlpatterns = [
     path('startup/<str:key>/action/', views.advance_startup_action, name='advance-startup-action'),
     path('startup/<str:key>/grant/', views.claim_incubator_grant, name='claim-incubator-grant'),
 
+    # City Hub : Guildes, Hackathons & Leaderboards (§13, §29, §30, §31, §33)
+    path('hub/guilds/', views.list_guilds, name='list-guilds'),
+    path('hub/guilds/<str:key>/join/', views.join_guild, name='join-guild'),
+    path('hub/guilds/<str:key>/leave/', views.leave_guild, name='leave-guild'),
+    path('hub/hackathons/', views.list_hackathons, name='list-hackathons'),
+    path('hub/hackathons/<str:key>/participate/', views.participate_hackathon, name='participate-hackathon'),
+    path('hub/leaderboard/', views.get_community_leaderboard, name='community-leaderboard'),
+
     # Dilemmas & Random Events
     path('dilemmas/active/', views.get_active_dilemma, name='active-dilemma'),
     path('dilemmas/resolve/', views.resolve_dilemma, name='resolve-dilemma'),

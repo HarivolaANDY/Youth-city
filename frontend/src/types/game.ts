@@ -224,5 +224,71 @@ export type StartupActionType =
   | 'recruit_partner' 
   | 'collect_revenue';
 
+export interface Guild {
+  id: string;
+  key: string;
+  name: string;
+  category: 'tech' | 'design' | 'business' | 'finance' | 'green';
+  description: string;
+  motto: string;
+  icon: string;
+  memberCount: number;
+  xpBonusPercent: number;
+  badgeReward: string;
+  isJoined?: boolean;
+}
+
+export interface HackathonParticipation {
+  id: number;
+  teamName: string;
+  teamMembers: string[];
+  submissionPitch: string;
+  score: number;
+  awardedXp: number;
+  awardedMoney: number;
+  isWinner: boolean;
+  feedback: string;
+  created_at?: string;
+}
+
+export interface Hackathon {
+  id: string;
+  key: string;
+  title: string;
+  theme: string;
+  status: 'open' | 'in_progress' | 'completed';
+  teamSize: number;
+  durationHours: number;
+  xpPool: number;
+  prizeMoney: number;
+  description: string;
+  evaluationCriteria: string[];
+  myParticipation?: HackathonParticipation | null;
+}
+
+export interface LeaderboardCitizen {
+  id: number;
+  name: string;
+  title: string;
+  level: number;
+  xp: number;
+  completedChallenges: number;
+  completedProjects: number;
+  savings: number;
+}
+
+export interface LeaderboardGuild {
+  id: string;
+  name: string;
+  category: string;
+  memberCount: number;
+  motto: string;
+}
+
+export interface CommunityLeaderboard {
+  topCitizens: LeaderboardCitizen[];
+  topGuilds: LeaderboardGuild[];
+}
+
 
 

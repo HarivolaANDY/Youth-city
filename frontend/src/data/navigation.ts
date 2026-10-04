@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   ShoppingBag,
   Rocket,
+  Users,
 } from 'lucide-react';
 
 export const TABS = [
@@ -16,6 +17,7 @@ export const TABS = [
   { id: 'campus', label: 'Campus', short: 'Campus', icon: GraduationCap },
   { id: 'career', label: 'Carrière', short: 'Carrière', icon: Briefcase },
   { id: 'startup', label: 'Startup District', short: 'Startup', icon: Rocket },
+  { id: 'cityhub', label: 'City Hub', short: 'Hub', icon: Users },
   { id: 'market', label: 'Market District', short: 'Boutique', icon: ShoppingBag },
   { id: 'finance', label: 'Finance', short: 'Finance', icon: Landmark },
   { id: 'residential', label: 'Résidentiel', short: 'Foyer', icon: Home },
