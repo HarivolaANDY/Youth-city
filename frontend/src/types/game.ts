@@ -340,6 +340,30 @@ export interface AdminOverviewData {
   recentCitizens: AdminCitizenItem[];
 }
 
+export interface RecurringSettlementSummary {
+  rentPaid: number;
+  rentCoveredBySavings: number;
+  rentUnpaid: number;
+  interestEarned: number;
+  salaryBonusEarned: number;
+  status: 'paid' | 'covered_by_savings' | 'overdue';
+  messages: string[];
+}
+
+export interface RecurringCycleInfo {
+  daysPerCycle: number;
+  currentCycleDay: number;
+  daysUntilRent: number;
+  rentDueDay: number;
+  rentAmount: number;
+  housingName: string;
+  monthlySavingsInterest: number;
+  monthlySalary: number;
+  status: 'ok' | 'warning' | 'danger';
+  hasSufficientRentFunds: boolean;
+}
+
+
 
 
 

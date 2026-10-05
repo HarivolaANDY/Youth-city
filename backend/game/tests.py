@@ -555,6 +555,71 @@ class YouthCityBackendAPITests(APITestCase):
         self.assertEqual(res_mod_inj.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("directive d'injection", res_mod_inj.json().get('error', ''))
 
+    def test_19_temporal_synchronization_and_recurring_expenses(self):
+        """Tests temporal synchronization, monthly rent deductions, and savings interest settlements (§18, §20)."""
+        self.character.day = 1
+        self.character.save()
+
+        # 1. State returns recurringCycle metadata
+        res_state = self.client.get('/api/game/state/')
+        self.assertEqual(res_state.status_code, status.HTTP_200_OK)
+        cycle = res_state.json().get('recurringCycle')
+        self.assertIsNotNone(cycle)
+        self.assertEqual(cycle['daysPerCycle'], 30)
+        self.assertEqual(cycle['currentCycleDay'], 1)
+        self.assertEqual(cycle['daysUntilRent'], 29)
+        self.assertGreater(cycle['rentAmount'], 0)
+
+        # 2. Advance time using advance_day to reach cycle settlement (Day 31)
+        initial_money = self.character.money
+        initial_savings = self.character.savings
+        housing_rent = self.character.current_housing.rent_price if self.character.current_housing else 70000
+
+        res_advance = self.client.post('/api/game/advance_day/', {'days': 30})
+        self.assertEqual(res_advance.status_code, status.HTTP_200_OK)
+        data = res_advance.json()
+        self.assertEqual(data['day'], 31)
+        summary = data.get('settlementSummary')
+        self.assertIsNotNone(summary)
+        self.assertEqual(summary['status'], 'paid')
+        self.assertEqual(summary['rentPaid'], housing_rent)
+        self.assertGreater(summary['interestEarned'], 0)
+
+        self.character.refresh_from_db()
+        expected_interest = round(initial_savings * 0.01)
+        self.assertEqual(self.character.savings, initial_savings + expected_interest)
+
+        # 3. Emergency reserve fallback when current account is short
+        self.character.money = 20000
+        self.character.savings = 150000
+        self.character.save()
+
+        # Advance 30 more days to trigger month 2 settlement (Day 61)
+        res_adv2 = self.client.post('/api/game/advance_day/', {'days': 30})
+        self.assertEqual(res_adv2.status_code, status.HTTP_200_OK)
+        summary2 = res_adv2.json().get('settlementSummary')
+        self.assertEqual(summary2['status'], 'covered_by_savings')
+        self.character.refresh_from_db()
+        self.assertEqual(self.character.money, 0)
+        shortfall = housing_rent - 20000
+        # Savings decreased by shortfall then gained interest
+        self.assertTrue(self.character.savings < 150000)
+
+        # 4. Rent default penalty when both cash and savings are exhausted
+        self.character.money = 0
+        self.character.savings = 0
+        initial_wellbeing = self.character.wellbeing
+        self.character.save()
+
+        # Advance 30 days to trigger month 3 settlement (Day 91)
+        res_adv3 = self.client.post('/api/game/advance_day/', {'days': 30})
+        self.assertEqual(res_adv3.status_code, status.HTTP_200_OK)
+        summary3 = res_adv3.json().get('settlementSummary')
+        self.assertEqual(summary3['status'], 'overdue')
+        self.character.refresh_from_db()
+        self.assertEqual(self.character.wellbeing, max(10, initial_wellbeing - 20))
+
+
 
 
 

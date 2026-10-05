@@ -18,6 +18,7 @@ import type {
   CommunityLeaderboard,
   ModerationReport,
   AdminOverviewData,
+  RecurringCycleInfo,
 } from '../types/game';
 import { INITIAL_CITIZEN, COURSES, JOBS, HOUSINGS, SAMPLE_DILEMMA, MARKET_ITEMS } from '../data/mockData';
 import { api } from '../services/api';
@@ -27,6 +28,7 @@ interface GameState {
   citizen: Citizen;
   day: number;
   timeSlot: TimeSlot;
+  recurringCycle: RecurringCycleInfo | null;
   activeTab: 'dashboard' | 'map' | 'campus' | 'career' | 'market' | 'finance' | 'residential' | 'passport' | 'startup' | 'cityhub';
   selectedDistrictId: DistrictId | null;
   isNovaModalOpen: boolean;
@@ -88,6 +90,7 @@ interface GameState {
 
   // Game Actions
   advanceTime: () => void;
+  advanceDay: (days?: number) => Promise<void>;
   restAndSleep: () => void;
   addXp: (amount: number) => void;
   earnMoney: (amount: number, label: string, category?: string) => void;
@@ -363,6 +366,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   citizen: { ...INITIAL_CITIZEN },
   day: 14,
   timeSlot: 'Matin (08:00)',
+  recurringCycle: null,
   activeTab: 'dashboard',
   selectedDistrictId: null,
   isNovaModalOpen: false,
@@ -501,6 +505,7 @@ export const useGameStore = create<GameState>((set, get) => ({
           citizen: state.citizen,
           day: state.day || 14,
           timeSlot: (state.timeSlot as TimeSlot) || 'Matin (08:00)',
+          recurringCycle: state.recurringCycle || null,
           transactions: state.transactions && state.transactions.length > 0 ? state.transactions : get().transactions,
           activeDilemma: state.activeDilemma || null,
           isBackendConnected: true,
@@ -1274,9 +1279,74 @@ export const useGameStore = create<GameState>((set, get) => ({
           day: res.day,
           timeSlot: res.timeSlot as TimeSlot,
           citizen: res.citizen,
+          recurringCycle: res.recurringCycle || null,
         });
+
+        if (res.settlementSummary) {
+          const s = res.settlementSummary;
+          if (s.status === 'paid') {
+            get().addNotification(
+              '🏠 Loyer mensuel prélevé',
+              `Loyer de ${formatNumber(s.rentPaid)} MGA honoré.${s.interestEarned > 0 ? ` +${formatNumber(s.interestEarned)} MGA d'intérêts versés sur ton épargne BOA !` : ''}`,
+              'success'
+            );
+          } else if (s.status === 'covered_by_savings') {
+            get().addNotification(
+              '⚠️ Prélèvement de secours sur épargne',
+              `Solde courant insuffisant : ${formatNumber(s.rentCoveredBySavings)} MGA prélevés sur ton épargne BOA pour payer ton loyer.`,
+              'warning'
+            );
+          } else if (s.status === 'overdue') {
+            get().addNotification(
+              '🚨 Impayé de loyer',
+              `Trésorerie et épargne épuisées : loyer impayé ! Malus de bien-être (-20%).`,
+              'warning'
+            );
+          }
+        }
       }
     });
+  },
+
+  advanceDay: async (days = 1) => {
+    const res = await api.advanceDay(days);
+    if (res && res.citizen) {
+      set({
+        day: res.day,
+        timeSlot: res.timeSlot as TimeSlot,
+        citizen: res.citizen,
+        recurringCycle: res.recurringCycle || null,
+      });
+
+      if (res.settlementSummary) {
+        const s = res.settlementSummary;
+        if (s.status === 'paid') {
+          get().addNotification(
+            '🏠 Fin de cycle mensuel : Loyer réglé',
+            `Loyer payé (${formatNumber(s.rentPaid)} MGA).${s.interestEarned > 0 ? ` +${formatNumber(s.interestEarned)} MGA d'intérêts d'épargne crédités !` : ''}`,
+            'success'
+          );
+        } else if (s.status === 'covered_by_savings') {
+          get().addNotification(
+            '⚠️ Couvert par ton épargne BOA',
+            `${formatNumber(s.rentCoveredBySavings)} MGA puisés dans ton livret d'épargne pour honorer ton loyer. Reconstitue ta réserve !`,
+            'warning'
+          );
+        } else if (s.status === 'overdue') {
+          get().addNotification(
+            '🚨 Impayé de loyer critique',
+            `Défaut de paiement de loyer. Malus de bien-être appliqué.`,
+            'warning'
+          );
+        }
+      } else {
+        get().addNotification(
+          `Jour ${res.day} atteint`,
+          `Nouveau jour démarré (+${days} j). Repos nocturne effectué.`,
+          'info'
+        );
+      }
+    }
   },
 
   restAndSleep: () => {

@@ -186,10 +186,165 @@ def add_xp_to_character(character, amount):
     return level_up
 
 
+def get_recurring_cycle_info(character):
+    """
+    Calcule l'état des échéances récurrentes (§18, §20) :
+    - Loyer mensuel : cycle de 30 jours
+    - Intérêts prévisionnels du livret d'épargne (1% mensuel)
+    - Salaire mensuel prévisionnel
+    """
+    DAYS_PER_CYCLE = 30
+    current_cycle_day = ((character.day - 1) % DAYS_PER_CYCLE) + 1
+    days_until_rent = DAYS_PER_CYCLE - current_cycle_day
+    housing = character.current_housing or Property.objects.filter(key='housing-studio').first() or Property.objects.first()
+    rent_price = housing.rent_price if housing else 70000
+    monthly_interest = round(character.savings * 0.01) if character.savings > 0 else 0
+    monthly_salary = character.current_job.salary if character.current_job else 0
+
+    if character.money >= rent_price:
+        status_code = 'ok'
+    elif character.money + character.savings >= rent_price:
+        status_code = 'warning'
+    else:
+        status_code = 'danger'
+
+    return {
+        'daysPerCycle': DAYS_PER_CYCLE,
+        'currentCycleDay': current_cycle_day,
+        'daysUntilRent': days_until_rent,
+        'rentDueDay': DAYS_PER_CYCLE,
+        'rentAmount': rent_price,
+        'housingName': housing.name if housing else "Logement",
+        'monthlySavingsInterest': monthly_interest,
+        'monthlySalary': monthly_salary,
+        'status': status_code,
+        'hasSufficientRentFunds': (character.money + character.savings) >= rent_price,
+    }
+
+
+def process_recurring_cycle_settlement(character):
+    """
+    Exécute le règlement financier de fin de mois (§18, §20) :
+    1. Prélèvement du loyer mensuel (avec prélèvement de sauvegarde sur épargne si nécessaire)
+    2. Versement des intérêts du livret d'épargne BOA (+1% mensuel)
+    3. Prime de fidélité pour emploi actif (+10% salaire)
+    Retourne un dictionnaire récapitulatif avec les messages et transactions créées.
+    """
+    housing = character.current_housing or Property.objects.filter(key='housing-studio').first() or Property.objects.first()
+    rent_price = housing.rent_price if housing else 70000
+    housing_name = housing.name if housing else "Logement"
+
+    summary = {
+        'rentPaid': 0,
+        'rentCoveredBySavings': 0,
+        'rentUnpaid': 0,
+        'interestEarned': 0,
+        'salaryBonusEarned': 0,
+        'status': 'paid',
+        'messages': [],
+    }
+
+    # 1. Prélèvement du Loyer
+    if character.money >= rent_price:
+        character.money -= rent_price
+        summary['rentPaid'] = rent_price
+        summary['status'] = 'paid'
+        msg_rent = f"🏠 Loyer mensuel prélevé : -{rent_price:,} MGA ({housing_name})."
+        summary['messages'].append(msg_rent)
+        Transaction.objects.create(
+            character=character,
+            timestamp=f"J-{character.day} Matin",
+            label=f"Loyer mensuel — {housing_name}",
+            amount=-rent_price,
+            transaction_type='expense',
+            category='Logement',
+        )
+    elif character.money + character.savings >= rent_price:
+        shortfall = rent_price - character.money
+        summary['rentPaid'] = character.money
+        summary['rentCoveredBySavings'] = shortfall
+        summary['status'] = 'covered_by_savings'
+        character.savings -= shortfall
+        character.money = 0
+        msg_rent = f"⚠️ Solde insuffisant : {shortfall:,} MGA prélevés sur ton épargne BOA pour honorer ton loyer ({housing_name})."
+        summary['messages'].append(msg_rent)
+        Transaction.objects.create(
+            character=character,
+            timestamp=f"J-{character.day} Matin",
+            label="Puisement épargne BOA pour loyer",
+            amount=-shortfall,
+            transaction_type='savings_out',
+            category='Épargne',
+        )
+        Transaction.objects.create(
+            character=character,
+            timestamp=f"J-{character.day} Matin",
+            label=f"Loyer mensuel — {housing_name}",
+            amount=-rent_price,
+            transaction_type='expense',
+            category='Logement',
+        )
+    else:
+        paid = character.money + character.savings
+        unpaid = rent_price - paid
+        summary['rentPaid'] = paid
+        summary['rentUnpaid'] = unpaid
+        summary['status'] = 'overdue'
+        character.money = 0
+        character.savings = 0
+        character.wellbeing = max(10, character.wellbeing - 20)
+        msg_rent = f"🚨 Impayé de loyer ! Manque de {unpaid:,} MGA pour {housing_name}. Stress financier : -20% bien-être."
+        summary['messages'].append(msg_rent)
+        Transaction.objects.create(
+            character=character,
+            timestamp=f"J-{character.day} Matin",
+            label=f"Loyer mensuel — {housing_name} (Impayé partiel)",
+            amount=-paid if paid > 0 else 0,
+            transaction_type='expense',
+            category='Logement',
+        )
+
+    # 2. Intérêts du livret d'épargne BOA (1% mensuel sur l'épargne conservée)
+    if character.savings > 0:
+        interest = round(character.savings * 0.01)
+        if interest > 0:
+            character.savings += interest
+            summary['interestEarned'] = interest
+            msg_int = f"🏦 Épargne récompensée : +{interest:,} MGA d'intérêts versés sur ton livret BOA !"
+            summary['messages'].append(msg_int)
+            Transaction.objects.create(
+                character=character,
+                timestamp=f"J-{character.day} Matin",
+                label="Intérêts mensuels livret d'épargne BOA",
+                amount=interest,
+                transaction_type='savings_in',
+                category='Épargne',
+            )
+
+    # 3. Prime mensuelle de fidélité professionnelle (si emploi actif)
+    if character.current_job:
+        job_bonus = round(character.current_job.salary * 0.10)
+        if job_bonus > 0:
+            character.money += job_bonus
+            summary['salaryBonusEarned'] = job_bonus
+            msg_sal = f"💼 Prime de fidélité professionnelle : +{job_bonus:,} MGA perçus ({character.current_job.company})."
+            summary['messages'].append(msg_sal)
+            Transaction.objects.create(
+                character=character,
+                timestamp=f"J-{character.day} Matin",
+                label=f"Prime mensuelle — {character.current_job.title}",
+                amount=job_bonus,
+                transaction_type='income',
+                category='Salaire',
+            )
+
+    return summary
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_game_state(request):
-    """Returns the consolidated state for the frontend (citizen, day, timeSlot, transactions)."""
+    """Returns the consolidated state for the frontend (citizen, day, timeSlot, recurringCycle, transactions)."""
     character = get_active_character(request)
     citizen_data = CitizenDetailSerializer(character).data
     transactions = Transaction.objects.filter(character=character).order_by('-created_at')[:20]
@@ -199,6 +354,7 @@ def get_game_state(request):
         'citizen': citizen_data,
         'day': character.day,
         'timeSlot': character.time_slot,
+        'recurringCycle': get_recurring_cycle_info(character),
         'transactions': TransactionSerializer(transactions, many=True).data,
         'activeDilemma': DilemmaSerializer(active_dilemma).data if active_dilemma else None,
     })
@@ -207,14 +363,16 @@ def get_game_state(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def advance_time(request):
-    """Advances time slot or triggers overnight energy recovery when day advances."""
+    """Advances time slot or triggers overnight energy recovery and monthly settlements (§18, §20)."""
     character = get_active_character(request)
     current_slot = character.time_slot
-    
+
     try:
         curr_idx = TIME_SLOTS.index(current_slot)
     except ValueError:
         curr_idx = 0
+
+    settlement_summary = None
 
     if curr_idx < len(TIME_SLOTS) - 1:
         character.time_slot = TIME_SLOTS[curr_idx + 1]
@@ -228,11 +386,66 @@ def advance_time(request):
         character.energy = min(100, character.energy + recovery)
         msg = f"Nouveau jour {character.day} ! +{recovery}% d'énergie récupérée grâce à ton logement."
 
+        # Règlements mensuels récurrents (tous les 30 jours révolus : Jour 31, 61, 91...)
+        if (character.day > 1) and ((character.day - 1) % 30 == 0):
+            settlement_summary = process_recurring_cycle_settlement(character)
+            if settlement_summary and settlement_summary.get('messages'):
+                msg += " " + " ".join(settlement_summary['messages'])
+
     character.save()
     return Response({
         'day': character.day,
         'timeSlot': character.time_slot,
         'energy': character.energy,
+        'recurringCycle': get_recurring_cycle_info(character),
+        'settlementSummary': settlement_summary,
+        'message': msg,
+        'citizen': CitizenDetailSerializer(character).data,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def advance_day(request):
+    """
+    Avance directement d'une ou plusieurs journées complètes (§18, §20).
+    Applique le repos nocturne et déclenche les règlements récurrents si un cycle est franchi.
+    """
+    character = get_active_character(request)
+    try:
+        days_to_advance = max(1, min(60, int(request.data.get('days', 1))))
+    except (ValueError, TypeError):
+        days_to_advance = 1
+
+    housing = character.current_housing
+    recovery = housing.energy_recovery if housing else 50
+    settlement_summaries = []
+
+    with db_transaction.atomic():
+        for _ in range(days_to_advance):
+            character.day += 1
+            character.time_slot = TIME_SLOTS[0]
+            character.energy = min(100, character.energy + recovery)
+
+            # Règlements mensuels récurrents (tous les 30 jours)
+            if (character.day > 1) and ((character.day - 1) % 30 == 0):
+                s = process_recurring_cycle_settlement(character)
+                settlement_summaries.append(s)
+
+        character.save()
+
+    msg = f"Avance rapide : +{days_to_advance} jour(s) écoulé(s). Nous sommes au Jour {character.day}."
+    if settlement_summaries:
+        all_msgs = [m for s in settlement_summaries for m in s.get('messages', [])]
+        if all_msgs:
+            msg += " " + " ".join(all_msgs)
+
+    return Response({
+        'day': character.day,
+        'timeSlot': character.time_slot,
+        'energy': character.energy,
+        'recurringCycle': get_recurring_cycle_info(character),
+        'settlementSummary': settlement_summaries[-1] if settlement_summaries else None,
         'message': msg,
         'citizen': CitizenDetailSerializer(character).data,
     })

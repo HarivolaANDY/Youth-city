@@ -15,6 +15,7 @@ urlpatterns = [
     # Game Loop & Citizen Status
     path('game/state/', views.get_game_state, name='game-state'),
     path('game/advance_time/', views.advance_time, name='advance-time'),
+    path('game/advance_day/', views.advance_day, name='advance-day'),
     path('game/sleep/', views.rest_and_sleep, name='rest-and-sleep'),
     path('game/housing/', views.change_housing, name='change-housing'),
     path('game/reset/', views.reset_game, name='reset-game'),

@@ -50,10 +50,19 @@ const LOAN_AMOUNTS = [50000, 100000, 200000, 400000];
 const LOAN_DURATIONS = [3, 6, 12];
 
 export const FinanceView: React.FC = () => {
-  const { citizen, depositSavings, withdrawSavings } = useGameStore();
+  const { citizen, day, recurringCycle, depositSavings, withdrawSavings, advanceDay } = useGameStore();
   const [savingsInput, setSavingsInput] = useState<string>('50000');
   const [loanAmount, setLoanAmount] = useState<number>(100000);
   const [loanDuration, setLoanDuration] = useState<number>(6);
+
+  const currentCycleDay = recurringCycle?.currentCycleDay ?? (((day - 1) % 30) + 1);
+  const daysUntilRent = recurringCycle?.daysUntilRent ?? (30 - currentCycleDay);
+  const rentAmount = recurringCycle?.rentAmount ?? 150000;
+  const housingName = recurringCycle?.housingName ?? 'Studio meublé City Center';
+  const monthlyInterest = recurringCycle?.monthlySavingsInterest ?? Math.round(citizen.savings * 0.01);
+  const isSolventDirect = citizen.money >= rentAmount;
+  const isSolventWithSavings = citizen.money + citizen.savings >= rentAmount;
+  const statusBadgeTone = isSolventDirect ? 'gain' : isSolventWithSavings ? 'warn' : 'risk';
 
   const handleDeposit = () => {
     const val = parseInt(savingsInput, 10);
@@ -252,6 +261,86 @@ export const FinanceView: React.FC = () => {
             <span className="metric mt-1.5 text-lg font-extrabold text-warn-300">
               {formatNumber(monthlyPayment)} MGA / mois
             </span>
+          </div>
+        </div>
+      </Panel>
+
+      {/* Section Échéances Récurrentes & Cycle Temporel (§18, §20) */}
+      <Panel as="section" aria-labelledby="recurring-cycle-title" className="space-y-4 p-5 sm:p-6 border-iris-500/30">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 id="recurring-cycle-title" className="flex items-center gap-2.5 text-base font-bold text-white">
+            <IconChip tone="iris" size="sm">
+              <Landmark />
+            </IconChip>
+            📅 Échéances Récurrentes &amp; Synchronisation Mensuelle (§18, §20)
+          </h3>
+          <Badge tone={statusBadgeTone}>
+            Cycle Jour {currentCycleDay} / 30 &mdash; {daysUntilRent === 0 ? "Échéance aujourd'hui !" : `${daysUntilRent} j restants`}
+          </Badge>
+        </div>
+
+        <p className="text-xs leading-relaxed text-mist-400">
+          Chaque mois virtuel dure 30 jours. À l&rsquo;échéance, ton loyer est prélevé automatiquement et tes intérêts d&rsquo;épargne sont crédités.
+        </p>
+
+        {/* Barre de progression du cycle mensuel */}
+        <div className="space-y-1.5">
+          <div className="flex justify-between text-2xs text-mist-400">
+            <span>Début de mois (Jour 1)</span>
+            <span className="font-semibold text-iris-300">Progression : {Math.round((currentCycleDay / 30) * 100)}%</span>
+            <span>Échéance Loyer (Jour 30)</span>
+          </div>
+          <div className="track h-2 w-full overflow-hidden rounded-full bg-night-800">
+            <div
+              className="h-full rounded-full bg-linear-to-r from-iris-500 via-brand-400 to-gain-400 transition-all duration-300"
+              style={{ width: `${Math.min(100, Math.max(5, (currentCycleDay / 30) * 100))}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 pt-2 sm:grid-cols-3">
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
+            <span className="eyebrow block text-mist-400 mb-1">🏠 Loyer mensuel dû</span>
+            <p className="metric text-xl font-extrabold text-white">
+              {formatNumber(rentAmount)} <span className="text-xs font-normal text-mist-400">MGA</span>
+            </p>
+            <p className="mt-1 text-2xs text-iris-300 truncate font-medium">{housingName}</p>
+            <div className="mt-3">
+              {isSolventDirect ? (
+                <Badge tone="gain" className="text-2xs">✅ Trésorerie suffisante</Badge>
+              ) : isSolventWithSavings ? (
+                <Badge tone="warn" className="text-2xs">⚠️ Couvert par l&rsquo;épargne BOA</Badge>
+              ) : (
+                <Badge tone="risk" className="text-2xs">🚨 Risque d&rsquo;impayé !</Badge>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
+            <span className="eyebrow block text-mist-400 mb-1">🏦 Intérêts livret BOA (+1%)</span>
+            <p className="metric text-xl font-extrabold text-gain-300">
+              +{formatNumber(monthlyInterest)} <span className="text-xs font-normal text-mist-400">MGA</span>
+            </p>
+            <p className="mt-1 text-2xs text-mist-400">
+              Versés automatiquement sur ton épargne à la fin du mois pour récompenser ta discipline.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 flex flex-col justify-between">
+            <div>
+              <span className="eyebrow block text-mist-400 mb-1">⚡ Avance rapide du temps</span>
+              <p className="text-2xs text-mist-400">
+                Simule le passage des jours pour observer les cycles financiers et prélèvements récurrents.
+              </p>
+            </div>
+            <div className="mt-3 flex gap-2">
+              <Button variant="secondary" size="sm" onClick={() => advanceDay(1)} className="flex-1 text-2xs">
+                +1 Jour
+              </Button>
+              <Button variant="iris" size="sm" onClick={() => advanceDay(5)} className="flex-1 text-2xs">
+                +5 Jours
+              </Button>
+            </div>
           </div>
         </div>
       </Panel>

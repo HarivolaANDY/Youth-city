@@ -18,6 +18,8 @@ import type {
   CommunityLeaderboard,
   ModerationReport,
   AdminOverviewData,
+  RecurringCycleInfo,
+  RecurringSettlementSummary,
 } from '../types/game';
 
 const API_BASE_URL = 'http://localhost:8000/api';
@@ -113,6 +115,7 @@ export interface GameStateResponse {
   citizen: Citizen;
   day: number;
   timeSlot: string;
+  recurringCycle?: RecurringCycleInfo;
   transactions: Transaction[];
   activeDilemma: Dilemma | null;
 }
@@ -201,10 +204,39 @@ export const api = {
     }
   },
 
-  async advanceTime(): Promise<{ day: number; timeSlot: string; energy: number; citizen: Citizen } | null> {
+  async advanceTime(): Promise<{
+    day: number;
+    timeSlot: string;
+    energy: number;
+    recurringCycle?: RecurringCycleInfo;
+    settlementSummary?: RecurringSettlementSummary;
+    message?: string;
+    citizen: Citizen;
+  } | null> {
     try {
       const res = await fetchAuth(`${API_BASE_URL}/game/advance_time/`, {
         method: 'POST',
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  },
+
+  async advanceDay(days = 1): Promise<{
+    day: number;
+    timeSlot: string;
+    energy: number;
+    recurringCycle?: RecurringCycleInfo;
+    settlementSummary?: RecurringSettlementSummary;
+    message?: string;
+    citizen: Citizen;
+  } | null> {
+    try {
+      const res = await fetchAuth(`${API_BASE_URL}/game/advance_day/`, {
+        method: 'POST',
+        body: JSON.stringify({ days }),
       });
       if (!res.ok) return null;
       return await res.json();

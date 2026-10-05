@@ -56,6 +56,7 @@ export const Navbar: React.FC = () => {
     citizen,
     day,
     timeSlot,
+    recurringCycle,
     advanceTime,
     restAndSleep,
     toggleNovaModal,
@@ -213,10 +214,15 @@ export const Navbar: React.FC = () => {
 
             <span aria-hidden="true" className="h-7 w-px bg-white/10" />
 
-            <Tooltip text="Jour et créneau horaire en cours"><div className="flex items-center gap-2">
+            <Tooltip text={`Jour et créneau horaire en cours • ${recurringCycle ? `Loyer dans ${recurringCycle.daysUntilRent} jour(s)` : 'Cycle mensuel'}`}><div className="flex items-center gap-2">
               <Clock className="size-4 text-iris-400" aria-hidden="true" />
               <div className="text-xs leading-tight">
-                <span className="block font-bold text-mist-100">Jour {day}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="block font-bold text-mist-100">Jour {day}</span>
+                  <span className="rounded bg-iris-500/15 px-1 py-0.2 text-3xs font-semibold text-iris-300">
+                    J-{recurringCycle?.daysUntilRent ?? (30 - (((day - 1) % 30) + 1))}
+                  </span>
+                </div>
                 <span className="block text-2xs text-mist-400">{timeSlot}</span>
               </div>
             </div></Tooltip>

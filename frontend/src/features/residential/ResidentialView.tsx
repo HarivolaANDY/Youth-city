@@ -10,7 +10,9 @@ import { IconChip } from '../../components/ui/IconChip';
 import { formatNumber } from '../../lib/format';
 
 export const ResidentialView: React.FC = () => {
-  const { citizen, changeHousing, restAndSleep } = useGameStore();
+  const { citizen, day, recurringCycle, changeHousing, restAndSleep } = useGameStore();
+  const currentCycleDay = recurringCycle?.currentCycleDay ?? (((day - 1) % 30) + 1);
+  const daysUntilRent = recurringCycle?.daysUntilRent ?? (30 - currentCycleDay);
 
   return (
     <div className="space-y-5 sm:space-y-6">
@@ -56,9 +58,14 @@ export const ResidentialView: React.FC = () => {
                       <span className="text-mist-500/40">{'★'.repeat(5 - housing.comfortStars)}</span>
                     </span>
                     {isCurrent && (
-                      <Badge tone="iris" icon={<CheckCircle2 />}>
-                        Foyer actuel
-                      </Badge>
+                      <div className="flex flex-col items-end gap-1">
+                        <Badge tone="iris" icon={<CheckCircle2 />}>
+                          Foyer actuel
+                        </Badge>
+                        <span className="text-2xs font-semibold text-iris-300">
+                          Loyer dans {daysUntilRent === 0 ? "aujourd'hui !" : `${daysUntilRent} j`}
+                        </span>
+                      </div>
                     )}
                   </div>
 
