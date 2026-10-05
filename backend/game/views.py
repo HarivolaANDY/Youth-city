@@ -10,6 +10,12 @@ from django.contrib.auth.models import User
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from game.throttles import LoginRateThrottle, RegisterRateThrottle, NovaChatRateThrottle
+from game.sanitizers import (
+    sanitize_text,
+    sanitize_short_identifier,
+    sanitize_multiline_content,
+    detect_indirect_prompt_injection,
+)
 
 logger = logging.getLogger('game.auth')
 
@@ -843,12 +849,20 @@ def customize_character(request):
 
     data = serializer.validated_data
     character = get_active_character(request)
+    raw_name = data['name']
+    is_injection, _ = detect_indirect_prompt_injection(raw_name)
+    if is_injection:
+        return Response({'error': "Nom de citoyen non autorisé (directive suspecte)."}, status=status.HTTP_400_BAD_REQUEST)
+
+    cleaned_name = sanitize_short_identifier(raw_name, max_length=50)
+    cleaned_seed = sanitize_short_identifier(data.get('avatarSeed', 'felix'), max_length=50)
+
     archetype_data = ARCHETYPES.get(data['archetype'], ARCHETYPES['ambitious_student'])
     vocation_data = VOCATIONS.get(data['vocation'], VOCATIONS['tech'])
 
     with db_transaction.atomic():
-        character.name = data['name'].strip()
-        character.avatar_seed = data.get('avatarSeed', 'felix').strip()
+        character.name = cleaned_name or "Citoyen"
+        character.avatar_seed = cleaned_seed or "felix"
         character.title = archetype_data['title']
         character.level = 1
         character.xp = 0
@@ -999,9 +1013,19 @@ def create_startup_project(request):
     """Launches a new entrepreneurial project (§12, §24)."""
     import uuid
     character = get_active_character(request)
-    name = (request.data.get('name') or '').strip()
-    sector = request.data.get('sector', 'tech')
-    pitch = (request.data.get('pitch') or '').strip()
+    raw_name = request.data.get('name') or ''
+    raw_pitch = request.data.get('pitch') or ''
+
+    is_inj_name, _ = detect_indirect_prompt_injection(raw_name)
+    is_inj_pitch, _ = detect_indirect_prompt_injection(raw_pitch)
+    if is_inj_name or is_inj_pitch:
+        return Response({
+            'error': "Contenu non autorisé : directive d'injection de prompt ou instruction système détectée."
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    name = sanitize_short_identifier(raw_name, max_length=80)
+    sector = sanitize_short_identifier(request.data.get('sector', 'tech'), max_length=40)
+    pitch = sanitize_multiline_content(raw_pitch, max_length=1200)
 
     try:
         capital = int(request.data.get('initialCapital', 30000))
@@ -1328,19 +1352,36 @@ def participate_hackathon(request, key):
     if character.energy < 20:
         return Response({'error': "Énergie insuffisante pour un sprint de 48h (min. 20%). Repose-toi au Residential District !"}, status=status.HTTP_400_BAD_REQUEST)
 
-    team_name = (request.data.get('teamName') or f"Team {character.name}").strip()
-    submission_pitch = (request.data.get('submissionPitch') or '').strip()
+    raw_team = request.data.get('teamName') or f"Team {character.name}"
+    raw_pitch = request.data.get('submissionPitch') or ''
+
+    is_inj_pitch, _ = detect_indirect_prompt_injection(raw_pitch)
+    is_inj_team, _ = detect_indirect_prompt_injection(raw_team)
+    if is_inj_pitch or is_inj_team:
+        return Response({
+            'error': "Contenu non autorisé : directive d'injection de prompt ou tentative d'altération du jury détectée."
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    team_name = sanitize_short_identifier(raw_team, max_length=80)
+    submission_pitch = sanitize_multiline_content(raw_pitch, max_length=1200)
 
     if len(submission_pitch) < 15:
         return Response({'error': "Le descriptif de votre solution doit comporter au moins 15 caractères pour le jury."}, status=status.HTTP_400_BAD_REQUEST)
 
-    team_members = request.data.get('teamMembers')
-    if not team_members or not isinstance(team_members, list):
+    raw_members = request.data.get('teamMembers')
+    if not raw_members or not isinstance(raw_members, list):
         team_members = [
             f"{character.name} (Team Lead & Développeur)",
             "Aina R. (Designer UI/UX)",
             "Hery T. (Business & Pitch)",
         ]
+    else:
+        team_members = [
+            sanitize_short_identifier(str(m), max_length=80)
+            for m in raw_members if str(m).strip()
+        ]
+        if not team_members:
+            team_members = [f"{character.name} (Team Lead)"]
 
     # Pedagogical jury scoring logic (§13, §31)
     base_score = 75
@@ -1572,21 +1613,28 @@ def create_moderation_report(request):
     Dépose un nouveau signalement citoyen (§43).
     """
     character = get_active_character(request)
-    target_type = request.data.get('targetType', 'general')
-    target_id = str(request.data.get('targetId', ''))
-    target_name = request.data.get('targetName', 'Contenu ou Citoyen')
-    reason = request.data.get('reason', 'other')
-    details = request.data.get('details', '').strip()
+    raw_details = request.data.get('details', '')
+    is_injection, _ = detect_indirect_prompt_injection(raw_details)
+    if is_injection:
+        return Response({
+            'error': "Contenu non autorisé : directive d'injection détectée dans le signalement."
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    target_type = sanitize_short_identifier(request.data.get('targetType', 'general'), max_length=40)
+    target_id = sanitize_short_identifier(str(request.data.get('targetId', '')), max_length=60)
+    target_name = sanitize_short_identifier(request.data.get('targetName', 'Contenu ou Citoyen'), max_length=100)
+    reason = sanitize_short_identifier(request.data.get('reason', 'other'), max_length=40)
+    details = sanitize_multiline_content(raw_details, max_length=1500)
 
     if not details:
         return Response({'error': "Merci de décrire la raison du signalement."}, status=status.HTTP_400_BAD_REQUEST)
 
     report = ModerationReport.objects.create(
         reporter=character,
-        target_type=target_type,
-        target_id=target_id,
-        target_name=target_name,
-        reason=reason,
+        target_type=target_type or 'general',
+        target_id=target_id or 'unknown',
+        target_name=target_name or 'Contenu ou Citoyen',
+        reason=reason or 'other',
         details=details,
         status='pending',
         action_taken='none',
@@ -1676,31 +1724,27 @@ def chat_with_nova(request):
     Applique le throttling dédié (P3) et les filtres anti-injection (P2/P4).
     """
     character = get_active_character(request)
-    raw_message = request.data.get('message', '').strip()
+    raw_message = request.data.get('message', '')
 
-    if not raw_message:
+    if not str(raw_message).strip():
         return Response({'error': "Message requis."}, status=status.HTTP_400_BAD_REQUEST)
 
     # Max length guardrail (500 chars)
-    if len(raw_message) > 500:
+    if len(str(raw_message)) > 500:
         return Response({
             'error': "Le message dépasse la limite autorisée de 500 caractères."
         }, status=status.HTTP_400_BAD_REQUEST)
 
-    # Prompt injection signatures
-    lower = raw_message.lower()
+    # Sanitization & indirect injection detection
+    clean_message = sanitize_text(str(raw_message), max_length=500, allow_multiline=True)
+    is_inj, _ = detect_indirect_prompt_injection(clean_message)
+
+    lower = clean_message.lower()
     suspicious_patterns = [
-        'ignore previous instructions',
-        'ignore all instructions',
-        'oublie les instructions',
-        'system prompt',
-        'mode sans restriction',
-        'jailbreak',
-        '<script',
         'grant me',
         'donne-moi',
     ]
-    if any(pat in lower for pat in suspicious_patterns):
+    if is_inj or any(pat in lower for pat in suspicious_patterns):
         return Response({
             'reply': (
                 "⚠️ Alerte Garde-Fou : Requête non autorisée. "
