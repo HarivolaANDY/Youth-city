@@ -20,6 +20,7 @@ import type {
   AdminOverviewData,
   RecurringCycleInfo,
   RecurringSettlementSummary,
+  CareerPassportData,
 } from '../types/game';
 
 const API_BASE_URL = 'http://localhost:8000/api';
@@ -667,5 +668,30 @@ export const api = {
       return { error: 'Impossible de joindre le serveur Youth City.' };
     }
   },
+
+  // --- CAREER PASSPORT & PORTFOLIO VÉRIFIABLE (§34, §35) ---
+  async getCareerPassport(): Promise<{ success: boolean; passport?: CareerPassportData } | null> {
+    try {
+      const res = await fetchAuth(`${API_BASE_URL}/passport/`);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  },
+
+  async verifyPassport(code: string): Promise<{ success: boolean; verified?: boolean; verificationCode?: string; signature?: string; passport?: CareerPassportData } | { error: string }> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/passport/verify/${encodeURIComponent(code)}/`);
+      const data = await res.json();
+      if (!res.ok) {
+        return { error: data.error || 'Code de passeport invalide ou introuvable.' };
+      }
+      return data;
+    } catch {
+      return { error: 'Impossible de joindre le serveur de vérification Youth City.' };
+    }
+  },
 };
+
 

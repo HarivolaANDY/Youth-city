@@ -19,6 +19,7 @@ import type {
   ModerationReport,
   AdminOverviewData,
   RecurringCycleInfo,
+  CareerPassportData,
 } from '../types/game';
 import { INITIAL_CITIZEN, COURSES, JOBS, HOUSINGS, SAMPLE_DILEMMA, MARKET_ITEMS } from '../data/mockData';
 import { api } from '../services/api';
@@ -29,6 +30,7 @@ interface GameState {
   day: number;
   timeSlot: TimeSlot;
   recurringCycle: RecurringCycleInfo | null;
+  careerPassport: CareerPassportData | null;
   activeTab: 'dashboard' | 'map' | 'campus' | 'career' | 'market' | 'finance' | 'residential' | 'passport' | 'startup' | 'cityhub';
   selectedDistrictId: DistrictId | null;
   isNovaModalOpen: boolean;
@@ -87,6 +89,9 @@ interface GameState {
   createModerationReport: (payload: { targetType: string; targetId: string; targetName: string; reason: string; details: string }) => Promise<{ success: boolean; error?: string }>;
   resolveModerationReport: (reportId: number, payload: { action: string; status: string; notes?: string }) => Promise<{ success: boolean; error?: string }>;
   grantAdminStipend: (payload: { characterId?: number; amount: number; reason: string }) => Promise<{ success: boolean; error?: string }>;
+
+  // Career Passport & Portfolio (§34, §35)
+  fetchCareerPassport: () => Promise<void>;
 
   // Game Actions
   advanceTime: () => void;
@@ -367,6 +372,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   day: 14,
   timeSlot: 'Matin (08:00)',
   recurringCycle: null,
+  careerPassport: null,
   activeTab: 'dashboard',
   selectedDistrictId: null,
   isNovaModalOpen: false,
@@ -512,22 +518,31 @@ export const useGameStore = create<GameState>((set, get) => ({
         });
       }
 
-      const [projects, guilds, hackathons, lb] = await Promise.all([
+      const [projects, guilds, hackathons, lb, passportRes] = await Promise.all([
         api.getStartupProjects(),
         api.getGuilds(),
         api.getHackathons(),
         api.getCommunityLeaderboard(),
+        api.getCareerPassport(),
       ]);
       if (projects && projects.length > 0) set({ startupProjects: projects });
       if (guilds && guilds.length > 0) set({ guilds });
       if (hackathons && hackathons.length > 0) set({ hackathons });
       if (lb) set({ leaderboard: lb });
+      if (passportRes && passportRes.success && passportRes.passport) {
+        set({ careerPassport: passportRes.passport });
+      }
     } catch {
       // Backend not running, falls back silently to local state
     }
   },
 
-  setActiveTab: (tab) => set({ activeTab: tab }),
+  setActiveTab: (tab) => {
+    set({ activeTab: tab });
+    if (tab === 'passport') {
+      get().fetchCareerPassport();
+    }
+  },
 
   selectDistrict: (id) => {
     set({ selectedDistrictId: id });
@@ -545,6 +560,14 @@ export const useGameStore = create<GameState>((set, get) => ({
   dismissDilemma: () => set({ activeDilemma: null }),
 
   triggerDilemma: (dilemma = SAMPLE_DILEMMA) => set({ activeDilemma: dilemma }),
+
+  // --- CAREER PASSPORT & PORTFOLIO VÉRIFIABLE (§34, §35) ---
+  fetchCareerPassport: async () => {
+    const res = await api.getCareerPassport();
+    if (res && res.success && res.passport) {
+      set({ careerPassport: res.passport });
+    }
+  },
 
   // --- STARTUP DISTRICT (§12, §24) ---
   fetchStartupProjects: async () => {

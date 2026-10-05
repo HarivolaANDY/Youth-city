@@ -69,5 +69,9 @@ urlpatterns = [
 
     # NOVA AI Mentor Chat (§27, §28 — P2/P3)
     path('nova/chat/', views.chat_with_nova, name='nova-chat'),
+
+    # Career Passport & Vérification Publique (§34, §35)
+    path('passport/', views.get_career_passport, name='career-passport'),
+    path('passport/verify/<str:code>/', views.verify_career_passport, name='verify-career-passport'),
 ]
 

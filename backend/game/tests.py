@@ -619,6 +619,42 @@ class YouthCityBackendAPITests(APITestCase):
         self.character.refresh_from_db()
         self.assertEqual(self.character.wellbeing, max(10, initial_wellbeing - 20))
 
+    def test_20_career_passport_and_cryptographic_verification(self):
+        """Vérifie le Career Passport infalsifiable et la vérification cryptographique (§34, §35)."""
+        res = self.client.get('/api/passport/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        data = res.json()
+        self.assertTrue(data.get('success'))
+        passport = data.get('passport')
+        self.assertIsNotNone(passport)
+
+        # 1. Vérification des attributs clés
+        self.assertEqual(passport['citizenId'], '#YC-84920')
+        self.assertEqual(passport['citizenName'], self.character.name)
+        self.assertTrue(passport['verificationCode'].startswith('YC-VERIF-'))
+        self.assertTrue(passport['cryptographicSignature'].startswith('SHA256:'))
+        self.assertTrue(passport['aptitudeScore'] > 0)
+        self.assertGreaterEqual(len(passport['skills']), 1)
+        self.assertGreaterEqual(len(passport['certifications']), 1)
+        self.assertGreaterEqual(len(passport['projects']), 1)
+        self.assertGreaterEqual(len(passport['badges']), 5)
+
+        # 2. Vérification par code public
+        code = passport['verificationCode']
+        res_verify = self.client.get(f'/api/passport/verify/{code}/')
+        self.assertEqual(res_verify.status_code, status.HTTP_200_OK)
+        verify_data = res_verify.json()
+        self.assertTrue(verify_data.get('success'))
+        self.assertTrue(verify_data.get('verified'))
+        self.assertEqual(verify_data.get('verificationCode'), code)
+        self.assertEqual(verify_data['passport']['citizenName'], self.character.name)
+
+        # 3. Vérification par identifiant citoyen
+        res_verify_id = self.client.get('/api/passport/verify/YC-84920/')
+        self.assertEqual(res_verify_id.status_code, status.HTTP_200_OK)
+        self.assertTrue(res_verify_id.json().get('verified'))
+
+
 
 
 

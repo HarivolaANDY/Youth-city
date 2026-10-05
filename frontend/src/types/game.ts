@@ -363,6 +363,75 @@ export interface RecurringCycleInfo {
   hasSufficientRentFunds: boolean;
 }
 
+// Career Passport & Portfolio Vérifiable (§34, §35)
+export interface PassportSkill {
+  key: string;
+  name: string;
+  percent: number;
+  level: string;
+  category: string;
+}
+
+export interface PassportCertification {
+  id: number;
+  title: string;
+  honors: string;
+  issuedAt: string;
+  issuer: string;
+}
+
+export interface PassportProject {
+  id: string;
+  title: string;
+  category: string;
+  description: string;
+  stage: string;
+  impact: string;
+  date: string;
+  verified: boolean;
+}
+
+export interface PassportBadge {
+  key: string;
+  name: string;
+  description: string;
+  icon: string;
+  unlocked: boolean;
+  date?: string | null;
+}
+
+export interface CareerPassportData {
+  citizenId: string;
+  citizenName: string;
+  title: string;
+  level: number;
+  xp: number;
+  avatarSeed: string;
+  verificationCode: string;
+  cryptographicSignature: string;
+  issuedAt: string;
+  authority: string;
+  aptitudeScore: number;
+  currentJob: {
+    title: string;
+    company: string;
+    salary: number;
+  } | null;
+  stats: {
+    projectsDelivered: number;
+    challengesResolved: number;
+    certificationsCount: number;
+    collaborativeProjects: number;
+  };
+  skills: PassportSkill[];
+  certifications: PassportCertification[];
+  projects: PassportProject[];
+  badges: PassportBadge[];
+  publicShareUrl: string;
+  isVerified: boolean;
+}
+
+
 
 
 
