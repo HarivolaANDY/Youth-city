@@ -7,6 +7,7 @@ import { Badge } from './ui/Badge';
 import { IconChip } from './ui/IconChip';
 import { controlClass } from './ui/control';
 import { formatNumber } from '../lib/format';
+import { sanitizeUserInputForAgent, MAX_USER_INPUT_LENGTH } from '../lib/guidance';
 
 interface Message {
   sender: 'nova' | 'user';
@@ -42,8 +43,12 @@ export const NovaMentorModal: React.FC = () => {
   if (!isNovaModalOpen) return null;
 
   const handleSend = (textToSend?: string) => {
-    const text = (textToSend || inputText).trim();
-    if (!text) return;
+    const rawText = (textToSend || inputText).trim();
+    if (!rawText) return;
+
+    // OWASP LLM01 Guardrail : Sanitization et détection d'injection
+    const sanitization = sanitizeUserInputForAgent(rawText);
+    const text = sanitization.cleanText;
 
     setMessages((prev) => [...prev, { sender: 'user', text }]);
     setInputText('');
@@ -51,20 +56,24 @@ export const NovaMentorModal: React.FC = () => {
 
     replyTimer.current = window.setTimeout(() => {
       let reply = '';
-      const lower = text.toLowerCase();
-
-      if (lower.includes('budget') || lower.includes('argent') || lower.includes('épargne')) {
-        reply = `Actuellement, tu as ${formatNumber(citizen.money)} MGA de trésorerie et ${formatNumber(citizen.savings)} MGA d'épargne. C'est un bon début ! Veille à toujours conserver au moins 2 mois de loyer en réserve pour ne pas être pris au dépourvu lors d'imprévus.`;
-      } else if (lower.includes('travail') || lower.includes('job') || lower.includes('carrière') || lower.includes('emploi')) {
-        if (!citizen.currentJobId) {
-          reply = `Tu n'as pas encore de contrat de travail actif. Si ton score en JavaScript est supérieur à 50%, fonce au Business District pour postuler chez TechSolutions. Le salaire de 450 000 MGA par mois t'apportera une solide autonomie !`;
-        } else {
-          reply = `Tu occupes déjà un poste ! Pense à effectuer tes shifts régulièrement sans épuiser ta jauge d'énergie. Si tu tombes sous 20% d'énergie, ta productivité et ton bien-être chuteront.`;
-        }
-      } else if (lower.includes('formation') || lower.includes('campus') || lower.includes('apprendre') || lower.includes('cours')) {
-        reply = `La formation continue est la clé : chaque module validé augmente directement ta valeur marchande dans le Business District. Je te conseille d'obtenir le Certificat Développeur Web Junior au Campus.`;
+      if (sanitization.isSuspect) {
+        reply = `⚠️ Alerte Garde-Fou : ${sanitization.reason || "Requête non autorisée."} En tant que mentor de Youth City, mes règles de jeu, valeurs éthiques et directives d'apprentissage ne peuvent pas être contournées. Repartons sur un conseil constructif pour ta carrière !`;
       } else {
-        reply = `C'est une excellente question pour ton développement citoyen. Mon conseil : équilibre toujours tes 3 piliers : Compétences (Campus), Stabilité financière (Business & Finance) et Énergie vitale (Repos au Résidentiel).`;
+        const lower = text.toLowerCase();
+
+        if (lower.includes('budget') || lower.includes('argent') || lower.includes('épargne')) {
+          reply = `Actuellement, tu as ${formatNumber(citizen.money)} MGA de trésorerie et ${formatNumber(citizen.savings)} MGA d'épargne. C'est un bon début ! Veille à toujours conserver au moins 2 mois de loyer en réserve pour ne pas être pris au dépourvu lors d'imprévus.`;
+        } else if (lower.includes('travail') || lower.includes('job') || lower.includes('carrière') || lower.includes('emploi')) {
+          if (!citizen.currentJobId) {
+            reply = `Tu n'as pas encore de contrat de travail actif. Si ton score en JavaScript est supérieur à 50%, fonce au Business District pour postuler chez TechSolutions. Le salaire de 450 000 MGA par mois t'apportera une solide autonomie !`;
+          } else {
+            reply = `Tu occupes déjà un poste ! Pense à effectuer tes shifts régulièrement sans épuiser ta jauge d'énergie. Si tu tombes sous 20% d'énergie, ta productivité et ton bien-être chuteront.`;
+          }
+        } else if (lower.includes('formation') || lower.includes('campus') || lower.includes('apprendre') || lower.includes('cours')) {
+          reply = `La formation continue est la clé : chaque module validé augmente directement ta valeur marchande dans le Business District. Je te conseille d'obtenir le Certificat Développeur Web Junior au Campus.`;
+        } else {
+          reply = `C'est une excellente question pour ton développement citoyen. Mon conseil : équilibre toujours tes 3 piliers : Compétences (Campus), Stabilité financière (Business & Finance) et Énergie vitale (Repos au Résidentiel).`;
+        }
       }
 
       setTyping(false);
@@ -169,6 +178,7 @@ export const NovaMentorModal: React.FC = () => {
         <input
           id="nova-input"
           type="text"
+          maxLength={MAX_USER_INPUT_LENGTH}
           value={inputText}
           onChange={(event) => setInputText(event.target.value)}
           placeholder="Pose une question à NOVA..."
