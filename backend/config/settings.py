@@ -135,6 +135,7 @@ REST_FRAMEWORK = {
         'user': '300/minute',
         'auth_login': '10/minute',
         'auth_register': '5/minute',
+        'nova_chat': '20/minute',
     },
 }
 

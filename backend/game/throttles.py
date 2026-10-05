@@ -7,3 +7,8 @@ class LoginRateThrottle(AnonRateThrottle):
 class RegisterRateThrottle(AnonRateThrottle):
     """Limits new account registrations per IP to mitigate spam and automated bots."""
     scope = 'auth_register'
+
+class NovaChatRateThrottle(AnonRateThrottle):
+    """Limits AI mentor chat interactions per IP to mitigate quota exhaustion and automated spam (OWASP LLM04/LLM06)."""
+    scope = 'nova_chat'
+

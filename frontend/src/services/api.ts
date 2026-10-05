@@ -618,5 +618,22 @@ export const api = {
       return { error: 'Impossible de joindre le serveur Youth City.' };
     }
   },
+
+  // --- NOVA AI MENTOR API (§27, §28 — P2/P3) ---
+  async chatWithNova(message: string): Promise<{ reply: string; citizenName: string; isGuardrailTriggered: boolean } | { error: string }> {
+    try {
+      const res = await fetchAuth(`${API_BASE_URL}/nova/chat/`, {
+        method: 'POST',
+        body: JSON.stringify({ message }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { error: data.error || 'Erreur lors de la communication avec NOVA.' };
+      }
+      return data;
+    } catch {
+      return { error: 'Impossible de joindre le serveur Youth City.' };
+    }
+  },
 };
 

@@ -65,5 +65,8 @@ urlpatterns = [
     path('moderation/reports/', views.list_moderation_reports, name='moderation-reports'),
     path('moderation/reports/create/', views.create_moderation_report, name='moderation-create-report'),
     path('moderation/reports/<int:report_id>/resolve/', views.resolve_moderation_report, name='moderation-resolve-report'),
+
+    # NOVA AI Mentor Chat (§27, §28 — P2/P3)
+    path('nova/chat/', views.chat_with_nova, name='nova-chat'),
 ]
 

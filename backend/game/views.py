@@ -9,7 +9,7 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from game.throttles import LoginRateThrottle, RegisterRateThrottle
+from game.throttles import LoginRateThrottle, RegisterRateThrottle, NovaChatRateThrottle
 
 logger = logging.getLogger('game.auth')
 
@@ -1661,6 +1661,90 @@ def grant_admin_stipend(request):
         'citizen': CitizenDetailSerializer(target_character).data,
         'transaction': TransactionSerializer(tx).data,
     })
+
+
+# ============================================================
+# 🤖 Mentor IA NOVA & Sécurité Throttling (§27, §28 — P2/P3/P4)
+# ============================================================
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@throttle_classes([NovaChatRateThrottle])
+def chat_with_nova(request):
+    """
+    Assistant d'orientation et mentorat IA NOVA (§27, §28).
+    Applique le throttling dédié (P3) et les filtres anti-injection (P2/P4).
+    """
+    character = get_active_character(request)
+    raw_message = request.data.get('message', '').strip()
+
+    if not raw_message:
+        return Response({'error': "Message requis."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Max length guardrail (500 chars)
+    if len(raw_message) > 500:
+        return Response({
+            'error': "Le message dépasse la limite autorisée de 500 caractères."
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    # Prompt injection signatures
+    lower = raw_message.lower()
+    suspicious_patterns = [
+        'ignore previous instructions',
+        'ignore all instructions',
+        'oublie les instructions',
+        'system prompt',
+        'mode sans restriction',
+        'jailbreak',
+        '<script',
+        'grant me',
+        'donne-moi',
+    ]
+    if any(pat in lower for pat in suspicious_patterns):
+        return Response({
+            'reply': (
+                "⚠️ Alerte Garde-Fou : Requête non autorisée. "
+                "En tant que mentor de Youth City, mes règles éthiques et directives d'apprentissage "
+                "ne peuvent pas être contournées. Repartons sur un conseil constructif pour ta carrière !"
+            ),
+            'isGuardrailTriggered': True,
+        })
+
+    # Contextual advice based on real character state
+    if any(k in lower for k in ['budget', 'argent', 'epargne', 'épargne']):
+        reply = (
+            f"Actuellement, tu as {character.money:,} MGA de trésorerie et {character.savings:,} MGA d'épargne. "
+            f"Veille à conserver au moins 2 mois de loyer en réserve pour parer aux imprévus !"
+        )
+    elif any(k in lower for k in ['travail', 'job', 'carriere', 'carrière', 'emploi']):
+        if not character.current_job:
+            reply = (
+                "Tu n'as pas encore de contrat de travail actif. "
+                "Rends-toi au Business District pour postuler ou perfectionne tes compétences au Campus District !"
+            )
+        else:
+            reply = (
+                f"Tu es actuellement en poste comme « {character.current_job.title} ». "
+                f"Effectue tes shifts avec rigueur et veille à préserver ton énergie au-dessus de 20%."
+            )
+    elif any(k in lower for k in ['formation', 'campus', 'cours', 'apprendre']):
+        completed_count = len(character.completed_courses or [])
+        reply = (
+            f"Tu as validé {completed_count} module(s) jusqu'ici. "
+            "La formation continue augmente ta valeur sur le marché du travail et débloque de meilleurs postes !"
+        )
+    else:
+        reply = (
+            f"C'est une excellente question pour ton développement citoyen, {character.name}. "
+            "Équilibre toujours tes 3 piliers : Compétences (Campus), Stabilité financière (Business & Finance) et Énergie vitale (Résidentiel)."
+        )
+
+    return Response({
+        'reply': reply,
+        'citizenName': character.name,
+        'isGuardrailTriggered': False,
+    })
+
 
 
 
