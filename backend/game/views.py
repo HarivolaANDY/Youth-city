@@ -2230,7 +2230,7 @@ def generate_career_passport_data(character):
 def find_character_by_code(code_str):
     """Retrouve un citoyen par son code de vérification ou son identifiant officiel."""
     if not code_str:
-        return Character.objects.first()
+        return None
     code_clean = code_str.strip().upper()
     for char in Character.objects.all():
         token = f"YC-TOKEN:{char.id}:{char.name}"
@@ -2239,7 +2239,7 @@ def find_character_by_code(code_str):
         citizen_id_tag = f"YC-{citizen_id_num}"
         if code_clean in [char_code, char_code.replace('YC-VERIF-', ''), citizen_id_tag, f"#{citizen_id_tag}", str(char.id)]:
             return char
-    return Character.objects.first()
+    return None
 
 
 @api_view(['GET'])

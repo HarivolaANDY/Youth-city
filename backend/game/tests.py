@@ -654,6 +654,13 @@ class YouthCityBackendAPITests(APITestCase):
         self.assertEqual(res_verify_id.status_code, status.HTTP_200_OK)
         self.assertTrue(res_verify_id.json().get('verified'))
 
+        # 4. Vérification avec code inexistant ou forgé (fail-closed, doit renvoyer 404)
+        res_invalid = self.client.get('/api/passport/verify/INVALID-FORGED-CODE-9999/')
+        self.assertEqual(res_invalid.status_code, status.HTTP_404_NOT_FOUND)
+        invalid_data = res_invalid.json()
+        self.assertFalse(invalid_data.get('success'))
+        self.assertIn('error', invalid_data)
+
 
 
 
