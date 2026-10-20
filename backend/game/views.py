@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404
 from django.db import transaction as db_transaction
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
+from django.conf import settings
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from game.throttles import LoginRateThrottle, RegisterRateThrottle, NovaChatRateThrottle
@@ -919,6 +920,11 @@ def reset_game(request):
             'transactions': [],
         })
     else:
+        if not settings.DEBUG and not (request.user and request.user.is_staff):
+            return Response(
+                {'error': "La réinitialisation globale de la base de données est restreinte aux administrateurs en production."},
+                status=status.HTTP_403_FORBIDDEN
+            )
         from django.core.management import call_command
         call_command('seed_game_data')
         character = Character.objects.filter(user__isnull=True).first() or Character.objects.first()
