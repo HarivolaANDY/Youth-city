@@ -23,15 +23,20 @@ if env_file.exists():
         pass
 
 INSECURE_DEV_SECRET = 'django-insecure-youth-city-mvp-secret-key-development'
+KNOWN_INSECURE_SECRETS = {
+    INSECURE_DEV_SECRET,
+    'change-me-to-a-secure-random-secret-key-in-production',
+    'youth-city-prod-docker-secret-key-change-me-in-env-file-0923847',
+}
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', INSECURE_DEV_SECRET)
 DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
 
 if not DEBUG:
-    if not SECRET_KEY or SECRET_KEY == INSECURE_DEV_SECRET:
+    if not SECRET_KEY or SECRET_KEY in KNOWN_INSECURE_SECRETS or len(SECRET_KEY) < 32:
         from django.core.exceptions import ImproperlyConfigured
         raise ImproperlyConfigured(
             "CRITICAL SECURITY ERROR: DJANGO_SECRET_KEY must be explicitly defined "
-            "with a strong random secret when DEBUG is False."
+            "with a strong random secret (min. 32 characters) when DEBUG is False."
         )
 
 allowed_hosts_env = os.getenv('DJANGO_ALLOWED_HOSTS')
