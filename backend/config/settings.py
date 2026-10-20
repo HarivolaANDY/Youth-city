@@ -142,6 +142,7 @@ REST_FRAMEWORK = {
         'auth_register': '5/minute',
         'nova_chat': '20/minute',
     },
+    'NUM_PROXIES': int(os.getenv('DJANGO_NUM_PROXIES', '1')),
 }
 
 # SimpleJWT settings - Stricter lifetimes and rotation
@@ -170,7 +171,13 @@ X_FRAME_OPTIONS = 'DENY'
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True
 
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT = os.getenv('DJANGO_SECURE_SSL_REDIRECT', 'False').lower() in ('true', '1')
 SESSION_COOKIE_SECURE = os.getenv('DJANGO_SESSION_COOKIE_SECURE', 'False').lower() in ('true', '1')
 CSRF_COOKIE_SECURE = os.getenv('DJANGO_CSRF_COOKIE_SECURE', 'False').lower() in ('true', '1')
+
+if SECURE_SSL_REDIRECT:
+    SECURE_HSTS_SECONDS = int(os.getenv('DJANGO_SECURE_HSTS_SECONDS', '31536000'))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
