@@ -945,6 +945,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   fetchAdminData: async () => {
+    if (!get().user?.is_staff) return;
     try {
       const [overview, reports] = await Promise.all([
         api.getAdminOverview(),

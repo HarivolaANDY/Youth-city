@@ -1,7 +1,7 @@
 import logging
 import hashlib
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
@@ -1703,7 +1703,7 @@ def get_community_leaderboard(request):
 # ============================================================
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAdminUser])
 def get_admin_overview(request):
     """
     Tableau de bord d'administration et indicateurs d'impact pédagogique (§45, §46).
@@ -1769,7 +1769,7 @@ def get_admin_overview(request):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAdminUser])
 def list_moderation_reports(request):
     """
     Liste les signalements citoyens pour examen et modération éthique (§43).
@@ -1861,7 +1861,7 @@ def create_moderation_report(request):
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAdminUser])
 def resolve_moderation_report(request, report_id):
     """
     Modère et clôture un signalement avec sanction ou classement (§43).
@@ -1886,7 +1886,7 @@ def resolve_moderation_report(request, report_id):
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAdminUser])
 def grant_admin_stipend(request):
     """
     Octroie une bourse d'encouragement ou subvention d'urgence administrative à un citoyen (§45).

@@ -1,4 +1,6 @@
 from django.core.management.base import BaseCommand
+from django.contrib.auth.models import User
+import os
 from game.models import (
     Property,
     Skill,
@@ -483,5 +485,15 @@ class Command(BaseCommand):
             transaction_type="expense",
             category="Logement"
         )
+
+        # Default staff administrator for Back-Office (§43, §45, §46)
+        if not User.objects.filter(is_superuser=True).exists():
+            admin_pwd = os.getenv('DJANGO_ADMIN_PASSWORD', 'YouthCityAdmin2026!')
+            admin_user = User.objects.create_superuser(
+                username='admin',
+                email='admin@youthcity.mg',
+                password=admin_pwd,
+            )
+            self.stdout.write(f"Default administrator '{admin_user.username}' created.")
 
         self.stdout.write(self.style.SUCCESS(f"Successfully seeded Character '{character.name}' with initial balance {character.money:,} MGA."))

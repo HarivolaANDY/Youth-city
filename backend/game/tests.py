@@ -1,5 +1,6 @@
 from django.test import TestCase
 from django.core.management import call_command
+from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 from rest_framework import status
 from game.models import Character, Property, Job, Course, Transaction, Hackathon, StartupProject, ModerationReport
@@ -408,25 +409,27 @@ class YouthCityBackendAPITests(APITestCase):
 
     def test_16_admin_backoffice_and_moderation_flow(self):
         """Verifies Admin Back-Office, Moderation queue, Impact Analytics and Stipend Grant (§43, §45, §46)."""
-        # 1. Admin Overview & Impact Analytics (§46)
-        res_overview = self.client.get('/api/admin/overview/')
-        self.assertEqual(res_overview.status_code, status.HTTP_200_OK)
-        overview_data = res_overview.json()
-        self.assertIn('overview', overview_data)
-        self.assertIn('recentCitizens', overview_data)
-        metrics = overview_data['overview']
-        self.assertGreaterEqual(metrics['totalCitizens'], 1)
-        self.assertGreater(metrics['totalMoneyCirculation'], 0)
-        self.assertGreaterEqual(metrics['economicHealthScore'], 50)
-        self.assertGreaterEqual(len(overview_data['recentCitizens']), 1)
+        # 1. Broken Access Control Defense: Unauthenticated access MUST be blocked (P0)
+        res_anon_overview = self.client.get('/api/admin/overview/')
+        self.assertIn(res_anon_overview.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
 
-        # 2. List Moderation Reports (§43)
-        res_reports = self.client.get('/api/moderation/reports/')
-        self.assertEqual(res_reports.status_code, status.HTTP_200_OK)
-        reports = res_reports.json()
-        self.assertGreaterEqual(len(reports), 1)
+        res_anon_reports = self.client.get('/api/moderation/reports/')
+        self.assertIn(res_anon_reports.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
 
-        # 3. Create a citizen moderation report (§43)
+        res_anon_stipend = self.client.post('/api/admin/grant_stipend/', {'amount': 100000})
+        self.assertIn(res_anon_stipend.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
+
+        # 2. Broken Access Control Defense: Regular citizen (non-staff) MUST be forbidden
+        regular_user = User.objects.create_user(username='citizen_jane', password='SafePassword123!')
+        self.client.force_authenticate(user=regular_user)
+
+        res_citizen_overview = self.client.get('/api/admin/overview/')
+        self.assertEqual(res_citizen_overview.status_code, status.HTTP_403_FORBIDDEN)
+
+        res_citizen_stipend = self.client.post('/api/admin/grant_stipend/', {'amount': 100000})
+        self.assertEqual(res_citizen_stipend.status_code, status.HTTP_403_FORBIDDEN)
+
+        # 3. Citizen can still legitimately report abusive content (§43)
         res_create_rep = self.client.post('/api/moderation/reports/create/', {
             'targetType': 'chat_message',
             'targetId': 'msg-999',
@@ -439,7 +442,35 @@ class YouthCityBackendAPITests(APITestCase):
         report_id = new_report['id']
         self.assertEqual(new_report['status'], 'pending')
 
-        # 4. Resolve the report (§43)
+        # Regular citizen CANNOT resolve moderation reports
+        res_citizen_resolve = self.client.post(f'/api/moderation/reports/{report_id}/resolve/', {'action': 'warning'})
+        self.assertEqual(res_citizen_resolve.status_code, status.HTTP_403_FORBIDDEN)
+
+        # 4. Authenticated Staff Administrator can access overview, reports, and actions
+        admin_user = User.objects.filter(is_superuser=True).first()
+        if not admin_user:
+            admin_user = User.objects.create_superuser(username='superadmin', password='StrongAdminPass123!')
+        self.client.force_authenticate(user=admin_user)
+
+        # 4.1. Admin Overview & Impact Analytics (§46)
+        res_overview = self.client.get('/api/admin/overview/')
+        self.assertEqual(res_overview.status_code, status.HTTP_200_OK)
+        overview_data = res_overview.json()
+        self.assertIn('overview', overview_data)
+        self.assertIn('recentCitizens', overview_data)
+        metrics = overview_data['overview']
+        self.assertGreaterEqual(metrics['totalCitizens'], 1)
+        self.assertGreater(metrics['totalMoneyCirculation'], 0)
+        self.assertGreaterEqual(metrics['economicHealthScore'], 50)
+        self.assertGreaterEqual(len(overview_data['recentCitizens']), 1)
+
+        # 4.2. List Moderation Reports (§43)
+        res_reports = self.client.get('/api/moderation/reports/')
+        self.assertEqual(res_reports.status_code, status.HTTP_200_OK)
+        reports = res_reports.json()
+        self.assertGreaterEqual(len(reports), 1)
+
+        # 4.3. Resolve the report as admin (§43)
         res_resolve = self.client.post(f'/api/moderation/reports/{report_id}/resolve/', {
             'action': 'warning',
             'status': 'resolved',
@@ -450,7 +481,7 @@ class YouthCityBackendAPITests(APITestCase):
         self.assertEqual(resolved_rep['status'], 'resolved')
         self.assertEqual(resolved_rep['actionTaken'], 'warning')
 
-        # 5. Grant Admin Stipend to citizen (§45)
+        # 4.4. Grant Admin Stipend to citizen as admin (§45)
         initial_money = self.character.money
         res_stipend = self.client.post('/api/admin/grant_stipend/', {
             'characterId': self.character.id,

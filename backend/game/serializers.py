@@ -23,7 +23,7 @@ from game.models import (
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'date_joined']
+        fields = ['id', 'username', 'email', 'is_staff', 'is_superuser', 'date_joined']
 
 
 class RegisterSerializer(serializers.Serializer):

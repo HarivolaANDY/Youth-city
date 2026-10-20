@@ -50,6 +50,7 @@ const ACTION_LABELS: Record<ModerationAction, { label: string; color: string }> 
 
 export const AdminBackOfficeModal: React.FC = () => {
   const {
+    user,
     isAdminModalOpen,
     toggleAdminModal,
     adminOverview,
@@ -80,6 +81,36 @@ export const AdminBackOfficeModal: React.FC = () => {
   const [isSubmittingStipend, setIsSubmittingStipend] = useState(false);
 
   if (!isAdminModalOpen) return null;
+
+  if (!user?.is_staff) {
+    return (
+      <Modal
+        open={isAdminModalOpen}
+        onClose={() => toggleAdminModal(false)}
+        labelledBy="admin-denied-title"
+        size="md"
+      >
+        <div className="p-6 text-center space-y-4 bg-night-950 text-white">
+          <div className="mx-auto flex size-14 items-center justify-center rounded-2xl border border-rose-500/30 bg-rose-500/10 text-rose-400">
+            <ShieldAlert className="size-8" />
+          </div>
+          <div>
+            <h3 id="admin-denied-title" className="text-lg font-bold text-white">
+              Accès Restreint aux Administrateurs
+            </h3>
+            <p className="mt-2 text-sm text-mist-400">
+              La console de supervision et de modération requiert un compte doté des privilèges d'administration (<code className="text-amber-300">is_staff</code>).
+            </p>
+          </div>
+          <div className="pt-2">
+            <Button variant="secondary" onClick={() => toggleAdminModal(false)}>
+              Fermer
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    );
+  }
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
