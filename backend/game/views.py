@@ -2484,8 +2484,3 @@ def verify_career_passport(request, code):
         'passport': data,
     })
 
-
-
-
-
-

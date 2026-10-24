@@ -19,7 +19,7 @@ import {
   History,
   Loader2,
 } from 'lucide-react';
-import { JOBS } from '../../data/mockData';
+import { JOBS, DEFAULT_FREELANCE_GIGS } from '../../data/mockData';
 import { useGameStore } from '../../stores/useGameStore';
 import type { Job, InterviewResult, FreelanceGig } from '../../types/game';
 import { ViewHeader } from '../../components/ui/ViewHeader';
@@ -29,129 +29,6 @@ import { Badge } from '../../components/ui/Badge';
 import { IconChip } from '../../components/ui/IconChip';
 import { Tooltip } from '../../components/ui/Tooltip';
 import { formatNumber } from '../../lib/format';
-
-const FALLBACK_FREELANCE_GIGS: FreelanceGig[] = [
-  {
-    id: 'gig-web-landing',
-    key: 'gig-web-landing',
-    title: 'Création de Landing Page Responsive',
-    clientName: 'Artisanat Malagasy Moderne',
-    category: 'tech',
-    description: 'Développe une page vitrine responsive mettant en valeur les créations de vannerie et broderie malgaches auprès d\'une clientèle internationale.',
-    rewardMoney: 120000,
-    rewardXp: 180,
-    energyCost: 25,
-    durationHours: 6,
-    requiredSkillKey: 'javascript',
-    requiredSkillName: 'JavaScript & Web',
-    minSkillPercent: 25,
-    icon: 'Code',
-    canApply: true,
-    citizenSkillLevel: 55,
-    reason: '',
-    completedCount: 0,
-  },
-  {
-    id: 'gig-seo-social',
-    key: 'gig-seo-social',
-    title: 'Audit SEO & Campagne Réseaux Sociaux',
-    clientName: 'Café des Arts Antaninarenina',
-    category: 'marketing',
-    description: 'Optimise la visibilité locale, la page Facebook et le compte Instagram d\'un café culturel pour booster la fréquentation du week-end.',
-    rewardMoney: 85000,
-    rewardXp: 140,
-    energyCost: 20,
-    durationHours: 4,
-    requiredSkillKey: 'communication',
-    requiredSkillName: 'Communication & Marketing',
-    minSkillPercent: 20,
-    icon: 'Megaphone',
-    canApply: true,
-    citizenSkillLevel: 60,
-    reason: '',
-    completedCount: 0,
-  },
-  {
-    id: 'gig-excel-budget',
-    key: 'gig-excel-budget',
-    title: 'Automatisation Tableur & Suivi Budgétaire',
-    clientName: 'Coopérative Vanille Sambava',
-    category: 'finance',
-    description: 'Conçois un fichier de suivi de trésorerie automatisé avec formules de réconciliation pour sécuriser les rentrées d\'argent des récoltes.',
-    rewardMoney: 150000,
-    rewardXp: 220,
-    energyCost: 25,
-    durationHours: 5,
-    requiredSkillKey: 'budget',
-    requiredSkillName: 'Gestion Budgétaire & Finance',
-    minSkillPercent: 30,
-    icon: 'BarChart',
-    canApply: true,
-    citizenSkillLevel: 65,
-    reason: '',
-    completedCount: 0,
-  },
-  {
-    id: 'gig-brand-identity',
-    key: 'gig-brand-identity',
-    title: 'Charte Graphique & Pack Visuels Sociaux',
-    clientName: 'GreenRide Vélo-Taxi',
-    category: 'design',
-    description: 'Réalise un logo vectoriel épuré, une palette chromatique et 5 gabarits de posts promotionnels pour une startup de livraison écologique.',
-    rewardMoney: 175000,
-    rewardXp: 250,
-    energyCost: 30,
-    durationHours: 7,
-    requiredSkillKey: 'communication',
-    requiredSkillName: 'Créativité & Design Visuel',
-    minSkillPercent: 35,
-    icon: 'Palette',
-    canApply: true,
-    citizenSkillLevel: 60,
-    reason: '',
-    completedCount: 0,
-  },
-  {
-    id: 'gig-translation-en-fr',
-    key: 'gig-translation-en-fr',
-    title: 'Traduction & Localisation EN-FR de Dossier Projet',
-    clientName: 'Agence Écotourisme Madagascar',
-    category: 'writing',
-    description: 'Traduis et adapte avec précision un document de présentation de 12 pages destiné aux bailleurs et investisseurs internationaux.',
-    rewardMoney: 95000,
-    rewardXp: 150,
-    energyCost: 20,
-    durationHours: 4,
-    requiredSkillKey: 'communication',
-    requiredSkillName: 'Rédaction & Traduction',
-    minSkillPercent: 20,
-    icon: 'FileText',
-    canApply: true,
-    citizenSkillLevel: 60,
-    reason: '',
-    completedCount: 0,
-  },
-  {
-    id: 'gig-database-cleanup',
-    key: 'gig-database-cleanup',
-    title: 'Nettoyage & Restructuration de Base Clients',
-    clientName: 'Logistique Express Tana',
-    category: 'tech',
-    description: 'Normalise, nettoie et formate les coordonnées téléphoniques et géographiques de contacts dans le système d\'expédition.',
-    rewardMoney: 210000,
-    rewardXp: 320,
-    energyCost: 35,
-    durationHours: 8,
-    requiredSkillKey: 'javascript',
-    requiredSkillName: 'Informatique & Données',
-    minSkillPercent: 40,
-    icon: 'Database',
-    canApply: true,
-    citizenSkillLevel: 55,
-    reason: '',
-    completedCount: 0,
-  },
-];
 
 const GIG_CATEGORY_META: Record<string, { label: string; tone: string; icon: React.ReactNode }> = {
   tech: { label: 'Tech & Web', tone: 'brand', icon: <Code className="size-3.5" /> },
@@ -195,7 +72,7 @@ export const CareerView: React.FC = () => {
   const displayGigs: FreelanceGig[] =
     freelanceGigs && freelanceGigs.length > 0
       ? freelanceGigs
-      : FALLBACK_FREELANCE_GIGS.map((g) => {
+      : DEFAULT_FREELANCE_GIGS.map((g) => {
           const citizenSkill = citizen.skills[g.requiredSkillKey] || 10;
           const skillOk = citizenSkill >= g.minSkillPercent;
           const energyOk = citizen.energy >= g.energyCost;
