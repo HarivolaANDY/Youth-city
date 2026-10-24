@@ -172,15 +172,18 @@ def create_initial_character_for_user(user, name=None):
 
 def get_active_character(request):
     """Retrieves the active citizen avatar (user or default demo citizen)."""
+    base_qs = Character.objects.select_related('current_housing', 'current_job')
     if request.user and request.user.is_authenticated:
-        char = Character.objects.filter(user=request.user).first()
+        char = base_qs.filter(user=request.user).first()
         if not char:
             char = create_initial_character_for_user(request.user)
+            char = base_qs.filter(id=char.id).first() or char
         return char
-    char = Character.objects.filter(user__isnull=True).first() or Character.objects.first()
+    char = base_qs.filter(user__isnull=True).first() or base_qs.first()
     if not char:
         prop = Property.objects.first()
         char = Character.objects.create(name="Emmanuel", current_housing=prop)
+        char = base_qs.filter(id=char.id).first() or char
     return char
 
 

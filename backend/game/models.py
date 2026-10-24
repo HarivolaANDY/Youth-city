@@ -141,6 +141,12 @@ class Transaction(models.Model):
     timestamp = models.CharField(max_length=64, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['character', '-created_at']),
+        ]
+
     def __str__(self):
         return f"{self.label}: {self.amount:,} MGA ({self.character.name})"
 
@@ -221,6 +227,12 @@ class StartupProject(models.Model):
     team = models.JSONField(default=list, blank=True, help_text="Liste des rôles/associés (ex: Développeur, Commercial)")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['character', '-created_at']),
+        ]
 
     def __str__(self):
         return f"{self.name} ({self.get_stage_display()}) — {self.character.name}"
@@ -335,6 +347,12 @@ class ModerationReport(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', '-created_at']),
+        ]
+
     def __str__(self):
         return f"Report #{self.id} [{self.get_reason_display()}] - {self.get_status_display()}"
 
@@ -377,6 +395,12 @@ class FreelanceContract(models.Model):
     completed_at = models.DateTimeField(auto_now_add=True)
     day = models.IntegerField(default=1)
 
+    class Meta:
+        ordering = ['-completed_at']
+        indexes = [
+            models.Index(fields=['character', '-completed_at']),
+        ]
+
     def __str__(self):
         return f"{self.character.name} - {self.gig.title} (+{self.payout:,} MGA)"
 
@@ -398,6 +422,10 @@ class CitizenMessage(models.Model):
 
     class Meta:
         ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['recipient', 'is_read']),
+            models.Index(fields=['sender', 'recipient', 'created_at']),
+        ]
 
     def __str__(self):
         return f"Msg {self.sender.name} -> {self.recipient.name}: {self.content[:30]}"
