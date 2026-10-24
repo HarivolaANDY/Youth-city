@@ -14,6 +14,7 @@ from game.models import (
     MarketItem,
     FreelanceGig,
     FreelanceContract,
+    CitizenMessage,
 )
 
 class Command(BaseCommand):
@@ -821,6 +822,79 @@ class Command(BaseCommand):
             transaction_type="expense",
             category="Logement"
         )
+
+        # Peer citizens for Annuaire & Messagerie Directe (§29)
+        peer_citizens_data = [
+            {
+                "name": "Aina",
+                "avatar_seed": "Aina",
+                "title": "Designer UI/UX & Lead Graphiste",
+                "level": 4,
+                "xp": 980,
+                "money": 380000,
+                "savings": 140000,
+                "day": 12,
+            },
+            {
+                "name": "Rova",
+                "avatar_seed": "Rova",
+                "title": "Tech Founder & Développeur Full-Stack",
+                "level": 6,
+                "xp": 2350,
+                "money": 890000,
+                "savings": 450000,
+                "day": 20,
+            },
+            {
+                "name": "Andry",
+                "avatar_seed": "Andry",
+                "title": "Apprenti Comptable & Analyste Budgétaire",
+                "level": 3,
+                "xp": 620,
+                "money": 210000,
+                "savings": 90000,
+                "day": 9,
+            },
+            {
+                "name": "Mialy",
+                "avatar_seed": "Mialy",
+                "title": "Innovatrice Sociale & AgriTech Durable",
+                "level": 4,
+                "xp": 1100,
+                "money": 320000,
+                "savings": 110000,
+                "day": 15,
+            },
+        ]
+        created_peers = {}
+        for p in peer_citizens_data:
+            peer_obj, _ = Character.objects.update_or_create(
+                name=p["name"],
+                defaults=p
+            )
+            created_peers[p["name"]] = peer_obj
+
+        # Seed initial peer messages (§29)
+        if "Aina" in created_peers:
+            CitizenMessage.objects.get_or_create(
+                sender=created_peers["Aina"],
+                recipient=character,
+                defaults={
+                    "content": "Salut Emmanuel ! J'ai vu que tu progressais bien en frontend au Campus. Si tu cherches une designer pour faire équipe sur le prochain Hackathon du City Hub, fais-moi signe !",
+                    "context_tag": "collaboration",
+                    "is_read": False,
+                }
+            )
+        if "Rova" in created_peers:
+            CitizenMessage.objects.get_or_create(
+                sender=created_peers["Rova"],
+                recipient=character,
+                defaults={
+                    "content": "Bonjour Emmanuel, bienvenue dans la communauté tech de Youth City. N'hésite pas si tu as besoin d'une revue de code sur tes projets ou des conseils sur l'architecture.",
+                    "context_tag": "mentoring",
+                    "is_read": False,
+                }
+            )
 
         # Default staff administrator for Back-Office (§43, §45, §46)
         if not User.objects.filter(is_superuser=True).exists():

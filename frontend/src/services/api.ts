@@ -25,6 +25,10 @@ import type {
   FreelanceContract,
   FreelanceResponse,
   NovaProactiveGuidance,
+  DirectoryCitizen,
+  CitizenMessage,
+  SendMessagePayload,
+  SendMessageResponse,
 } from '../types/game';
 
 const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || '/api';
@@ -366,4 +370,13 @@ export const api = {
     }
     return { success: true, ...res };
   },
+
+  // --- ANNUAIRE CITOYEN & MESSAGERIE SOCIALE DIRECTE (§29) ---
+  getCitizenDirectory: () => getJSON<DirectoryCitizen[]>('/hub/directory/'),
+  getCitizenMessages: (contactId?: number) =>
+    getJSON<CitizenMessage[]>(`/hub/messages/${contactId ? `?contact_id=${contactId}` : ''}`),
+  sendCitizenMessage: (payload: SendMessagePayload) =>
+    postWithResult<SendMessageResponse>('/hub/messages/send/', payload, 'Impossible d\'envoyer le message.'),
+  markMessageRead: (messageId: number) =>
+    postJSON<{ success: boolean; messageId: number }>(`/hub/messages/${messageId}/read/`),
 };

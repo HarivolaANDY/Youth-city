@@ -20,6 +20,7 @@ from game.models import (
     ModerationReport,
     FreelanceGig,
     FreelanceContract,
+    CitizenMessage,
 )
 
 class UserSerializer(serializers.ModelSerializer):
@@ -492,5 +493,89 @@ class FreelanceGigSerializer(serializers.ModelSerializer):
         if not character:
             return 0
         return obj.contracts.filter(character=character).count()
+
+
+class CitizenDirectorySerializer(serializers.ModelSerializer):
+    """Profil public dans l'annuaire citoyen (§29)"""
+    avatarSeed = serializers.CharField(source='avatar_seed')
+    guildName = serializers.SerializerMethodField()
+    jobTitle = serializers.SerializerMethodField()
+    certificationsCount = serializers.SerializerMethodField()
+    unreadMessagesCount = serializers.SerializerMethodField()
+    isMe = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Character
+        fields = [
+            'id',
+            'name',
+            'avatarSeed',
+            'title',
+            'level',
+            'xp',
+            'day',
+            'guildName',
+            'jobTitle',
+            'certificationsCount',
+            'unreadMessagesCount',
+            'isMe',
+        ]
+
+    def get_guildName(self, obj):
+        if hasattr(obj, 'guild_membership') and obj.guild_membership:
+            return obj.guild_membership.guild.name
+        return "Sans guilde"
+
+    def get_jobTitle(self, obj):
+        if obj.current_job:
+            return obj.current_job.title
+        return "En recherche / Freelance"
+
+    def get_certificationsCount(self, obj):
+        return obj.certifications.count()
+
+    def get_unreadMessagesCount(self, obj):
+        character = self.context.get('character')
+        if not character:
+            return 0
+        return CitizenMessage.objects.filter(sender=obj, recipient=character, is_read=False).count()
+
+    def get_isMe(self, obj):
+        character = self.context.get('character')
+        return bool(character and obj.id == character.id)
+
+
+class CitizenMessageSerializer(serializers.ModelSerializer):
+    """Message direct entre deux citoyens (§29)"""
+    senderId = serializers.IntegerField(source='sender.id', read_only=True)
+    senderName = serializers.CharField(source='sender.name', read_only=True)
+    senderAvatar = serializers.CharField(source='sender.avatar_seed', read_only=True)
+    recipientId = serializers.IntegerField(source='recipient.id', read_only=True)
+    recipientName = serializers.CharField(source='recipient.name', read_only=True)
+    contextTag = serializers.CharField(source='context_tag')
+    isRead = serializers.BooleanField(source='is_read')
+    createdAt = serializers.DateTimeField(source='created_at', format="%d/%m/%Y %H:%M")
+    isFromMe = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CitizenMessage
+        fields = [
+            'id',
+            'senderId',
+            'senderName',
+            'senderAvatar',
+            'recipientId',
+            'recipientName',
+            'content',
+            'contextTag',
+            'isRead',
+            'createdAt',
+            'isFromMe',
+        ]
+
+    def get_isFromMe(self, obj):
+        character = self.context.get('character')
+        return bool(character and obj.sender_id == character.id)
+
 
 

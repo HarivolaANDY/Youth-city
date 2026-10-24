@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
 from django.db import transaction as db_transaction
+from django.db.models import Q
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.conf import settings
@@ -40,6 +41,7 @@ from game.models import (
     ModerationReport,
     FreelanceGig,
     FreelanceContract,
+    CitizenMessage,
 )
 from game.serializers import (
     PropertySerializer,
@@ -60,6 +62,8 @@ from game.serializers import (
     ModerationReportSerializer,
     FreelanceGigSerializer,
     FreelanceContractSerializer,
+    CitizenDirectorySerializer,
+    CitizenMessageSerializer,
 )
 
 TIME_SLOTS = [
@@ -2732,4 +2736,150 @@ def verify_career_passport(request, code):
         'signature': data['cryptographicSignature'],
         'passport': data,
     })
+
+
+# --- ANNUAIRE CITOYEN & MESSAGERIE SOCIALE DIRECTE (§29) ---
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def list_citizen_directory(request):
+    """
+    Annuaire public des citoyens au City Hub (§29).
+    Liste les profils citoyens avec compétences, guilde, poste et statut pour favoriser l'émulation saine.
+    """
+    character = get_active_character(request)
+    citizens = Character.objects.all().order_by('-level', '-xp')
+    serializer = CitizenDirectorySerializer(citizens, many=True, context={'character': character})
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def list_citizen_messages(request):
+    """
+    Liste les messages directs de la messagerie instantanée (§29).
+    Prend optionnellement `contact_id` pour charger le fil de conversation spécifique.
+    """
+    character = get_active_character(request)
+    contact_id = request.query_params.get('contact_id')
+
+    if contact_id:
+        try:
+            cid = int(contact_id)
+        except (ValueError, TypeError):
+            return Response({'error': 'ID de contact invalide.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Marque comme lus les messages reçus de ce contact
+        CitizenMessage.objects.filter(sender_id=cid, recipient=character, is_read=False).update(is_read=True)
+
+        messages = CitizenMessage.objects.filter(
+            (Q(sender=character, recipient_id=cid) | Q(sender_id=cid, recipient=character))
+        ).order_by('created_at')
+    else:
+        messages = CitizenMessage.objects.filter(
+            Q(sender=character) | Q(recipient=character)
+        ).order_by('created_at')
+
+    serializer = CitizenMessageSerializer(messages, many=True, context={'character': character})
+    return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def send_citizen_message(request):
+    """
+    Envoi d'un message direct dans le cadre de l'apprentissage collaboratif (§29).
+    Protégé par les garde-fous OWASP (longueur max, désinfection de texte, anti-injection).
+    Si le destinataire est un citoyen simulé, engendre une réponse de pair constructive.
+    """
+    character = get_active_character(request)
+    recipient_id = request.data.get('recipientId')
+    raw_content = request.data.get('content', '')
+    context_tag = request.data.get('contextTag', 'collaboration')
+
+    if not recipient_id:
+        return Response({'error': "Destinataire requis."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        rid = int(recipient_id)
+    except (ValueError, TypeError):
+        return Response({'error': "Identifiant destinataire invalide."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if rid == character.id:
+        return Response({'error': "Impossible d'envoyer un message à soi-même."}, status=status.HTTP_400_BAD_REQUEST)
+
+    recipient = Character.objects.filter(id=rid).first()
+    if not recipient:
+        return Response({'error': "Citoyen destinataire introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+    clean_content = sanitize_text(str(raw_content), max_length=500, allow_multiline=True)
+    if not clean_content.strip():
+        return Response({'error': "Le contenu du message ne peut pas être vide."}, status=status.HTTP_400_BAD_REQUEST)
+
+    is_inj, _ = detect_indirect_prompt_injection(clean_content)
+    if is_inj:
+        return Response({'error': "Contenu non autorisé détecté par le filtre éthique (§OWASP)."}, status=status.HTTP_400_BAD_REQUEST)
+
+    msg = CitizenMessage.objects.create(
+        sender=character,
+        recipient=recipient,
+        content=clean_content,
+        context_tag=context_tag,
+    )
+
+    # Réponse constructive de pair pour les citoyens pairs simulés (§29)
+    auto_reply = None
+    if recipient.user is None or recipient.user.username != character.user.username:
+        recip_lower = recipient.name.lower()
+        if 'aina' in recip_lower:
+            reply_text = (
+                f"Salut {character.name} ! J'ai bien reçu ton message. Tes progrès récents au Campus District sont impressionnants ! "
+                "Je serais ravie de concevoir les maquettes UI/UX pour ton prochain livrable ou pour le Hackathon du City Hub."
+            )
+        elif 'rova' in recip_lower:
+            reply_text = (
+                f"Hello {character.name} ! Super initiative de prendre contact. Le travail en équipe et l'architecture logicielle "
+                "sont indispensables pour faire grandir nos startups à Madagascar. Restons connectés sur ce projet !"
+            )
+        elif 'andry' in recip_lower:
+            reply_text = (
+                f"Bonjour {character.name} ! Bien reçu. La rigueur financière et le suivi des métriques d'épargne "
+                "sont le socle de toute entreprise pérenne. Faisons un point sur le business plan dès que tu as un moment !"
+            )
+        elif 'mialy' in recip_lower:
+            reply_text = (
+                f"Salama {character.name} ! Très heureuse d'échanger. Les initiatives à fort impact social et écologiques "
+                "ont tout leur sens sur Youth City. Collaborons pour faire bouger les lignes !"
+            )
+        else:
+            reply_text = (
+                f"Salama {character.name} ! Merci pour ton message. Ravis de collaborer avec toi sur Youth City "
+                "pour faire progresser nos projets et notre communauté citoyenne !"
+            )
+
+        auto_reply = CitizenMessage.objects.create(
+            sender=recipient,
+            recipient=character,
+            content=reply_text,
+            context_tag=context_tag,
+            is_read=False,
+        )
+
+    return Response({
+        'success': True,
+        'message': CitizenMessageSerializer(msg, context={'character': character}).data,
+        'autoReply': CitizenMessageSerializer(auto_reply, context={'character': character}).data if auto_reply else None,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def mark_message_read(request, message_id):
+    """Marque un message comme lu (§29)."""
+    character = get_active_character(request)
+    msg = get_object_or_404(CitizenMessage, id=message_id, recipient=character)
+    msg.is_read = True
+    msg.save()
+    return Response({'success': True, 'messageId': msg.id})
+
 

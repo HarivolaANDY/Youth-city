@@ -81,6 +81,48 @@ export interface NovaProactiveGuidance {
   economicStats?: Record<string, any>;
 }
 
+export interface DirectoryCitizen {
+  id: number;
+  name: string;
+  avatarSeed: string;
+  title: string;
+  level: number;
+  xp: number;
+  day: number;
+  guildName: string;
+  jobTitle: string;
+  certificationsCount: number;
+  unreadMessagesCount: number;
+  isMe: boolean;
+}
+
+export interface CitizenMessage {
+  id: number;
+  senderId: number;
+  senderName: string;
+  senderAvatar: string;
+  recipientId: number;
+  recipientName: string;
+  content: string;
+  contextTag: 'collaboration' | 'mentoring' | 'guild' | 'general';
+  isRead: boolean;
+  createdAt: string;
+  isFromMe: boolean;
+}
+
+export interface SendMessagePayload {
+  recipientId: number;
+  content: string;
+  contextTag?: 'collaboration' | 'mentoring' | 'guild' | 'general';
+}
+
+export interface SendMessageResponse {
+  success: boolean;
+  message: CitizenMessage;
+  autoReply?: CitizenMessage | null;
+  error?: string;
+}
+
 export interface District {
   id: DistrictId;
   name: string;

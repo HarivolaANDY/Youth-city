@@ -876,6 +876,56 @@ class YouthCityBackendAPITests(APITestCase):
         self.assertEqual(low_data['priorityAction']['targetTab'], 'residential')
         self.assertEqual(low_data['priorityAction']['urgency'], 'urgent')
 
+    def test_25_citizen_directory_and_messaging(self):
+        """Tests Section 29 citizen directory and direct peer messaging system with OWASP guardrails."""
+        # 1. Consultation de l'annuaire citoyen
+        dir_res = self.client.get('/api/hub/directory/')
+        self.assertEqual(dir_res.status_code, status.HTTP_200_OK)
+        dir_data = dir_res.json()
+        self.assertGreaterEqual(len(dir_data), 2)
+        aina = next((c for c in dir_data if c['name'] == 'Aina'), None)
+        self.assertIsNotNone(aina)
+        self.assertGreaterEqual(aina['unreadMessagesCount'], 1)
+
+        # 2. Liste des messages directs
+        msg_res = self.client.get('/api/hub/messages/')
+        self.assertEqual(msg_res.status_code, status.HTTP_200_OK)
+        messages = msg_res.json()
+        self.assertGreaterEqual(len(messages), 1)
+
+        # 3. Envoi d'un message direct à un pair citoyen
+        send_res = self.client.post(
+            '/api/hub/messages/send/',
+            {
+                'recipientId': aina['id'],
+                'content': "Salut Aina ! Je prépare le projet Hackathon. Partante pour monter l'équipe ensemble ?",
+                'contextTag': 'collaboration',
+            },
+            format='json'
+        )
+        self.assertEqual(send_res.status_code, status.HTTP_200_OK)
+        send_data = send_res.json()
+        self.assertTrue(send_data['success'])
+        self.assertEqual(send_data['message']['senderName'], self.character.name)
+        self.assertIsNotNone(send_data.get('autoReply'))
+        self.assertEqual(send_data['autoReply']['senderName'], 'Aina')
+
+        # 4. Garde-fou OWASP : message vide rejeté
+        empty_res = self.client.post(
+            '/api/hub/messages/send/',
+            {'recipientId': aina['id'], 'content': '   '},
+            format='json'
+        )
+        self.assertEqual(empty_res.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # 5. Garde-fou : envoi à soi-même rejeté
+        self_res = self.client.post(
+            '/api/hub/messages/send/',
+            {'recipientId': self.character.id, 'content': 'Test auto-message'},
+            format='json'
+        )
+        self.assertEqual(self_res.status_code, status.HTTP_400_BAD_REQUEST)
+
 
 
 

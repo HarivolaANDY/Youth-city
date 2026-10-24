@@ -381,4 +381,27 @@ class FreelanceContract(models.Model):
         return f"{self.character.name} - {self.gig.title} (+{self.payout:,} MGA)"
 
 
+class CitizenMessage(models.Model):
+    """Messagerie sociale directe entre citoyens au City Hub (§29)"""
+    CONTEXT_CHOICES = (
+        ('collaboration', 'Collaboration & Projet'),
+        ('mentoring', 'Entraide & Mentorat'),
+        ('guild', 'Échange de Guilde'),
+        ('general', 'Discussion Citoyenne'),
+    )
+    sender = models.ForeignKey(Character, on_delete=models.CASCADE, related_name='sent_messages')
+    recipient = models.ForeignKey(Character, on_delete=models.CASCADE, related_name='received_messages')
+    content = models.TextField(help_text="Contenu du message direct")
+    context_tag = models.CharField(max_length=32, choices=CONTEXT_CHOICES, default='collaboration')
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Msg {self.sender.name} -> {self.recipient.name}: {self.content[:30]}"
+
+
+
 

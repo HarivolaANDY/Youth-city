@@ -78,5 +78,11 @@ urlpatterns = [
     # Career Passport & Vérification Publique (§34, §35)
     path('passport/', views.get_career_passport, name='career-passport'),
     path('passport/verify/<str:code>/', views.verify_career_passport, name='verify-career-passport'),
+
+    # Annuaire Citoyen & Messagerie Directe (§29)
+    path('hub/directory/', views.list_citizen_directory, name='hub-directory'),
+    path('hub/messages/', views.list_citizen_messages, name='hub-messages'),
+    path('hub/messages/send/', views.send_citizen_message, name='hub-send-message'),
+    path('hub/messages/<int:message_id>/read/', views.mark_message_read, name='hub-mark-message-read'),
 ]
 

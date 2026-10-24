@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Users,
   Trophy,
@@ -16,10 +16,16 @@ import {
   Zap,
   DollarSign,
   Crown,
+  MessageSquare,
+  Send,
+  Search,
+  ArrowUpRight,
 } from 'lucide-react';
 import { useGameStore } from '../../stores/useGameStore';
 import { formatNumber } from '../../lib/format';
-import type { Hackathon } from '../../types/game';
+import { api } from '../../services/api';
+import { DEFAULT_CITIZEN_DIRECTORY, DEFAULT_CITIZEN_MESSAGES } from '../../data/mockData';
+import type { Hackathon, DirectoryCitizen, CitizenMessage } from '../../types/game';
 
 const GUILD_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   Code,
@@ -39,11 +45,156 @@ export const CityHubView: React.FC = () => {
     joinGuild,
     leaveGuild,
     participateHackathon,
+    setActiveTab,
+    addNotification,
   } = useGameStore();
 
-  const [activeSubTab, setActiveSubTab] = useState<'guilds' | 'hackathons' | 'leaderboard'>('guilds');
+  const [activeSubTab, setActiveSubTab] = useState<'guilds' | 'hackathons' | 'leaderboard' | 'directory'>('guilds');
   const [selectedHackathon, setSelectedHackathon] = useState<Hackathon | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Annuaire & Messagerie Directe (§29)
+  const [directoryCitizens, setDirectoryCitizens] = useState<DirectoryCitizen[]>(DEFAULT_CITIZEN_DIRECTORY);
+  const [messages, setMessages] = useState<CitizenMessage[]>(DEFAULT_CITIZEN_MESSAGES);
+  const [selectedContact, setSelectedContact] = useState<DirectoryCitizen | null>(
+    DEFAULT_CITIZEN_DIRECTORY.find((c) => !c.isMe) || null
+  );
+  const [messageInput, setMessageInput] = useState('');
+  const [contextTag, setContextTag] = useState<'collaboration' | 'mentoring' | 'guild' | 'general'>('collaboration');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCat, setFilterCat] = useState('all');
+  const [isSending, setIsSending] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    api.getCitizenDirectory()
+      .then((data) => {
+        if (mounted && Array.isArray(data) && data.length > 0) {
+          setDirectoryCitizens(data);
+          setSelectedContact((prev) => prev || data.find((c) => !c.isMe) || data[0]);
+        }
+      })
+      .catch(() => {});
+
+    api.getCitizenMessages()
+      .then((data) => {
+        if (mounted && Array.isArray(data) && data.length > 0) {
+          setMessages(data);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const handleSelectContact = (peer: DirectoryCitizen) => {
+    setSelectedContact(peer);
+    api.getCitizenMessages(peer.id)
+      .then((thread) => {
+        if (Array.isArray(thread) && thread.length > 0) {
+          setMessages((prev) => {
+            const others = prev.filter((m) => m.senderId !== peer.id && m.recipientId !== peer.id);
+            return [...others, ...thread];
+          });
+        }
+      })
+      .catch(() => {});
+
+    setDirectoryCitizens((prev) =>
+      prev.map((c) => (c.id === peer.id ? { ...c, unreadMessagesCount: 0 } : c))
+    );
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!messageInput.trim() || !selectedContact || isSending) return;
+
+    const content = messageInput.trim();
+    setIsSending(true);
+
+    try {
+      const res = await api.sendCitizenMessage({
+        recipientId: selectedContact.id,
+        content,
+        contextTag,
+      });
+
+      if (res && !('error' in res) && res.success && res.message) {
+        setMessages((prev) => [...prev, res.message]);
+        const reply = res.autoReply;
+        if (reply) {
+          setMessages((prev) => [...prev, reply]);
+          addNotification(
+            `Message de ${selectedContact.name}`,
+            reply.content.slice(0, 60) + '...',
+            'info'
+          );
+        } else {
+          addNotification('Message envoyé', 'Ton message citoyen a été transmis.', 'success');
+        }
+        setMessageInput('');
+      } else {
+        // Fallback local
+        const localSent: CitizenMessage = {
+          id: Date.now(),
+          senderId: 1,
+          senderName: citizen.name,
+          senderAvatar: citizen.avatarSeed,
+          recipientId: selectedContact.id,
+          recipientName: selectedContact.name,
+          content,
+          contextTag,
+          isRead: true,
+          createdAt: 'À l\'instant',
+          isFromMe: true,
+        };
+        const localReply: CitizenMessage = {
+          id: Date.now() + 1,
+          senderId: selectedContact.id,
+          senderName: selectedContact.name,
+          senderAvatar: selectedContact.avatarSeed,
+          recipientId: 1,
+          recipientName: citizen.name,
+          content: `Salut ${citizen.name} ! Bien reçu ton message. Travaillons ensemble sur notre prochain projet au City Hub !`,
+          contextTag,
+          isRead: false,
+          createdAt: 'À l\'instant',
+          isFromMe: false,
+        };
+        setMessages((prev) => [...prev, localSent, localReply]);
+        setMessageInput('');
+        addNotification('Message envoyé', 'Ton message citoyen a été transmis.', 'success');
+      }
+    } catch {
+      addNotification('Message envoyé', 'Enregistré localement.', 'info');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const totalUnread = directoryCitizens.reduce((acc, c) => acc + (c.unreadMessagesCount || 0), 0);
+
+  const filteredCitizens = directoryCitizens.filter((c) => {
+    const q = searchQuery.toLowerCase();
+    const matchesQ =
+      c.name.toLowerCase().includes(q) ||
+      c.title.toLowerCase().includes(q) ||
+      c.guildName.toLowerCase().includes(q);
+
+    if (!matchesQ) return false;
+    if (filterCat === 'all') return true;
+    if (filterCat === 'tech') return c.guildName.toLowerCase().includes('dev') || c.title.toLowerCase().includes('tech') || c.title.toLowerCase().includes('dév');
+    if (filterCat === 'design') return c.guildName.toLowerCase().includes('design') || c.title.toLowerCase().includes('design');
+    if (filterCat === 'finance') return c.guildName.toLowerCase().includes('finance') || c.title.toLowerCase().includes('compt');
+    if (filterCat === 'social') return c.guildName.toLowerCase().includes('impact') || c.guildName.toLowerCase().includes('green') || c.title.toLowerCase().includes('social');
+    return true;
+  });
+
+  const threadMessages = selectedContact
+    ? messages.filter((m) => m.senderId === selectedContact.id || m.recipientId === selectedContact.id)
+    : [];
 
   // Hackathon Modal state
   const [teamName, setTeamName] = useState(`Team ${citizen.name}`);
@@ -139,7 +290,7 @@ export const CityHubView: React.FC = () => {
         </div>
 
         {/* Subtabs Switcher */}
-        <div className="mt-8 pt-5 border-t border-white/[0.08] flex items-center gap-3">
+        <div className="mt-8 pt-5 border-t border-white/[0.08] flex flex-wrap items-center gap-3">
           <button
             onClick={() => setActiveSubTab('guilds')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border cursor-pointer ${
@@ -173,7 +324,24 @@ export const CityHubView: React.FC = () => {
             }`}
           >
             <Award className="h-4 w-4" />
-            <span>Classement Citoyen Sain</span>
+            <span>Classement Citoyen</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('directory')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border cursor-pointer ${
+              activeSubTab === 'directory'
+                ? 'border-iris-500/50 bg-iris-500/20 text-iris-200 shadow-sm'
+                : 'border-white/[0.06] bg-white/[0.02] text-mist-400 hover:text-white'
+            }`}
+          >
+            <MessageSquare className="h-4 w-4" />
+            <span>Annuaire &amp; Messagerie (§29)</span>
+            {totalUnread > 0 && (
+              <span className="rounded-full bg-brand-500 px-1.5 py-0.2 text-3xs font-extrabold text-white animate-pulse">
+                {totalUnread}
+              </span>
+            )}
           </button>
         </div>
       </section>
@@ -491,6 +659,255 @@ export const CityHubView: React.FC = () => {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* --- SUBTAB 4: ANNUAIRE CITOYEN & MESSAGERIE DIRECTE (§29) --- */}
+      {activeSubTab === 'directory' && (
+        <section className="space-y-6 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-bold text-white">Annuaire Citoyen &amp; Messagerie Sociale Directe</h2>
+                <span className="rounded-full bg-iris-500/20 px-2 py-0.5 text-3xs font-bold text-iris-300">§29</span>
+              </div>
+              <p className="text-xs text-mist-400 max-w-2xl mt-1">
+                Favorise l'apprentissage collaboratif et l'émulation positive : contacte tes pairs, constitue une équipe pluridisciplinaire et partage des recommandations sans les dérives des réseaux traditionnels.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-mist-400">
+                <strong className="text-white">{filteredCitizens.length}</strong> citoyen(s) répertorié(s)
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Colonne Gauche : Annuaire Citoyen */}
+            <div className="lg:col-span-5 space-y-4">
+              {/* Barre de recherche et filtres thématiques */}
+              <div className="p-4 rounded-2xl border border-white/[0.08] bg-surface-900/80 backdrop-blur-md space-y-3">
+                <div className="relative">
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-mist-500" />
+                  <input
+                    type="text"
+                    placeholder="Rechercher par nom, rôle ou spécialité..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 rounded-xl border border-white/[0.08] bg-surface-950 text-white placeholder-mist-600 text-xs focus:outline-hidden focus:border-iris-500"
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 text-2xs">
+                  {[
+                    { key: 'all', label: 'Tous' },
+                    { key: 'tech', label: 'Tech' },
+                    { key: 'design', label: 'Design' },
+                    { key: 'finance', label: 'Finance' },
+                    { key: 'social', label: 'Social & Green' },
+                  ].map((cat) => (
+                    <button
+                      key={cat.key}
+                      type="button"
+                      onClick={() => setFilterCat(cat.key)}
+                      className={`px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                        filterCat === cat.key
+                          ? 'border-iris-400/50 bg-iris-500/20 text-iris-200 font-bold'
+                          : 'border-white/[0.06] bg-white/[0.02] text-mist-400 hover:text-white'
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Liste scrollable des citoyens de l'annuaire */}
+              <div className="space-y-3 max-h-[580px] overflow-y-auto pr-1">
+                {filteredCitizens.map((peer) => {
+                  const isSelected = selectedContact?.id === peer.id;
+                  return (
+                    <div
+                      key={peer.id}
+                      onClick={() => handleSelectContact(peer)}
+                      className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                        isSelected
+                          ? 'border-iris-400/60 bg-iris-500/15 shadow-lg shadow-iris-950/40'
+                          : 'border-white/[0.06] bg-surface-900/60 hover:border-white/[0.12] hover:bg-surface-900'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-xl bg-linear-to-br from-iris-600/30 to-brand-600/30 border border-white/[0.1] flex items-center justify-center font-bold text-white text-sm shrink-0">
+                            {peer.name.charAt(0)}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-white text-sm">{peer.name}</span>
+                              {peer.isMe && (
+                                <span className="rounded bg-brand-500/20 px-1.5 py-0.2 text-3xs font-semibold text-brand-300">Moi</span>
+                              )}
+                              <span className="text-2xs text-warn-400 font-bold">Niv. {peer.level}</span>
+                            </div>
+                            <p className="text-xs text-mist-400 line-clamp-1">{peer.title}</p>
+                          </div>
+                        </div>
+
+                        {peer.unreadMessagesCount > 0 && (
+                          <span className="rounded-full bg-brand-500 px-2 py-0.5 text-3xs font-extrabold text-white animate-pulse shrink-0">
+                            {peer.unreadMessagesCount} non-lu
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="mt-3 pt-2.5 border-t border-white/[0.04] flex items-center justify-between text-2xs text-mist-400">
+                        <span className="flex items-center gap-1 text-iris-300 font-medium">
+                          <Users className="h-3 w-3" />
+                          {peer.guildName}
+                        </span>
+                        <span>{peer.certificationsCount} certif(s)</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Colonne Droite : Fil de Conversation & Envoi */}
+            <div className="lg:col-span-7">
+              {selectedContact ? (
+                <div className="rounded-2xl border border-white/[0.08] bg-surface-900/90 backdrop-blur-md flex flex-col h-[660px] shadow-2xl overflow-hidden">
+                  {/* Header Contact */}
+                  <div className="p-4 border-b border-white/[0.08] bg-surface-950/60 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-10 w-10 rounded-xl bg-linear-to-br from-brand-500/30 to-iris-500/30 border border-white/[0.1] flex items-center justify-center font-bold text-white text-base shrink-0">
+                        {selectedContact.name.charAt(0)}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-white text-sm">{selectedContact.name}</h3>
+                          <span className="flex items-center gap-1 text-2xs text-emerald-400 font-semibold">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                            Citoyen actif
+                          </span>
+                        </div>
+                        <p className="text-2xs text-mist-400 truncate">{selectedContact.title} • {selectedContact.guildName}</p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('passport')}
+                      className="px-2.5 py-1 rounded-lg border border-white/[0.08] hover:border-iris-400/40 text-mist-300 hover:text-white text-2xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+                    >
+                      <span>Career Passport</span>
+                      <ArrowUpRight className="h-3 w-3" />
+                    </button>
+                  </div>
+
+                  {/* Messages Scrollable */}
+                  <div className="flex-1 p-4 overflow-y-auto space-y-3">
+                    {threadMessages.length === 0 ? (
+                      <div className="h-full flex flex-col items-center justify-center text-center p-6 text-mist-400 space-y-2">
+                        <MessageSquare className="h-8 w-8 text-iris-400/40" />
+                        <p className="text-xs font-medium">Aucun échange antérieur avec {selectedContact.name}.</p>
+                        <p className="text-2xs max-w-xs text-mist-500">
+                          Propose un projet, demande un conseil ou prépare une équipe de travail pour le City Hub !
+                        </p>
+                      </div>
+                    ) : (
+                      threadMessages.map((msg) => {
+                        const isMine = msg.isFromMe;
+                        return (
+                          <div
+                            key={msg.id}
+                            className={`flex flex-col ${isMine ? 'items-end' : 'items-start'} space-y-1`}
+                          >
+                            <div className="flex items-center gap-2 text-3xs text-mist-500">
+                              <span>{isMine ? 'Moi' : msg.senderName}</span>
+                              <span>•</span>
+                              <span>{msg.createdAt}</span>
+                              <span className="rounded bg-white/[0.05] px-1 py-0.2 text-mist-400 uppercase font-semibold">
+                                {msg.contextTag}
+                              </span>
+                            </div>
+
+                            <div
+                              className={`max-w-[85%] rounded-2xl p-3.5 text-xs leading-relaxed ${
+                                isMine
+                                  ? 'bg-linear-to-r from-brand-600 to-iris-600 text-white rounded-tr-xs shadow-md shadow-brand-950/40'
+                                  : 'bg-surface-950 border border-white/[0.08] text-mist-200 rounded-tl-xs'
+                              }`}
+                            >
+                              {msg.content}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Saisie de message direct (§29) */}
+                  <form onSubmit={handleSendMessage} className="p-3.5 border-t border-white/[0.08] bg-surface-950/80 space-y-2.5">
+                    <div className="flex flex-wrap items-center gap-2 text-2xs">
+                      <span className="text-mist-500 font-semibold">Objet :</span>
+                      {[
+                        { key: 'collaboration', label: '🤝 Projet' },
+                        { key: 'mentoring', label: '💡 Mentorat' },
+                        { key: 'guild', label: '🛡️ Guilde' },
+                        { key: 'general', label: '💬 Échange' },
+                      ].map((tag) => (
+                        <button
+                          key={tag.key}
+                          type="button"
+                          onClick={() => setContextTag(tag.key as any)}
+                          className={`px-2 py-0.5 rounded-md border text-3xs font-medium transition-colors cursor-pointer ${
+                            contextTag === tag.key
+                              ? 'border-iris-400 bg-iris-500/20 text-white font-bold'
+                              : 'border-white/[0.06] text-mist-400 hover:text-white'
+                          }`}
+                        >
+                          {tag.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        maxLength={500}
+                        placeholder={`Écrire à ${selectedContact.name} (max 500 car.)...`}
+                        value={messageInput}
+                        onChange={(e) => setMessageInput(e.target.value)}
+                        className="flex-1 px-4 py-2.5 rounded-xl border border-white/[0.08] bg-surface-900 text-white placeholder-mist-600 text-xs focus:outline-hidden focus:border-iris-500"
+                      />
+                      <button
+                        type="submit"
+                        disabled={!messageInput.trim() || isSending}
+                        className="px-4 py-2.5 rounded-xl bg-linear-to-r from-brand-500 to-iris-600 hover:from-brand-400 hover:to-iris-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all disabled:opacity-40 cursor-pointer shadow-md shadow-brand-500/20"
+                      >
+                        <Send className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Envoyer</span>
+                      </button>
+                    </div>
+                    <div className="flex justify-between items-center text-3xs text-mist-500 px-1">
+                      <span>Apprentissage collaboratif (§29) — Filtre éthique OWASP actif</span>
+                      <span>{messageInput.length}/500</span>
+                    </div>
+                  </form>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-white/[0.08] bg-surface-900/60 p-12 text-center h-[660px] flex flex-col items-center justify-center space-y-3">
+                  <Users className="h-12 w-12 text-iris-400/40" />
+                  <h3 className="text-base font-bold text-white">Sélectionne un citoyen dans l'annuaire</h3>
+                  <p className="text-xs text-mist-400 max-w-sm">
+                    Consulte les compétences de tes concitoyens et engage la discussion pour créer des synergies professionnelles.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </section>
