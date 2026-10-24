@@ -7,6 +7,7 @@ from rest_framework import status
 from django.shortcuts import get_object_or_404
 from django.db import models, transaction as db_transaction
 from django.db.models import Q, Count, Sum
+from django.db.models.functions import Coalesce
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.conf import settings
@@ -45,7 +46,6 @@ from game.models import (
 )
 from game.serializers import (
     PropertySerializer,
-    SkillSerializer,
     JobSerializer,
     CourseSerializer,
     DilemmaSerializer,
@@ -799,23 +799,36 @@ def work_shift(request):
 def list_freelance_gigs(request):
     """Lists available freelance gigs with citizen eligibility & past contracts (§52)."""
     character = get_active_character(request)
-    gigs = FreelanceGig.objects.filter(is_active=True).order_by('id')
-    serializer = FreelanceGigSerializer(gigs, many=True, context={'character': character})
+    gigs = list(FreelanceGig.objects.filter(is_active=True).order_by('id'))
+
+    skills_map = dict(character.skills.values_list('skill__key', 'level_percent'))
+    category_map = dict(character.skills.values_list('skill__category', 'level_percent'))
+    contracts_map = dict(character.freelance_contracts.values('gig_id').annotate(c=Count('id')).values_list('gig_id', 'c'))
+
+    serializer = FreelanceGigSerializer(
+        gigs,
+        many=True,
+        context={
+            'character': character,
+            'skills_map': skills_map,
+            'category_map': category_map,
+            'contracts_map': contracts_map,
+        }
+    )
 
     contracts = character.freelance_contracts.select_related('gig').order_by('-completed_at')[:10]
     contracts_data = FreelanceContractSerializer(contracts, many=True).data
 
-    all_contracts = character.freelance_contracts.all()
-    total_earned = sum(c.payout for c in all_contracts)
+    stats = character.freelance_contracts.aggregate(
+        totalEarned=Coalesce(Sum('payout'), 0),
+        totalCompleted=Count('id')
+    )
 
     return Response({
         'success': True,
         'gigs': serializer.data,
         'contracts': contracts_data,
-        'stats': {
-            'totalEarned': total_earned,
-            'totalCompleted': len(all_contracts),
-        }
+        'stats': stats,
     })
 
 
@@ -1503,9 +1516,9 @@ def buy_market_item(request):
 def list_startup_projects(request):
     """Lists startup ventures of the active citizen (§12, §24)."""
     character = get_active_character(request)
-    projects = StartupProject.objects.filter(character=character).order_by('-created_at')
+    projects = list(StartupProject.objects.filter(character=character).order_by('-created_at'))
 
-    if not projects.exists() and (not character.user or character.name == "Emmanuel"):
+    if not projects and (not character.user or character.name == "Emmanuel"):
         initial_proj = StartupProject.objects.create(
             character=character,
             key="startup-ecotana",
@@ -1853,8 +1866,16 @@ def list_hackathons(request):
                 evaluation_criteria=["Impact Producteurs (35%)", "Accessibilité Téléphone Basique (35%)", "Viabilité Opérationnelle (30%)"]
             ),
         ])
-    hackathons = Hackathon.objects.all().order_by('-created_at')
-    serializer = HackathonSerializer(hackathons, many=True, context={'character': character})
+    hackathons = list(Hackathon.objects.all().order_by('-created_at'))
+    my_parts = {
+        p.hackathon_id: HackathonParticipationSerializer(p).data
+        for p in HackathonParticipation.objects.filter(character=character, hackathon__in=hackathons)
+    }
+    serializer = HackathonSerializer(
+        hackathons,
+        many=True,
+        context={'character': character, 'my_participations': my_parts}
+    )
     return Response(serializer.data)
 
 
@@ -1970,29 +1991,34 @@ def participate_hackathon(request, key):
 @permission_classes([AllowAny])
 def get_community_leaderboard(request):
     """Returns healthy thematic leaderboards without anxiety-inducing metrics (§33)."""
-    top_citizens = Character.objects.all().order_by('-xp')[:10]
+    top_citizens = Character.objects.values(
+        'id', 'name', 'title', 'level', 'xp', 'completed_challenges', 'completed_projects', 'savings'
+    ).order_by('-xp')[:10]
     citizens_data = [
         {
-            'id': c.id,
-            'name': c.name,
-            'title': c.title,
-            'level': c.level,
-            'xp': c.xp,
-            'completedChallenges': c.completed_challenges,
-            'completedProjects': c.completed_projects,
-            'savings': c.savings,
+            'id': c['id'],
+            'name': c['name'],
+            'title': c['title'],
+            'level': c['level'],
+            'xp': c['xp'],
+            'completedChallenges': c['completed_challenges'],
+            'completedProjects': c['completed_projects'],
+            'savings': c['savings'],
         }
         for c in top_citizens
     ]
 
-    top_guilds = Guild.objects.all().order_by('-member_count')[:5]
+    category_display_map = dict(Guild.CATEGORY_CHOICES)
+    top_guilds = Guild.objects.values(
+        'key', 'name', 'category', 'member_count', 'motto'
+    ).order_by('-member_count')[:5]
     guilds_data = [
         {
-            'id': g.key,
-            'name': g.name,
-            'category': g.get_category_display(),
-            'memberCount': g.member_count,
-            'motto': g.motto,
+            'id': g['key'],
+            'name': g['name'],
+            'category': category_display_map.get(g['category'], g['category']),
+            'memberCount': g['member_count'],
+            'motto': g['motto'],
         }
         for g in top_guilds
     ]
@@ -2030,13 +2056,21 @@ def get_admin_overview(request):
 
     all_completed = sum(len(c.completed_courses or []) for c in Character.objects.only('completed_courses'))
     total_certs = Certification.objects.count()
-    total_startups = StartupProject.objects.count()
-    funded_startups = StartupProject.objects.filter(has_incubator_grant=True).count()
+    startup_agg = StartupProject.objects.aggregate(
+        total=Count('id'),
+        funded=Count('id', filter=Q(has_incubator_grant=True))
+    )
+    total_startups = startup_agg['total']
+    funded_startups = startup_agg['funded']
     total_hackathons = HackathonParticipation.objects.count()
     total_guilds = Guild.objects.count()
 
-    pending_reports = ModerationReport.objects.filter(status='pending').count()
-    resolved_reports = ModerationReport.objects.filter(status='resolved').count()
+    report_agg = ModerationReport.objects.aggregate(
+        pending=Count('id', filter=Q(status='pending')),
+        resolved=Count('id', filter=Q(status='resolved'))
+    )
+    pending_reports = report_agg['pending']
+    resolved_reports = report_agg['resolved']
 
     savings_ratio = min(1.0, (total_savings / (total_money + 1)))
     health_index = min(100, int(50 + (savings_ratio * 30) + min(20, all_completed * 2)))

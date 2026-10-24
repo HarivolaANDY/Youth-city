@@ -7,14 +7,11 @@ from game.models import (
     Job,
     Course,
     Character,
-    CharacterSkill,
-    Certification,
     Transaction,
     Dilemma,
     MarketItem,
     StartupProject,
     Guild,
-    GuildMembership,
     Hackathon,
     HackathonParticipation,
     ModerationReport,
@@ -240,10 +237,7 @@ class CitizenDetailSerializer(serializers.ModelSerializer):
         return obj.current_job.key if obj.current_job else None
 
     def get_skills(self, obj):
-        result = {}
-        for cs in obj.skills.select_related('skill'):
-            result[cs.skill.key] = cs.level_percent
-        return result
+        return dict(obj.skills.values_list('skill__key', 'level_percent'))
 
     def get_certifications(self, obj):
         return list(obj.certifications.values_list('title', flat=True))
@@ -358,6 +352,9 @@ class HackathonSerializer(serializers.ModelSerializer):
         ]
 
     def get_myParticipation(self, obj):
+        my_parts = self.context.get('my_participations')
+        if my_parts is not None:
+            return my_parts.get(obj.id)
         character = self.context.get('character')
         if not character:
             return None
@@ -461,6 +458,12 @@ class FreelanceGigSerializer(serializers.ModelSerializer):
         character = self.context.get('character')
         if not character:
             return 0
+        skills_map = self.context.get('skills_map')
+        if skills_map is not None:
+            if obj.required_skill_key in skills_map:
+                return skills_map[obj.required_skill_key]
+            category_map = self.context.get('category_map', {})
+            return category_map.get(obj.required_skill_key, 10)
         cs = character.skills.filter(skill__key=obj.required_skill_key).first()
         if not cs:
             cs = character.skills.filter(skill__category=obj.required_skill_key).first()
@@ -492,6 +495,9 @@ class FreelanceGigSerializer(serializers.ModelSerializer):
         character = self.context.get('character')
         if not character:
             return 0
+        contracts_map = self.context.get('contracts_map')
+        if contracts_map is not None:
+            return contracts_map.get(obj.id, 0)
         return obj.contracts.filter(character=character).count()
 
 

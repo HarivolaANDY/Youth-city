@@ -13,7 +13,6 @@ from game.models import (
     Dilemma,
     MarketItem,
     FreelanceGig,
-    FreelanceContract,
     CitizenMessage,
 )
 
