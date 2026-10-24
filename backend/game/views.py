@@ -164,9 +164,14 @@ def create_initial_character_for_user(user, name=None):
             'progress': 10,
         },
     )
-    for skill in Skill.objects.all():
-        base_level = 20 if skill.key in ['budget', 'communication'] else 10
-        CharacterSkill.objects.create(character=char, skill=skill, level_percent=base_level)
+    CharacterSkill.objects.bulk_create([
+        CharacterSkill(
+            character=char,
+            skill=skill,
+            level_percent=20 if skill.key in ['budget', 'communication'] else 10
+        )
+        for skill in Skill.objects.all()
+    ])
     return char
 
 
@@ -521,6 +526,41 @@ def list_courses(request):
     return Response(CourseSerializer(courses, many=True).data)
 
 
+def complete_course_for_character(character, course):
+    """Met à jour les compétences du citoyen, valide le cours et attribue certifications/XP (§23)."""
+    skills_map = course.skills_awarded or {}
+    if skills_map:
+        skill_objs = {s.key: s for s in Skill.objects.filter(key__in=skills_map.keys())}
+        existing_cs = {cs.skill_id: cs for cs in CharacterSkill.objects.filter(character=character, skill__key__in=skills_map.keys())}
+        to_update, to_create = [], []
+        for skey, gain in skills_map.items():
+            sobj = skill_objs.get(skey)
+            if not sobj:
+                continue
+            if sobj.id in existing_cs:
+                cs = existing_cs[sobj.id]
+                cs.level_percent = min(100, cs.level_percent + gain)
+                to_update.append(cs)
+            else:
+                to_create.append(CharacterSkill(character=character, skill=sobj, level_percent=min(100, 10 + gain)))
+        if to_update:
+            CharacterSkill.objects.bulk_update(to_update, ['level_percent'])
+        if to_create:
+            CharacterSkill.objects.bulk_create(to_create)
+
+    completed = list(character.completed_courses or [])
+    if course.key not in completed:
+        completed.append(course.key)
+        character.completed_courses = completed
+        if course.certification_name:
+            Certification.objects.get_or_create(character=character, title=course.certification_name)
+
+    character.energy = max(10, character.energy - 15)
+    level_up = add_xp_to_character(character, course.xp_reward)
+    character.save()
+    return level_up
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def complete_course(request, key):
@@ -529,38 +569,7 @@ def complete_course(request, key):
     course = get_object_or_404(Course, key=key)
 
     with db_transaction.atomic():
-        # Update skills
-        for skill_key, gain in (course.skills_awarded or {}).items():
-            skill_obj = Skill.objects.filter(key=skill_key).first()
-            if skill_obj:
-                char_skill, _ = CharacterSkill.objects.get_or_create(
-                    character=character,
-                    skill=skill_obj,
-                    defaults={'level_percent': 10}
-                )
-                char_skill.level_percent = min(100, char_skill.level_percent + gain)
-                char_skill.save()
-
-        # Update completed courses
-        completed = list(character.completed_courses or [])
-        is_first_time = course.key not in completed
-        if is_first_time:
-            completed.append(course.key)
-            character.completed_courses = completed
-
-            # Add certification
-            if course.certification_name:
-                Certification.objects.get_or_create(
-                    character=character,
-                    title=course.certification_name
-                )
-
-        # Energy consumption
-        character.energy = max(10, character.energy - 15)
-        
-        # XP gain
-        level_up = add_xp_to_character(character, course.xp_reward)
-        character.save()
+        level_up = complete_course_for_character(character, course)
 
     return Response({
         'message': f"Formation validée ! Compétences renforcées et certificat '{course.certification_name}' ajouté.",
@@ -607,34 +616,8 @@ def validate_course_quiz(request, key):
 
     if is_correct and is_last_module:
         with db_transaction.atomic():
-            # Update skills
-            for skill_key, gain in (course.skills_awarded or {}).items():
-                skill_obj = Skill.objects.filter(key=skill_key).first()
-                if skill_obj:
-                    char_skill, _ = CharacterSkill.objects.get_or_create(
-                        character=character,
-                        skill=skill_obj,
-                        defaults={'level_percent': 10}
-                    )
-                    char_skill.level_percent = min(100, char_skill.level_percent + gain)
-                    char_skill.save()
-
-            # Completed courses
-            completed = list(character.completed_courses or [])
-            if course.key not in completed:
-                completed.append(course.key)
-                character.completed_courses = completed
-                if course.certification_name:
-                    Certification.objects.get_or_create(
-                        character=character,
-                        title=course.certification_name
-                    )
-
-            # Energy consumption
-            character.energy = max(10, character.energy - 15)
+            level_up = complete_course_for_character(character, course)
             xp_awarded = course.xp_reward
-            level_up = add_xp_to_character(character, course.xp_reward)
-            character.save()
             is_course_completed = True
 
     return Response({
@@ -1152,16 +1135,24 @@ def resolve_dilemma(request):
         level_up = add_xp_to_character(character, gain_xp)
 
         # Impact sur les compétences
-        for skill_key, delta in impact_skills.items():
-            skill_obj = Skill.objects.filter(key=skill_key).first()
-            if skill_obj:
-                char_skill, _ = CharacterSkill.objects.get_or_create(
-                    character=character,
-                    skill=skill_obj,
-                    defaults={'level_percent': 50}
-                )
-                char_skill.level_percent = max(0, min(100, char_skill.level_percent + delta))
-                char_skill.save()
+        if impact_skills:
+            skill_objs = {s.key: s for s in Skill.objects.filter(key__in=impact_skills.keys())}
+            existing_cs = {cs.skill_id: cs for cs in CharacterSkill.objects.filter(character=character, skill__key__in=impact_skills.keys())}
+            to_update, to_create = [], []
+            for skill_key, delta in impact_skills.items():
+                skill_obj = skill_objs.get(skill_key)
+                if not skill_obj:
+                    continue
+                if skill_obj.id in existing_cs:
+                    cs = existing_cs[skill_obj.id]
+                    cs.level_percent = max(0, min(100, cs.level_percent + delta))
+                    to_update.append(cs)
+                else:
+                    to_create.append(CharacterSkill(character=character, skill=skill_obj, level_percent=max(0, min(100, 50 + delta))))
+            if to_update:
+                CharacterSkill.objects.bulk_update(to_update, ['level_percent'])
+            if to_create:
+                CharacterSkill.objects.bulk_create(to_create)
 
         # Enregistrement dans les résolus et réinitialisation du dilemme actif
         resolved_list = character.resolved_dilemmas or []
@@ -1208,9 +1199,7 @@ def reset_game(request):
         character.completed_challenges = 0
         character.save()
 
-        for cs in character.skills.all():
-            cs.level_percent = 15 if preset == 'new' else 50
-            cs.save()
+        character.skills.update(level_percent=15 if preset == 'new' else 50)
 
         Certification.objects.filter(character=character).delete()
         Transaction.objects.filter(character=character).delete()
@@ -1251,9 +1240,7 @@ def reset_game(request):
             character.completed_challenges = 0
             character.save()
 
-            for cs in character.skills.all():
-                cs.level_percent = 15
-                cs.save()
+            character.skills.update(level_percent=15)
 
             Certification.objects.filter(character=character).delete()
             Transaction.objects.filter(character=character).delete()
@@ -1399,16 +1386,23 @@ def customize_character(request):
         character.current_objective = vocation_data
 
         # Configure skills according to archetype
+        skills_by_key = {s.key: s for s in Skill.objects.filter(key__in=archetype_data['skills'].keys())}
+        existing_cs = {cs.skill_id: cs for cs in CharacterSkill.objects.filter(character=character, skill__key__in=archetype_data['skills'].keys())}
+        to_update, to_create = [], []
         for skill_key, level in archetype_data['skills'].items():
-            skill_obj = Skill.objects.filter(key=skill_key).first()
-            if skill_obj:
-                char_skill, _ = CharacterSkill.objects.get_or_create(
-                    character=character,
-                    skill=skill_obj,
-                    defaults={'level_percent': level}
-                )
-                char_skill.level_percent = level
-                char_skill.save()
+            skill_obj = skills_by_key.get(skill_key)
+            if not skill_obj:
+                continue
+            if skill_obj.id in existing_cs:
+                cs = existing_cs[skill_obj.id]
+                cs.level_percent = level
+                to_update.append(cs)
+            else:
+                to_create.append(CharacterSkill(character=character, skill=skill_obj, level_percent=level))
+        if to_update:
+            CharacterSkill.objects.bulk_update(to_update, ['level_percent'])
+        if to_create:
+            CharacterSkill.objects.bulk_create(to_create)
 
         # Reset transactions & record initial stipend
         Transaction.objects.filter(character=character).delete()
