@@ -3,6 +3,7 @@ import type {
   Transaction,
   Dilemma,
   Course,
+  CourseQuizValidationResult,
   Job,
   Housing,
   AuthUser,
@@ -256,6 +257,8 @@ export const api = {
   // --- CAMPUS DISTRICT ---
   getCourses: () => getJSON<Course[]>('/campus/courses/'),
   completeCourse: (courseKey: string) => postJSON<{ citizen: Citizen; xpAwarded: number; levelUp: boolean }>(`/campus/courses/${courseKey}/complete/`),
+  validateCourseQuiz: (courseKey: string, moduleIndex: number, answerIndex: number) =>
+    postJSON<CourseQuizValidationResult>(`/campus/courses/${courseKey}/validate-quiz/`, { moduleIndex, answerIndex }),
 
   // --- BUSINESS DISTRICT & CARRIÈRE ---
   getJobs: () => getJSON<Job[]>('/business/jobs/'),

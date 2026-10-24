@@ -563,6 +563,87 @@ def complete_course(request, key):
     })
 
 
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def validate_course_quiz(request, key):
+    """
+    Pipeline Pédagogique Interactif avec Quiz de Validation au Campus (§23).
+    Valide une réponse à un quiz de module, offre le feedback pédagogique immédiat
+    et déclenche la certification à la réussite du dernier module.
+    """
+    character = get_active_character(request)
+    course = get_object_or_404(Course, key=key)
+
+    try:
+        module_index = int(request.data.get('moduleIndex', 0))
+    except (ValueError, TypeError):
+        module_index = 0
+
+    try:
+        answer_index = int(request.data.get('answerIndex', -1))
+    except (ValueError, TypeError):
+        answer_index = -1
+
+    modules = course.modules or []
+    if module_index < 0 or module_index >= len(modules):
+        return Response({'detail': "Index de module invalide."}, status=status.HTTP_400_BAD_REQUEST)
+
+    current_module = modules[module_index]
+    quiz_data = current_module.get('quiz', {})
+    correct_index = quiz_data.get('correctIndex', 0)
+    explanation = quiz_data.get('explanation', '')
+    is_correct = (answer_index == correct_index)
+    is_last_module = (module_index == len(modules) - 1)
+    is_course_completed = False
+    level_up = False
+    xp_awarded = 0
+
+    if is_correct and is_last_module:
+        with db_transaction.atomic():
+            # Update skills
+            for skill_key, gain in (course.skills_awarded or {}).items():
+                skill_obj = Skill.objects.filter(key=skill_key).first()
+                if skill_obj:
+                    char_skill, _ = CharacterSkill.objects.get_or_create(
+                        character=character,
+                        skill=skill_obj,
+                        defaults={'level_percent': 10}
+                    )
+                    char_skill.level_percent = min(100, char_skill.level_percent + gain)
+                    char_skill.save()
+
+            # Completed courses
+            completed = list(character.completed_courses or [])
+            if course.key not in completed:
+                completed.append(course.key)
+                character.completed_courses = completed
+                if course.certification_name:
+                    Certification.objects.get_or_create(
+                        character=character,
+                        title=course.certification_name
+                    )
+
+            # Energy consumption
+            character.energy = max(10, character.energy - 15)
+            xp_awarded = course.xp_reward
+            level_up = add_xp_to_character(character, course.xp_reward)
+            character.save()
+            is_course_completed = True
+
+    return Response({
+        'isCorrect': is_correct,
+        'explanation': explanation,
+        'moduleIndex': module_index,
+        'isLastModule': is_last_module,
+        'isCourseCompleted': is_course_completed,
+        'xpAwarded': xp_awarded,
+        'levelUp': level_up,
+        'skillsAwarded': course.skills_awarded if is_course_completed else {},
+        'certificationName': course.certification_name if is_course_completed else None,
+        'citizen': CitizenDetailSerializer(character).data,
+    })
+
+
 # --- BUSINESS DISTRICT ---
 
 @api_view(['GET'])

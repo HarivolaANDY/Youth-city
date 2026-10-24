@@ -73,6 +73,14 @@ export interface QuizQuestion {
   explanation: string;
 }
 
+export interface CourseModule {
+  title: string;
+  lessonSummary: string;
+  practicalExercise?: string;
+  realWorldMission?: string;
+  quiz: QuizQuestion;
+}
+
 export interface Course {
   id: string;
   title: string;
@@ -83,11 +91,20 @@ export interface Course {
   skillsAwarded: Record<string, number>;
   description: string;
   certificationName: string;
-  modules: {
-    title: string;
-    lessonSummary: string;
-    quiz: QuizQuestion;
-  }[];
+  modules: CourseModule[];
+}
+
+export interface CourseQuizValidationResult {
+  isCorrect: boolean;
+  explanation: string;
+  moduleIndex: number;
+  isLastModule: boolean;
+  isCourseCompleted: boolean;
+  xpAwarded: number;
+  levelUp: boolean;
+  skillsAwarded: Record<string, number>;
+  certificationName?: string | null;
+  citizen?: Citizen;
 }
 
 export interface Job {

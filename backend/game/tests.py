@@ -70,6 +70,35 @@ class YouthCityBackendAPITests(APITestCase):
         self.character.refresh_from_db()
         self.assertIn('course-web-dev', self.character.completed_courses)
 
+    def test_05b_course_interactive_quiz_pipeline(self):
+        """Tests Section 23 interactive pedagogical pipeline quiz validation and certification unlock."""
+        # Test wrong answer
+        wrong_res = self.client.post(
+            '/api/campus/courses/course-finance-budget/validate-quiz/',
+            {'moduleIndex': 0, 'answerIndex': 0},
+            format='json'
+        )
+        self.assertEqual(wrong_res.status_code, status.HTTP_200_OK)
+        self.assertFalse(wrong_res.json()['isCorrect'])
+        self.assertFalse(wrong_res.json()['isCourseCompleted'])
+
+        # Test correct answer and course graduation
+        correct_res = self.client.post(
+            '/api/campus/courses/course-finance-budget/validate-quiz/',
+            {'moduleIndex': 0, 'answerIndex': 1},
+            format='json'
+        )
+        self.assertEqual(correct_res.status_code, status.HTTP_200_OK)
+        res_data = correct_res.json()
+        self.assertTrue(res_data['isCorrect'])
+        self.assertTrue(res_data['isCourseCompleted'])
+        self.assertEqual(res_data['xpAwarded'], 120)
+        self.assertEqual(res_data['certificationName'], "Passeport Épargne & Rigueur Budgétaire")
+
+        self.character.refresh_from_db()
+        self.assertIn('course-finance-budget', self.character.completed_courses)
+        self.assertTrue(self.character.certifications.filter(title="Passeport Épargne & Rigueur Budgétaire").exists())
+
     def test_06_hire_and_work_shift(self):
         """Tests job hiring and work shift daily wage in MGA."""
         hire_res = self.client.post('/api/business/jobs/job-dev-junior/hire/')

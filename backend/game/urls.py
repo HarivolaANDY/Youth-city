@@ -23,6 +23,7 @@ urlpatterns = [
     # Campus District
     path('campus/courses/', views.list_courses, name='list-courses'),
     path('campus/courses/<str:key>/complete/', views.complete_course, name='complete-course'),
+    path('campus/courses/<str:key>/validate-quiz/', views.validate_course_quiz, name='validate-course-quiz'),
 
     # Business District & Freelance (§8, §21, §52)
     path('business/jobs/', views.list_jobs, name='list-jobs'),

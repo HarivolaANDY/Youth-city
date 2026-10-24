@@ -104,22 +104,26 @@ class Command(BaseCommand):
                     {
                         "title": "Module 1 : Les bases de JavaScript & DOM",
                         "lessonSummary": "Le JavaScript permet d'apporter de l'interactivité à une page web. On manipule des variables, des fonctions et des événements pour réagir aux clics de l'utilisateur.",
+                        "practicalExercise": "Déclare un tableau `produits` contenant 3 objets représentant des articles artisanaux malgaches et écris une fonction `calculerTotal()`.",
                         "quiz": {
                             "question": "Quelle instruction déclare une variable dont la valeur ne changera pas ?",
                             "options": ["var", "let", "const", "static"],
                             "correctIndex": 2,
                             "explanation": "`const` permet de déclarer une constante dont la référence ne peut pas être réaffectée.",
                         },
+                        "realWorldMission": "Intègre un sélecteur dynamique de quantité sur le panier d'un commerce en ligne d'Antananarivo.",
                     },
                     {
                         "title": "Module 2 : Gestion de versions avec Git",
                         "lessonSummary": "Git enregistre l'historique des modifications de code dans des commits. C'est l'outil standard indispensable pour collaborer sur un projet professionnel.",
+                        "practicalExercise": "Initialise un dépôt git local, crée une branche `feature-panier`, prépare les fichiers modifiés et rédige un commit conventionnel.",
                         "quiz": {
                             "question": "Quelle commande prépare des fichiers modifiés pour le prochain commit ?",
                             "options": ["git push", "git add", "git checkout", "git reset"],
                             "correctIndex": 1,
                             "explanation": "`git add <fichier>` prépare les modifications dans la zone de staging.",
                         },
+                        "realWorldMission": "Collabore sur le dépôt GitHub de ton équipe au City Hub sans provoquer de conflits de fusion.",
                     },
                 ],
             },
@@ -137,12 +141,14 @@ class Command(BaseCommand):
                     {
                         "title": "Module 1 : La règle 50/30/20",
                         "lessonSummary": "Répartis tes revenus : 50% pour les dépenses obligatoires (loyer, nourriture), 30% pour tes loisirs et bien-être, et 20% d'épargne systématique.",
+                        "practicalExercise": "Prends un revenu simulé de 350 000 MGA et établis le tableau mensuel des 3 enveloppes budgétaires en prévoyant les imprévus.",
                         "quiz": {
                             "question": "Si tu gagnes 400 000 MGA, combien devrais-tu épargner selon la règle des 20% ?",
                             "options": ["40 000 MGA", "80 000 MGA", "100 000 MGA", "50 000 MGA"],
                             "correctIndex": 1,
                             "explanation": "20% de 400 000 MGA = 80 000 MGA à réserver pour ton fonds de secours ou futurs investissements.",
                         },
+                        "realWorldMission": "Configure ton livret d'épargne au Finance District pour automatiser un virement d'au moins 20 000 MGA chaque cycle.",
                     },
                 ],
             },
@@ -160,12 +166,14 @@ class Command(BaseCommand):
                     {
                         "title": "Module 1 : Hooks & State Management",
                         "lessonSummary": "Le hook useState permet de stocker l'état local d'un composant et de redéclencher un rendu fluide lorsque la donnée est mise à jour.",
+                        "practicalExercise": "Écris un composant `BadgeCompetence` recevant en prop le niveau en pourcentage et affichant une jauge dynamique avec Tailwind.",
                         "quiz": {
                             "question": "Quel hook standard React permet de gérer les effets secondaires (appels API, timers) ?",
                             "options": ["useState", "useEffect", "useMemo", "useContext"],
                             "correctIndex": 1,
                             "explanation": "`useEffect` sert à exécuter du code lors du montage, de la mise à jour ou du démontage du composant.",
                         },
+                        "realWorldMission": "Développe un tableau de bord modulaire pour suivre les indicateurs d'une startup incubée au Startup District.",
                     },
                 ],
             },
