@@ -692,6 +692,53 @@ class YouthCityBackendAPITests(APITestCase):
         self.assertFalse(invalid_data.get('success'))
         self.assertIn('error', invalid_data)
 
+    def test_21_dynamic_events_and_contextual_dilemmas(self):
+        """Vérifie le moteur d'événements dynamiques et d'aléas contextuels (§26, §48, §53)."""
+        # 1. Déclenchement manuel ou contextuel d'un événement dynamique
+        res_trigger = self.client.post('/api/dilemmas/trigger/')
+        self.assertEqual(res_trigger.status_code, status.HTTP_200_OK)
+        data = res_trigger.json()
+        self.assertTrue(data.get('success'))
+        dilemma = data.get('dilemma')
+        self.assertIsNotNone(dilemma)
+        self.assertIn('id', dilemma)
+        self.assertIn('title', dilemma)
+        self.assertIn('category', dilemma)
+        self.assertGreaterEqual(len(dilemma['options']), 2)
+
+        # 2. Vérification de l'état actif dans la base de données
+        self.character.refresh_from_db()
+        self.assertEqual(self.character.active_dilemma_key, dilemma['id'])
+
+        res_active = self.client.get('/api/dilemmas/active/')
+        self.assertEqual(res_active.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_active.json().get('id'), dilemma['id'])
+
+        # 3. Résolution d'une option du dilemme
+        first_option = dilemma['options'][0]
+        initial_money = self.character.money
+        initial_xp = self.character.xp
+        initial_challenges = self.character.completed_challenges
+
+        res_resolve = self.client.post('/api/dilemmas/resolve/', {
+            'dilemma_key': dilemma['id'],
+            'option_id': first_option['id'],
+        })
+        self.assertEqual(res_resolve.status_code, status.HTTP_200_OK)
+        resolve_data = res_resolve.json()
+        self.assertIn('message', resolve_data)
+        self.assertEqual(resolve_data.get('dilemmaResolvedKey'), dilemma['id'])
+
+        # 4. Vérification de la persistance des conséquences
+        self.character.refresh_from_db()
+        self.assertEqual(self.character.active_dilemma_key, '')
+        self.assertIn(dilemma['id'], self.character.resolved_dilemmas)
+        self.assertEqual(self.character.completed_challenges, initial_challenges + 1)
+        if first_option.get('costMoney', 0) > 0:
+            self.assertEqual(self.character.money, initial_money - first_option['costMoney'])
+        if first_option.get('gainXp', 0) > 0:
+            self.assertTrue(self.character.xp >= initial_xp)
+
 
 
 

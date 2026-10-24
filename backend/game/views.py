@@ -350,7 +350,9 @@ def get_game_state(request):
     character = get_active_character(request)
     citizen_data = CitizenDetailSerializer(character).data
     transactions = Transaction.objects.filter(character=character).order_by('-created_at')[:20]
-    active_dilemma = Dilemma.objects.first()
+    active_dilemma = None
+    if character.active_dilemma_key:
+        active_dilemma = Dilemma.objects.filter(key=character.active_dilemma_key).first()
 
     return Response({
         'citizen': citizen_data,
@@ -394,6 +396,9 @@ def advance_time(request):
             if settlement_summary and settlement_summary.get('messages'):
                 msg += " " + " ".join(settlement_summary['messages'])
 
+    # Événement dynamique contextuel périodique (§26)
+    dilemma_triggered = evaluate_and_trigger_dynamic_event(character, force=False)
+
     character.save()
     return Response({
         'day': character.day,
@@ -401,6 +406,7 @@ def advance_time(request):
         'energy': character.energy,
         'recurringCycle': get_recurring_cycle_info(character),
         'settlementSummary': settlement_summary,
+        'activeDilemma': DilemmaSerializer(dilemma_triggered).data if dilemma_triggered else None,
         'message': msg,
         'citizen': CitizenDetailSerializer(character).data,
     })
@@ -436,6 +442,9 @@ def advance_day(request):
 
         character.save()
 
+    # Déclenchement d'un événement contextuel (§26) sur avance de jour
+    dilemma_triggered = evaluate_and_trigger_dynamic_event(character, force=(character.day % 2 == 0))
+
     msg = f"Avance rapide : +{days_to_advance} jour(s) écoulé(s). Nous sommes au Jour {character.day}."
     if settlement_summaries:
         all_msgs = [m for s in settlement_summaries for m in s.get('messages', [])]
@@ -448,6 +457,7 @@ def advance_day(request):
         'energy': character.energy,
         'recurringCycle': get_recurring_cycle_info(character),
         'settlementSummary': settlement_summaries[-1] if settlement_summaries else None,
+        'activeDilemma': DilemmaSerializer(dilemma_triggered).data if dilemma_triggered else None,
         'message': msg,
         'citizen': CitizenDetailSerializer(character).data,
     })
@@ -806,11 +816,77 @@ def list_properties(request):
 
 # --- DILEMMAS & ALÉAS ---
 
+def evaluate_and_trigger_dynamic_event(character, force=False):
+    """
+    Moteur de déclenchement d'événements et d'aléas contextuels (§26, §48, §53).
+    Évalue le profil et le contexte du citoyen :
+    - Emploi actif ou non
+    - Startups en cours ou non
+    - Niveau citoyen et jour
+    - Aléas déjà résolus (évite la répétition immédiate)
+    """
+    if character.active_dilemma_key:
+        existing = Dilemma.objects.filter(key=character.active_dilemma_key).first()
+        if existing:
+            return existing
+
+    # Déclenchement automatique selon le rythme du jeu (jours pairs ou force)
+    if not force:
+        should_trigger = (character.day % 2 == 0) and character.time_slot.startswith('Matin')
+        if not should_trigger:
+            return None
+
+    resolved_keys = set(character.resolved_dilemmas or [])
+    all_dilemmas = list(Dilemma.objects.all())
+    if not all_dilemmas:
+        return None
+
+    # Filtrage contextuel
+    has_job = character.current_job is not None
+    has_startup = character.startup_projects.exists()
+    candidates = []
+
+    for d in all_dilemmas:
+        conds = d.conditions or {}
+        if conds.get('has_job') and not has_job:
+            continue
+        if conds.get('has_startup') and not has_startup:
+            continue
+        if 'min_level' in conds and character.level < conds['min_level']:
+            continue
+        if 'min_day' in conds and character.day < conds['min_day']:
+            continue
+        if 'max_savings' in conds and character.savings > conds['max_savings']:
+            continue
+        if 'min_savings' in conds and character.savings < conds['min_savings']:
+            continue
+        candidates.append(d)
+
+    if not candidates:
+        candidates = all_dilemmas
+
+    # Priorité aux dilemmes non encore résolus
+    unresolved_candidates = [d for d in candidates if d.key not in resolved_keys]
+    pool = unresolved_candidates if unresolved_candidates else candidates
+
+    chosen_idx = (character.day * 7 + character.id * 13) % len(pool)
+    chosen = pool[chosen_idx]
+
+    character.active_dilemma_key = chosen.key
+    character.save(update_fields=['active_dilemma_key'])
+    return chosen
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_active_dilemma(request):
-    """Fetches an active ethical or financial dilemma."""
-    dilemma = Dilemma.objects.first()
+    """Récupère le dilemme/aléa actif ou évalue le prochain événement dynamique (§26)."""
+    character = get_active_character(request)
+    dilemma = None
+    if character.active_dilemma_key:
+        dilemma = Dilemma.objects.filter(key=character.active_dilemma_key).first()
+    if not dilemma:
+        dilemma = evaluate_and_trigger_dynamic_event(character, force=False)
     if not dilemma:
         return Response({'dilemma': None})
     return Response(DilemmaSerializer(dilemma).data)
@@ -818,11 +894,25 @@ def get_active_dilemma(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+def trigger_dynamic_event(request):
+    """Déclenche ou force l'apparition d'un aléa/événement dynamique contextuel (§26)."""
+    character = get_active_character(request)
+    dilemma = evaluate_and_trigger_dynamic_event(character, force=True)
+    if not dilemma:
+        return Response({'success': False, 'message': 'Aucun événement disponible actuellement.'})
+    return Response({
+        'success': True,
+        'dilemma': DilemmaSerializer(dilemma).data,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def resolve_dilemma(request):
-    """Applies consequences of choosing a dilemma option."""
+    """Applique les conséquences du choix d'un dilemme ou aléa dynamique (§25, §26)."""
     character = get_active_character(request)
     option_id = request.data.get('option_id')
-    dilemma_key = request.data.get('dilemma_key', 'dilemma-broken-laptop')
+    dilemma_key = request.data.get('dilemma_key') or character.active_dilemma_key or 'dilemma-broken-laptop'
 
     dilemma = get_object_or_404(Dilemma, key=dilemma_key)
     selected_option = next((opt for opt in dilemma.options if opt.get('id') == option_id), None)
@@ -833,6 +923,7 @@ def resolve_dilemma(request):
     cost_money = selected_option.get('costMoney', 0)
     cost_energy = selected_option.get('costEnergy', 0)
     gain_xp = selected_option.get('gainXp', 0)
+    gain_money = selected_option.get('gainMoney', 0)
     impact_skills = selected_option.get('impactSkills', {})
     consequence_text = selected_option.get('consequenceText', '')
 
@@ -847,16 +938,27 @@ def resolve_dilemma(request):
             Transaction.objects.create(
                 character=character,
                 timestamp=f"J-{character.day} {character.time_slot.split(' ')[0]}",
-                label=f"Arbitrage Aléa : {selected_option.get('text')[:60]}",
+                label=f"Aléa [{dilemma.title[:30]}] : {selected_option.get('text')[:50]}",
                 amount=-cost_money,
                 transaction_type='expense',
+                category='Aléas',
+            )
+
+        if gain_money > 0:
+            character.money += gain_money
+            Transaction.objects.create(
+                character=character,
+                timestamp=f"J-{character.day} {character.time_slot.split(' ')[0]}",
+                label=f"Gain Aléa [{dilemma.title[:30]}]",
+                amount=gain_money,
+                transaction_type='income',
                 category='Aléas',
             )
 
         character.energy = max(5, character.energy - cost_energy)
         level_up = add_xp_to_character(character, gain_xp)
 
-        # Apply skill impacts
+        # Impact sur les compétences
         for skill_key, delta in impact_skills.items():
             skill_obj = Skill.objects.filter(key=skill_key).first()
             if skill_obj:
@@ -868,11 +970,19 @@ def resolve_dilemma(request):
                 char_skill.level_percent = max(0, min(100, char_skill.level_percent + delta))
                 char_skill.save()
 
+        # Enregistrement dans les résolus et réinitialisation du dilemme actif
+        resolved_list = character.resolved_dilemmas or []
+        if dilemma.key not in resolved_list:
+            resolved_list.append(dilemma.key)
+            character.resolved_dilemmas = resolved_list
+        character.completed_challenges += 1
+        character.active_dilemma_key = ""
         character.save()
 
     return Response({
         'message': consequence_text,
         'levelUp': level_up,
+        'dilemmaResolvedKey': dilemma.key,
         'citizen': CitizenDetailSerializer(character).data,
     })
 

@@ -127,6 +127,7 @@ export interface DilemmaOption {
   costMoney: number;
   costEnergy: number;
   gainXp: number;
+  gainMoney?: number;
   impactSkills?: Record<string, number>;
   consequenceText: string;
 }
@@ -134,6 +135,7 @@ export interface DilemmaOption {
 export interface Dilemma {
   id: string;
   title: string;
+  category?: 'general' | 'career' | 'finance' | 'domestic' | 'startup' | 'campus';
   scenario: string;
   icon: string;
   options: DilemmaOption[];

@@ -67,6 +67,7 @@ interface GameState {
   toggleNovaModal: (open?: boolean) => void;
   dismissDilemma: () => void;
   triggerDilemma: (dilemma?: Dilemma) => void;
+  triggerDynamicEvent: () => Promise<void>;
   
   // Startup District (§12, §24)
   fetchStartupProjects: () => Promise<void>;
@@ -559,7 +560,34 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   dismissDilemma: () => set({ activeDilemma: null }),
 
-  triggerDilemma: (dilemma = SAMPLE_DILEMMA) => set({ activeDilemma: dilemma }),
+  triggerDilemma: (dilemma?: Dilemma) => {
+    if (dilemma) {
+      set({ activeDilemma: dilemma });
+      return;
+    }
+    // Attempt dynamic contextual event from backend first, fallback to SAMPLE_DILEMMA
+    get().triggerDynamicEvent().catch(() => {
+      set({ activeDilemma: SAMPLE_DILEMMA });
+    });
+  },
+
+  triggerDynamicEvent: async () => {
+    try {
+      const res = await api.triggerDynamicEvent();
+      if (res && res.success && res.dilemma) {
+        set({ activeDilemma: res.dilemma });
+        get().addNotification(
+          '🚨 Aléa Urbain Déclenché !',
+          `Un nouvel imprévu requiert ton arbitrage : ${res.dilemma.title}`,
+          'warning'
+        );
+      } else {
+        set({ activeDilemma: SAMPLE_DILEMMA });
+      }
+    } catch {
+      set({ activeDilemma: SAMPLE_DILEMMA });
+    }
+  },
 
   // --- CAREER PASSPORT & PORTFOLIO VÉRIFIABLE (§34, §35) ---
   fetchCareerPassport: async () => {
@@ -1304,6 +1332,7 @@ export const useGameStore = create<GameState>((set, get) => ({
           timeSlot: res.timeSlot as TimeSlot,
           citizen: res.citizen,
           recurringCycle: res.recurringCycle || null,
+          activeDilemma: res.activeDilemma || get().activeDilemma,
         });
 
         if (res.settlementSummary) {
@@ -1340,6 +1369,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         timeSlot: res.timeSlot as TimeSlot,
         citizen: res.citizen,
         recurringCycle: res.recurringCycle || null,
+        activeDilemma: res.activeDilemma || get().activeDilemma,
       });
 
       if (res.settlementSummary) {
@@ -1636,7 +1666,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   resolveDilemmaOption: (optionId) => {
-    const { activeDilemma, spendMoney, addXp, addNotification, citizen } = get();
+    const { activeDilemma, spendMoney, earnMoney, addXp, addNotification, citizen } = get();
     if (!activeDilemma) return;
 
     const opt = activeDilemma.options.find((o) => o.id === optionId);
@@ -1645,6 +1675,10 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (opt.costMoney > 0) {
       const ok = spendMoney(opt.costMoney, `Arbitrage : ${opt.text}`, 'Aléas');
       if (!ok) return;
+    }
+
+    if (opt.gainMoney && opt.gainMoney > 0) {
+      earnMoney(opt.gainMoney, `Gain Aléa : ${opt.text.slice(0, 40)}`, 'Aléas');
     }
 
     if (opt.gainXp > 0) {
@@ -1664,10 +1698,19 @@ export const useGameStore = create<GameState>((set, get) => ({
         ...citizen,
         energy: Math.max(5, citizen.energy - opt.costEnergy),
         skills: updatedSkills,
+        completedChallenges: citizen.completedChallenges + 1,
       },
     });
 
     addNotification('Conséquence appliquée', opt.consequenceText, 'info');
+
+    if (opt.gainXp >= 70 || (opt.gainMoney && opt.gainMoney >= 50000)) {
+      try {
+        confetti({ particleCount: 75, spread: 65, origin: { y: 0.6 } });
+      } catch {
+        // Fallback
+      }
+    }
 
     // Sync with backend
     api.resolveDilemma(optionId, activeDilemma.id).then((res) => {

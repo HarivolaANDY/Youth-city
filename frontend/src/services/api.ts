@@ -211,6 +211,7 @@ export const api = {
     energy: number;
     recurringCycle?: RecurringCycleInfo;
     settlementSummary?: RecurringSettlementSummary;
+    activeDilemma?: Dilemma;
     message?: string;
     citizen: Citizen;
   } | null> {
@@ -231,6 +232,7 @@ export const api = {
     energy: number;
     recurringCycle?: RecurringCycleInfo;
     settlementSummary?: RecurringSettlementSummary;
+    activeDilemma?: Dilemma;
     message?: string;
     citizen: Citizen;
   } | null> {
@@ -363,7 +365,30 @@ export const api = {
     }
   },
 
-  async resolveDilemma(optionId: string, dilemmaKey = 'dilemma-broken-laptop'): Promise<{ citizen: Citizen; message: string } | null> {
+  async getActiveDilemma(): Promise<Dilemma | null> {
+    try {
+      const res = await fetchAuth(`${API_BASE_URL}/dilemmas/active/`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.dilemma || data;
+    } catch {
+      return null;
+    }
+  },
+
+  async triggerDynamicEvent(): Promise<{ success: boolean; dilemma?: Dilemma; message?: string } | null> {
+    try {
+      const res = await fetchAuth(`${API_BASE_URL}/dilemmas/trigger/`, {
+        method: 'POST',
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  },
+
+  async resolveDilemma(optionId: string, dilemmaKey = 'dilemma-broken-laptop'): Promise<{ citizen: Citizen; message: string; levelUp?: boolean; dilemmaResolvedKey?: string } | null> {
     try {
       const res = await fetchAuth(`${API_BASE_URL}/dilemmas/resolve/`, {
         method: 'POST',

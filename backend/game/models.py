@@ -92,6 +92,8 @@ class Character(models.Model):
     completed_projects = models.IntegerField(default=0)
     completed_challenges = models.IntegerField(default=0)
     inventory = models.JSONField(default=list, blank=True, help_text="Liste des clés d'équipements possédés")
+    active_dilemma_key = models.CharField(max_length=64, blank=True, default="", help_text="Clé du dilemme/aléa en cours de résolution")
+    resolved_dilemmas = models.JSONField(default=list, blank=True, help_text="Clés des dilemmes déjà résolus")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -144,15 +146,25 @@ class Transaction(models.Model):
 
 
 class Dilemma(models.Model):
-    """Aléas et dilemmes éthiques & financiers (Section 25)"""
+    """Aléas et dilemmes éthiques & financiers (Section 25 & 26)"""
+    CATEGORY_CHOICES = (
+        ('general', 'Aléa Général'),
+        ('career', 'Emploi & Carrière'),
+        ('finance', 'Finance & Budget'),
+        ('domestic', 'Résidentiel & Logement'),
+        ('startup', 'Innovation & Entrepreneuriat'),
+        ('campus', 'Études & Campus'),
+    )
     key = models.CharField(max_length=64, unique=True)
     title = models.CharField(max_length=160)
+    category = models.CharField(max_length=32, choices=CATEGORY_CHOICES, default='general')
     scenario = models.TextField()
     icon = models.CharField(max_length=64, default="AlertTriangle")
+    conditions = models.JSONField(default=dict, blank=True, help_text="Conditions de déclenchement contextuel")
     options = models.JSONField(default=list, help_text="Liste des choix possibles avec coûts, gains et conséquences")
 
     def __str__(self):
-        return self.title
+        return f"[{self.get_category_display()}] {self.title}"
 
 
 class MarketItem(models.Model):

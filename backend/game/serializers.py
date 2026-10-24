@@ -152,7 +152,7 @@ class DilemmaSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Dilemma
-        fields = ['id', 'title', 'scenario', 'icon', 'options']
+        fields = ['id', 'title', 'category', 'scenario', 'icon', 'options']
 
 
 class TransactionSerializer(serializers.ModelSerializer):

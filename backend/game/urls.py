@@ -56,8 +56,9 @@ urlpatterns = [
     path('hub/hackathons/<str:key>/participate/', views.participate_hackathon, name='participate-hackathon'),
     path('hub/leaderboard/', views.get_community_leaderboard, name='community-leaderboard'),
 
-    # Dilemmas & Random Events
+    # Dilemmas & Random Events (§25 & §26)
     path('dilemmas/active/', views.get_active_dilemma, name='active-dilemma'),
+    path('dilemmas/trigger/', views.trigger_dynamic_event, name='trigger-dynamic-event'),
     path('dilemmas/resolve/', views.resolve_dilemma, name='resolve-dilemma'),
 
     # Admin Back-Office, Moderation & Impact Analytics (§43, §45, §46)

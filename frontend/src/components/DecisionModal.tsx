@@ -1,5 +1,16 @@
 import React, { useState } from 'react';
-import { AlertTriangle, Sparkles, Zap, Coins, Check } from 'lucide-react';
+import {
+  AlertTriangle,
+  Sparkles,
+  Zap,
+  Coins,
+  Check,
+  Briefcase,
+  Home,
+  Rocket,
+  TrendingUp,
+  Users,
+} from 'lucide-react';
 import { useGameStore } from '../stores/useGameStore';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
@@ -7,11 +18,22 @@ import { Badge } from './ui/Badge';
 import { IconChip } from './ui/IconChip';
 import { formatNumber } from '../lib/format';
 
+const CATEGORY_META = {
+  career: { label: 'Emploi & Carrière (§26, §52)', tone: 'iris' as const, icon: <Briefcase /> },
+  startup: { label: 'Startup & Innovation (§26, §24)', tone: 'brand' as const, icon: <Rocket /> },
+  finance: { label: 'Finance & Pouvoir d\'achat (§26)', tone: 'gain' as const, icon: <TrendingUp /> },
+  domestic: { label: 'Logement & Aléa Domestique (§26)', tone: 'warn' as const, icon: <Home /> },
+  campus: { label: 'Campus & Challenge Citoyen (§26, §31)', tone: 'brand' as const, icon: <Users /> },
+  general: { label: 'Événement Imprévu & Aléa (§25, §26)', tone: 'warn' as const, icon: <AlertTriangle /> },
+};
+
 export const DecisionModal: React.FC = () => {
   const { activeDilemma, dismissDilemma, resolveDilemmaOption, citizen } = useGameStore();
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
 
   if (!activeDilemma) return null;
+
+  const meta = CATEGORY_META[activeDilemma.category || 'general'] || CATEGORY_META.general;
 
   const handleConfirm = () => {
     if (!selectedOptionId) return;
@@ -22,12 +44,12 @@ export const DecisionModal: React.FC = () => {
     <Modal open onClose={dismissDilemma} labelledBy="dilemma-title" size="lg" dismissOnBackdrop={false}>
       <div className="border-b border-white/[0.07] bg-warn-500/[0.04] px-5 py-4 pr-14 sm:px-6">
         <div className="flex items-center gap-3">
-          <IconChip tone="warn">
-            <AlertTriangle />
+          <IconChip tone={meta.tone}>
+            {meta.icon}
           </IconChip>
           <div className="min-w-0">
             <span className="text-2xs font-black tracking-wider text-warn-400 uppercase">
-              Événement imprévu &amp; dilemme citoyen
+              {meta.label}
             </span>
             <h2 id="dilemma-title" className="mt-1 text-lg font-bold text-white">
               {activeDilemma.title}
@@ -77,20 +99,44 @@ export const DecisionModal: React.FC = () => {
                   >
                     {isSelected && <Check className="size-3" strokeWidth={3} />}
                   </span>
-                  <span
-                    className={`text-xs leading-snug font-medium ${
-                      isSelected ? 'text-white' : canAfford ? 'text-mist-200' : 'text-mist-400'
-                    }`}
-                  >
-                    {opt.text}
-                  </span>
+                  <div className="space-y-1">
+                    <span
+                      className={`block text-xs leading-snug font-medium ${
+                        isSelected ? 'text-white' : canAfford ? 'text-mist-200' : 'text-mist-400'
+                      }`}
+                    >
+                      {opt.text}
+                    </span>
+                    {opt.impactSkills && Object.keys(opt.impactSkills).length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-1 text-3xs">
+                        {Object.entries(opt.impactSkills).map(([skill, val]) => (
+                          <span
+                            key={skill}
+                            className={`rounded px-1.5 py-0.2 font-semibold ${
+                              val > 0
+                                ? 'bg-gain-500/15 text-gain-300'
+                                : 'bg-risk-500/15 text-risk-300'
+                            }`}
+                          >
+                            {skill} {val > 0 ? `+${val}%` : `${val}%`}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </span>
 
-                <span className="flex shrink-0 items-center gap-3 self-end text-xs sm:self-center">
+                <span className="flex shrink-0 flex-wrap items-center gap-3 self-end text-xs sm:self-center">
                   {opt.costMoney > 0 && (
                     <span className="metric flex items-center gap-1 font-bold text-risk-300">
                       <Coins className="size-3" aria-hidden="true" />
                       &minus;{formatNumber(opt.costMoney)} MGA
+                    </span>
+                  )}
+                  {opt.gainMoney && opt.gainMoney > 0 && (
+                    <span className="metric flex items-center gap-1 font-bold text-gain-300">
+                      <Coins className="size-3" aria-hidden="true" />
+                      +{formatNumber(opt.gainMoney)} MGA
                     </span>
                   )}
                   {opt.costEnergy > 0 && (
@@ -115,10 +161,10 @@ export const DecisionModal: React.FC = () => {
 
       <div className="flex items-center justify-end gap-3 border-t border-white/[0.07] bg-night-900/40 px-5 py-4 sm:px-6">
         <Button variant="ghost" size="md" onClick={dismissDilemma}>
-          Ignorer
+          Plus tard
         </Button>
         <Button variant="warn" size="md" disabled={!selectedOptionId} onClick={handleConfirm}>
-          Confirmer mon choix
+          Confirmer mon arbitrage
         </Button>
       </div>
     </Modal>
