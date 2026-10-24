@@ -21,6 +21,8 @@ import type {
   RecurringCycleInfo,
   RecurringSettlementSummary,
   CareerPassportData,
+  FreelanceContract,
+  FreelanceResponse,
 } from '../types/game';
 
 const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || '/api';
@@ -715,6 +717,43 @@ export const api = {
       return data;
     } catch {
       return { error: 'Impossible de joindre le serveur de vérification Youth City.' };
+    }
+  },
+
+  // --- MISSIONS FREELANCE & PETITS CONTRATS AU BUSINESS DISTRICT (§52) ---
+  async getFreelanceGigs(): Promise<FreelanceResponse | null> {
+    try {
+      const res = await fetchAuth(`${API_BASE_URL}/business/freelance/`);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  },
+
+  async completeFreelanceGig(key: string): Promise<{
+    success: boolean;
+    message?: string;
+    payout?: number;
+    xpEarned?: number;
+    energySpent?: number;
+    levelUp?: boolean;
+    contract?: FreelanceContract;
+    transaction?: Transaction;
+    citizen?: Citizen;
+    error?: string;
+  }> {
+    try {
+      const res = await fetchAuth(`${API_BASE_URL}/business/freelance/${encodeURIComponent(key)}/complete/`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Impossible d\'exécuter ce contrat freelance.' };
+      }
+      return data;
+    } catch {
+      return { success: false, error: 'Erreur réseau lors de la validation de la mission.' };
     }
   },
 };

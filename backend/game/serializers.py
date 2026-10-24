@@ -18,6 +18,8 @@ from game.models import (
     Hackathon,
     HackathonParticipation,
     ModerationReport,
+    FreelanceGig,
+    FreelanceContract,
 )
 
 class UserSerializer(serializers.ModelSerializer):
@@ -391,4 +393,104 @@ class ModerationReportSerializer(serializers.ModelSerializer):
 
     def get_reporterName(self, obj):
         return obj.reporter.name if obj.reporter else "Système Citoyen"
+
+
+class FreelanceContractSerializer(serializers.ModelSerializer):
+    gigKey = serializers.CharField(source='gig.key', read_only=True)
+    gigTitle = serializers.CharField(source='gig.title', read_only=True)
+    clientName = serializers.CharField(source='gig.client_name', read_only=True)
+    category = serializers.CharField(source='gig.category', read_only=True)
+    xpEarned = serializers.IntegerField(source='xp_earned', read_only=True)
+    completedAt = serializers.DateTimeField(source='completed_at', format='%d/%m/%Y %H:%M', read_only=True)
+
+    class Meta:
+        model = FreelanceContract
+        fields = [
+            'id',
+            'gigKey',
+            'gigTitle',
+            'clientName',
+            'category',
+            'payout',
+            'xpEarned',
+            'day',
+            'completedAt',
+        ]
+
+
+class FreelanceGigSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(source='key')
+    clientName = serializers.CharField(source='client_name')
+    rewardMoney = serializers.IntegerField(source='reward_money')
+    rewardXp = serializers.IntegerField(source='reward_xp')
+    energyCost = serializers.IntegerField(source='energy_cost')
+    durationHours = serializers.IntegerField(source='duration_hours')
+    requiredSkillKey = serializers.CharField(source='required_skill_key')
+    requiredSkillName = serializers.CharField(source='required_skill_name')
+    minSkillPercent = serializers.IntegerField(source='min_skill_percent')
+    canApply = serializers.SerializerMethodField()
+    citizenSkillLevel = serializers.SerializerMethodField()
+    reason = serializers.SerializerMethodField()
+    completedCount = serializers.SerializerMethodField()
+
+    class Meta:
+        model = FreelanceGig
+        fields = [
+            'id',
+            'key',
+            'title',
+            'clientName',
+            'category',
+            'description',
+            'rewardMoney',
+            'rewardXp',
+            'energyCost',
+            'durationHours',
+            'requiredSkillKey',
+            'requiredSkillName',
+            'minSkillPercent',
+            'icon',
+            'canApply',
+            'citizenSkillLevel',
+            'reason',
+            'completedCount',
+        ]
+
+    def _get_skill_level(self, obj):
+        character = self.context.get('character')
+        if not character:
+            return 0
+        cs = character.skills.filter(skill__key=obj.required_skill_key).first()
+        if not cs:
+            cs = character.skills.filter(skill__category=obj.required_skill_key).first()
+        return cs.level_percent if cs else 10
+
+    def get_citizenSkillLevel(self, obj):
+        return self._get_skill_level(obj)
+
+    def get_canApply(self, obj):
+        character = self.context.get('character')
+        if not character:
+            return False
+        skill_ok = self._get_skill_level(obj) >= obj.min_skill_percent
+        energy_ok = character.energy >= obj.energy_cost
+        return skill_ok and energy_ok
+
+    def get_reason(self, obj):
+        character = self.context.get('character')
+        if not character:
+            return "Session citoyen non trouvée"
+        if character.energy < obj.energy_cost:
+            return f"Énergie insuffisante ({character.energy}% / {obj.energy_cost}% requis)"
+        lvl = self._get_skill_level(obj)
+        if lvl < obj.min_skill_percent:
+            return f"Compétence insuffisante ({lvl}% / {obj.min_skill_percent}% requis)"
+        return ""
+
+    def get_completedCount(self, obj):
+        character = self.context.get('character')
+        if not character:
+            return 0
+        return obj.contracts.filter(character=character).count()
+
 

@@ -24,11 +24,13 @@ urlpatterns = [
     path('campus/courses/', views.list_courses, name='list-courses'),
     path('campus/courses/<str:key>/complete/', views.complete_course, name='complete-course'),
 
-    # Business District
+    # Business District & Freelance (§8, §21, §52)
     path('business/jobs/', views.list_jobs, name='list-jobs'),
     path('business/jobs/<str:key>/hire/', views.hire_job, name='hire-job'),
     path('business/jobs/<str:key>/interview/', views.simulate_interview, name='simulate-interview'),
     path('business/work_shift/', views.work_shift, name='work-shift'),
+    path('business/freelance/', views.list_freelance_gigs, name='freelance-gigs-list'),
+    path('business/freelance/<str:key>/complete/', views.complete_freelance_gig, name='freelance-gig-complete'),
 
     # Finance District
     path('finance/deposit/', views.deposit_savings, name='deposit-savings'),

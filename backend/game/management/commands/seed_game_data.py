@@ -12,6 +12,8 @@ from game.models import (
     Transaction,
     Dilemma,
     MarketItem,
+    FreelanceGig,
+    FreelanceContract,
 )
 
 class Command(BaseCommand):
@@ -631,6 +633,108 @@ class Command(BaseCommand):
             )
             created_market_items[m["key"]] = item
         self.stdout.write(f"Market items seeded: {len(created_market_items)}")
+
+        # 5b. Freelance Gigs & Short-Term Contracts (§52)
+        freelance_gigs_data = [
+            {
+                "key": "gig-web-landing",
+                "title": "Création de Landing Page Responsive",
+                "client_name": "Artisanat Malagasy Moderne",
+                "category": "tech",
+                "description": "Développe une page vitrine responsive mettant en valeur les créations de vannerie et broderie malgaches auprès d'une clientèle touristique et internationale.",
+                "reward_money": 120000,
+                "reward_xp": 180,
+                "energy_cost": 25,
+                "duration_hours": 6,
+                "required_skill_key": "javascript",
+                "required_skill_name": "JavaScript & Développement Web",
+                "min_skill_percent": 25,
+                "icon": "Code",
+            },
+            {
+                "key": "gig-seo-social",
+                "title": "Audit SEO & Campagne Réseaux Sociaux",
+                "client_name": "Café des Arts Antaninarenina",
+                "category": "marketing",
+                "description": "Optimise la fiche Google Business, la page Facebook et le compte Instagram d'un café culturel d'Antananarivo pour booster la fréquentation du week-end.",
+                "reward_money": 85000,
+                "reward_xp": 140,
+                "energy_cost": 20,
+                "duration_hours": 4,
+                "required_skill_key": "communication",
+                "required_skill_name": "Communication & Marketing Digital",
+                "min_skill_percent": 20,
+                "icon": "Megaphone",
+            },
+            {
+                "key": "gig-excel-budget",
+                "title": "Automatisation Tableur & Dashboard Trésorerie",
+                "client_name": "Coopérative Vanille Sambava",
+                "category": "finance",
+                "description": "Conçois un fichier de suivi budgétaire automatisé avec formules de réconciliation pour sécuriser les rentrées d'argent des récoltes.",
+                "reward_money": 150000,
+                "reward_xp": 220,
+                "energy_cost": 25,
+                "duration_hours": 5,
+                "required_skill_key": "budget",
+                "required_skill_name": "Gestion Budgétaire & Tableur",
+                "min_skill_percent": 30,
+                "icon": "BarChart",
+            },
+            {
+                "key": "gig-brand-identity",
+                "title": "Charte Graphique & Pack Visuels Sociaux",
+                "client_name": "GreenRide Vélo-Taxi",
+                "category": "design",
+                "description": "Réalise un logo vectoriel épuré, une palette de couleurs et 5 gabarits de posts réseaux sociaux pour une nouvelle startup de livraison écologique.",
+                "reward_money": 175000,
+                "reward_xp": 250,
+                "energy_cost": 30,
+                "duration_hours": 7,
+                "required_skill_key": "communication",
+                "required_skill_name": "Créativité & Design Visuel",
+                "min_skill_percent": 35,
+                "icon": "Palette",
+            },
+            {
+                "key": "gig-translation-en-fr",
+                "title": "Traduction & Localisation EN-FR de Dossier Projet",
+                "client_name": "Agence Écotourisme Madagascar",
+                "category": "writing",
+                "description": "Traduis et adapte avec précision un document de présentation de 12 pages pour des bailleurs et partenaires anglophones.",
+                "reward_money": 95000,
+                "reward_xp": 150,
+                "energy_cost": 20,
+                "duration_hours": 4,
+                "required_skill_key": "communication",
+                "required_skill_name": "Rédaction & Traduction Professionnelle",
+                "min_skill_percent": 20,
+                "icon": "FileText",
+            },
+            {
+                "key": "gig-database-cleanup",
+                "title": "Nettoyage & Restructuration de Base Clients",
+                "client_name": "Logistique Express Tana",
+                "category": "tech",
+                "description": "Déduplique, formate et normalise les coordonnées téléphoniques et géographiques de plus de 5000 contacts dans le système d'expédition.",
+                "reward_money": 210000,
+                "reward_xp": 320,
+                "energy_cost": 35,
+                "duration_hours": 8,
+                "required_skill_key": "javascript",
+                "required_skill_name": "Informatique & Données",
+                "min_skill_percent": 40,
+                "icon": "Database",
+            },
+        ]
+        created_gigs_count = 0
+        for g in freelance_gigs_data:
+            FreelanceGig.objects.update_or_create(
+                key=g["key"],
+                defaults=g
+            )
+            created_gigs_count += 1
+        self.stdout.write(f"Freelance gigs seeded: {created_gigs_count}")
 
         # 6. Default Demo Character: Emmanuel
         character, _ = Character.objects.update_or_create(

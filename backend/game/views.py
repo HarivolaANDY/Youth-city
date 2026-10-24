@@ -38,6 +38,8 @@ from game.models import (
     Hackathon,
     HackathonParticipation,
     ModerationReport,
+    FreelanceGig,
+    FreelanceContract,
 )
 from game.serializers import (
     PropertySerializer,
@@ -56,6 +58,8 @@ from game.serializers import (
     HackathonSerializer,
     HackathonParticipationSerializer,
     ModerationReportSerializer,
+    FreelanceGigSerializer,
+    FreelanceContractSerializer,
 )
 
 TIME_SLOTS = [
@@ -709,6 +713,98 @@ def work_shift(request):
         'transaction': TransactionSerializer(tx).data,
         'citizen': CitizenDetailSerializer(character).data,
     })
+
+
+# --- MISSIONS FREELANCE & PETITS CONTRATS (§52) ---
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def list_freelance_gigs(request):
+    """Lists available freelance gigs with citizen eligibility & past contracts (§52)."""
+    character = get_active_character(request)
+    gigs = FreelanceGig.objects.filter(is_active=True).order_by('id')
+    serializer = FreelanceGigSerializer(gigs, many=True, context={'character': character})
+
+    contracts = character.freelance_contracts.select_related('gig').order_by('-completed_at')[:10]
+    contracts_data = FreelanceContractSerializer(contracts, many=True).data
+
+    all_contracts = character.freelance_contracts.all()
+    total_earned = sum(c.payout for c in all_contracts)
+
+    return Response({
+        'success': True,
+        'gigs': serializer.data,
+        'contracts': contracts_data,
+        'stats': {
+            'totalEarned': total_earned,
+            'totalCompleted': len(all_contracts),
+        }
+    })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def complete_freelance_gig(request, key):
+    """Executes a short-term freelance contract, consuming energy and earning immediate MGA (§52)."""
+    character = get_active_character(request)
+    gig = get_object_or_404(FreelanceGig, key=key, is_active=True)
+
+    if character.energy < gig.energy_cost:
+        return Response({
+            'error': f"Énergie vitale insuffisante ({character.energy}% disponible, {gig.energy_cost}% requis). Repose-toi au Residential District !"
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    cs = character.skills.filter(skill__key=gig.required_skill_key).first()
+    if not cs:
+        cs = character.skills.filter(skill__category=gig.required_skill_key).first()
+    skill_lvl = cs.level_percent if cs else 10
+
+    if skill_lvl < gig.min_skill_percent:
+        return Response({
+            'error': f"Niveau insuffisant en {gig.required_skill_name} ({skill_lvl}% actuel, {gig.min_skill_percent}% requis). Perfectionne tes compétences au Campus !"
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    with db_transaction.atomic():
+        character.energy = max(0, character.energy - gig.energy_cost)
+        character.money += gig.reward_money
+        level_up = add_xp_to_character(character, gig.reward_xp)
+        character.completed_projects += 1
+
+        if cs:
+            cs.level_percent = min(100, cs.level_percent + 2)
+            cs.save()
+
+        character.save()
+
+        contract = FreelanceContract.objects.create(
+            character=character,
+            gig=gig,
+            payout=gig.reward_money,
+            xp_earned=gig.reward_xp,
+            day=character.day,
+        )
+
+        tx = Transaction.objects.create(
+            character=character,
+            timestamp=f"J-{character.day} {character.time_slot.split(' ')[0]}",
+            label=f"Mission Freelance — {gig.title} ({gig.client_name})",
+            amount=gig.reward_money,
+            transaction_type='income',
+            category='Freelance',
+        )
+
+    return Response({
+        'success': True,
+        'message': f"Mission « {gig.title} » validée avec succès auprès de {gig.client_name} ! +{gig.reward_money:,} MGA perçus.",
+        'payout': gig.reward_money,
+        'xpEarned': gig.reward_xp,
+        'energySpent': gig.energy_cost,
+        'levelUp': level_up,
+        'contract': FreelanceContractSerializer(contract).data,
+        'transaction': TransactionSerializer(tx).data,
+        'citizen': CitizenDetailSerializer(character).data,
+    })
+
 
 
 # --- FINANCE DISTRICT ---

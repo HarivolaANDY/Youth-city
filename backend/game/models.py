@@ -339,3 +339,46 @@ class ModerationReport(models.Model):
         return f"Report #{self.id} [{self.get_reason_display()}] - {self.get_status_display()}"
 
 
+class FreelanceGig(models.Model):
+    """Missions Freelance & Petits Contrats au Business District (§52)"""
+    CATEGORY_CHOICES = (
+        ('tech', 'Tech & Développement Web'),
+        ('marketing', 'Communication & Marketing'),
+        ('finance', 'Gestion, Compta & Finance'),
+        ('design', 'Design & Création Visuelle'),
+        ('writing', 'Rédaction & Traduction'),
+    )
+    key = models.CharField(max_length=64, unique=True)
+    title = models.CharField(max_length=160)
+    client_name = models.CharField(max_length=128)
+    category = models.CharField(max_length=32, choices=CATEGORY_CHOICES, default='tech')
+    description = models.TextField()
+    reward_money = models.IntegerField(help_text="Rémunération nette en MGA")
+    reward_xp = models.IntegerField(default=120)
+    energy_cost = models.IntegerField(default=25, help_text="Énergie vitale requise (0-100%)")
+    duration_hours = models.IntegerField(default=4, help_text="Durée estimée de la prestation en heures")
+    required_skill_key = models.CharField(max_length=64, default="hard", help_text="Clé ou catégorie de compétence requise")
+    required_skill_name = models.CharField(max_length=128, default="Informatique & Tech")
+    min_skill_percent = models.IntegerField(default=20, help_text="Niveau minimum requis en pourcentage (0-100%)")
+    icon = models.CharField(max_length=64, default="Briefcase")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.title} ({self.client_name}) — {self.reward_money:,} MGA"
+
+
+class FreelanceContract(models.Model):
+    """Contrat freelance exécuté par un citoyen (§52)"""
+    character = models.ForeignKey(Character, on_delete=models.CASCADE, related_name='freelance_contracts')
+    gig = models.ForeignKey(FreelanceGig, on_delete=models.CASCADE, related_name='contracts')
+    payout = models.BigIntegerField(help_text="Rémunération perçue en MGA")
+    xp_earned = models.IntegerField(default=0)
+    completed_at = models.DateTimeField(auto_now_add=True)
+    day = models.IntegerField(default=1)
+
+    def __str__(self):
+        return f"{self.character.name} - {self.gig.title} (+{self.payout:,} MGA)"
+
+
+

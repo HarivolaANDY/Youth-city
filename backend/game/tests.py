@@ -3,7 +3,18 @@ from django.core.management import call_command
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 from rest_framework import status
-from game.models import Character, Property, Job, Course, Transaction, Hackathon, StartupProject, ModerationReport
+from game.models import (
+    Character,
+    Property,
+    Job,
+    Course,
+    Transaction,
+    Hackathon,
+    StartupProject,
+    ModerationReport,
+    FreelanceGig,
+    FreelanceContract,
+)
 
 class YouthCityBackendAPITests(APITestCase):
     def setUp(self):
@@ -738,6 +749,82 @@ class YouthCityBackendAPITests(APITestCase):
             self.assertEqual(self.character.money, initial_money - first_option['costMoney'])
         if first_option.get('gainXp', 0) > 0:
             self.assertTrue(self.character.xp >= initial_xp)
+
+    def test_22_freelance_gigs_and_short_term_missions(self):
+        """Vérifie le système de missions freelance et contrats courts au Business District (§52)."""
+        # 1. Consultation des offres de missions freelance disponibles
+        res_list = self.client.get('/api/business/freelance/')
+        self.assertEqual(res_list.status_code, status.HTTP_200_OK)
+        list_data = res_list.json()
+        self.assertTrue(list_data.get('success'))
+        gigs = list_data.get('gigs', [])
+        self.assertGreaterEqual(len(gigs), 6)
+
+        gig_landing = next((g for g in gigs if g['key'] == 'gig-web-landing'), None)
+        self.assertIsNotNone(gig_landing)
+        self.assertEqual(gig_landing['rewardMoney'], 120000)
+        self.assertEqual(gig_landing['energyCost'], 25)
+        self.assertEqual(gig_landing['minSkillPercent'], 25)
+
+        # 2. Échec si énergie insuffisante
+        self.character.energy = 10
+        self.character.save()
+        res_no_energy = self.client.post('/api/business/freelance/gig-web-landing/complete/')
+        self.assertEqual(res_no_energy.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Énergie vitale insuffisante", res_no_energy.json().get('error', ''))
+
+        # 3. Échec si compétence insuffisante
+        self.character.energy = 80
+        self.character.save()
+        cs = self.character.skills.filter(skill__key='javascript').first()
+        cs.level_percent = 15
+        cs.save()
+
+        res_no_skill = self.client.post('/api/business/freelance/gig-web-landing/complete/')
+        self.assertEqual(res_no_skill.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Niveau insuffisant", res_no_skill.json().get('error', ''))
+
+        # 4. Exécution et validation avec succès d'un contrat freelance
+        cs.level_percent = 50
+        cs.save()
+        initial_money = self.character.money
+        initial_energy = self.character.energy
+        initial_xp = self.character.xp
+        initial_projects = self.character.completed_projects
+
+        res_complete = self.client.post('/api/business/freelance/gig-web-landing/complete/')
+        self.assertEqual(res_complete.status_code, status.HTTP_200_OK)
+        complete_data = res_complete.json()
+        self.assertTrue(complete_data.get('success'))
+        self.assertEqual(complete_data['payout'], 120000)
+        self.assertEqual(complete_data['energySpent'], 25)
+
+        # 5. Vérification des impacts sur le citoyen et les transactions
+        self.character.refresh_from_db()
+        self.assertEqual(self.character.money, initial_money + 120000)
+        self.assertEqual(self.character.energy, initial_energy - 25)
+        self.assertTrue(self.character.xp >= initial_xp + 180)
+        self.assertEqual(self.character.completed_projects, initial_projects + 1)
+
+        # Compétence légèrement améliorée (+2%)
+        cs.refresh_from_db()
+        self.assertEqual(cs.level_percent, 52)
+
+        # Contrat et transaction enregistrés
+        self.assertTrue(
+            FreelanceContract.objects.filter(character=self.character, gig__key='gig-web-landing').exists()
+        )
+        self.assertTrue(
+            Transaction.objects.filter(character=self.character, category='Freelance').exists()
+        )
+
+        # 6. Statistiques cumulées après complétion
+        res_after = self.client.get('/api/business/freelance/')
+        self.assertEqual(res_after.status_code, status.HTTP_200_OK)
+        stats = res_after.json().get('stats', {})
+        self.assertGreaterEqual(stats.get('totalEarned', 0), 120000)
+        self.assertGreaterEqual(stats.get('totalCompleted', 0), 1)
+
 
 
 

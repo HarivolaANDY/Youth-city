@@ -435,6 +435,52 @@ export interface CareerPassportData {
   isVerified: boolean;
 }
 
+export type FreelanceCategory = 'tech' | 'marketing' | 'finance' | 'design' | 'writing';
+
+export interface FreelanceGig {
+  id: string;
+  key: string;
+  title: string;
+  clientName: string;
+  category: FreelanceCategory;
+  description: string;
+  rewardMoney: number;
+  rewardXp: number;
+  energyCost: number;
+  durationHours: number;
+  requiredSkillKey: string;
+  requiredSkillName: string;
+  minSkillPercent: number;
+  icon: string;
+  canApply: boolean;
+  citizenSkillLevel: number;
+  reason: string;
+  completedCount: number;
+}
+
+export interface FreelanceContract {
+  id: number;
+  gigKey: string;
+  gigTitle: string;
+  clientName: string;
+  category: string;
+  payout: number;
+  xpEarned: number;
+  day: number;
+  completedAt: string;
+}
+
+export interface FreelanceResponse {
+  success: boolean;
+  gigs: FreelanceGig[];
+  contracts: FreelanceContract[];
+  stats: {
+    totalEarned: number;
+    totalCompleted: number;
+  };
+}
+
+
 
 
 

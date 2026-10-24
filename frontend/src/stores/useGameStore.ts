@@ -20,6 +20,8 @@ import type {
   AdminOverviewData,
   RecurringCycleInfo,
   CareerPassportData,
+  FreelanceGig,
+  FreelanceContract,
 } from '../types/game';
 import { INITIAL_CITIZEN, COURSES, JOBS, HOUSINGS, SAMPLE_DILEMMA, MARKET_ITEMS } from '../data/mockData';
 import { api } from '../services/api';
@@ -42,6 +44,9 @@ interface GameState {
   guilds: Guild[];
   hackathons: Hackathon[];
   leaderboard: CommunityLeaderboard | null;
+  freelanceGigs: FreelanceGig[];
+  freelanceContracts: FreelanceContract[];
+  freelanceStats: { totalEarned: number; totalCompleted: number };
 
   // Authentification & Comptes (§42, §47)
   user: AuthUser | null;
@@ -93,6 +98,10 @@ interface GameState {
 
   // Career Passport & Portfolio (§34, §35)
   fetchCareerPassport: () => Promise<void>;
+
+  // Missions Freelance & Petits Contrats (§52)
+  fetchFreelanceGigs: () => Promise<void>;
+  completeFreelanceGig: (key: string) => Promise<{ success: boolean; error?: string }>;
 
   // Game Actions
   advanceTime: () => void;
@@ -391,6 +400,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   guilds: DEFAULT_GUILDS,
   hackathons: DEFAULT_HACKATHONS,
   leaderboard: null,
+  freelanceGigs: [],
+  freelanceContracts: [],
+  freelanceStats: { totalEarned: 0, totalCompleted: 0 },
   isAdminModalOpen: false,
   adminOverview: DEFAULT_ADMIN_OVERVIEW,
   moderationReports: DEFAULT_MODERATION_REPORTS,
@@ -519,12 +531,13 @@ export const useGameStore = create<GameState>((set, get) => ({
         });
       }
 
-      const [projects, guilds, hackathons, lb, passportRes] = await Promise.all([
+      const [projects, guilds, hackathons, lb, passportRes, freelanceRes] = await Promise.all([
         api.getStartupProjects(),
         api.getGuilds(),
         api.getHackathons(),
         api.getCommunityLeaderboard(),
         api.getCareerPassport(),
+        api.getFreelanceGigs(),
       ]);
       if (projects && projects.length > 0) set({ startupProjects: projects });
       if (guilds && guilds.length > 0) set({ guilds });
@@ -532,6 +545,13 @@ export const useGameStore = create<GameState>((set, get) => ({
       if (lb) set({ leaderboard: lb });
       if (passportRes && passportRes.success && passportRes.passport) {
         set({ careerPassport: passportRes.passport });
+      }
+      if (freelanceRes && freelanceRes.success) {
+        set({
+          freelanceGigs: freelanceRes.gigs || [],
+          freelanceContracts: freelanceRes.contracts || [],
+          freelanceStats: freelanceRes.stats || { totalEarned: 0, totalCompleted: 0 },
+        });
       }
     } catch {
       // Backend not running, falls back silently to local state
@@ -542,6 +562,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({ activeTab: tab });
     if (tab === 'passport') {
       get().fetchCareerPassport();
+    } else if (tab === 'career') {
+      get().fetchFreelanceGigs();
     }
   },
 
@@ -595,6 +617,59 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (res && res.success && res.passport) {
       set({ careerPassport: res.passport });
     }
+  },
+
+  // --- MISSIONS FREELANCE & PETITS CONTRATS (§52) ---
+  fetchFreelanceGigs: async () => {
+    const res = await api.getFreelanceGigs();
+    if (res && res.success) {
+      set({
+        freelanceGigs: res.gigs || [],
+        freelanceContracts: res.contracts || [],
+        freelanceStats: res.stats || { totalEarned: 0, totalCompleted: 0 },
+      });
+    }
+  },
+
+  completeFreelanceGig: async (key: string) => {
+    const res = await api.completeFreelanceGig(key);
+    if (!res.success) {
+      get().addNotification('Échec de la mission', res.error || 'Impossible d\'exécuter ce contrat.', 'warning');
+      return { success: false, error: res.error };
+    }
+
+    if (res.citizen) {
+      set({ citizen: res.citizen });
+    }
+
+    if (res.transaction) {
+      set((state) => ({ transactions: [res.transaction!, ...state.transactions] }));
+    }
+
+    // Actualiser la liste des missions et contrats
+    await get().fetchFreelanceGigs();
+
+    confetti({
+      particleCount: 50,
+      spread: 60,
+      origin: { y: 0.6 },
+    });
+
+    get().addNotification(
+      '🎉 Mission freelance accomplie !',
+      res.message || `Rémunération de +${formatNumber(res.payout || 0)} MGA perçue !`,
+      'success'
+    );
+
+    if (res.levelUp) {
+      get().addNotification(
+        'Niveau supérieur !',
+        `Félicitations ${get().citizen.name}, tu as atteint le niveau ${get().citizen.level} !`,
+        'success'
+      );
+    }
+
+    return { success: true };
   },
 
   // --- STARTUP DISTRICT (§12, §24) ---
