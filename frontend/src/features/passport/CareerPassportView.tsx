@@ -197,7 +197,10 @@ export const CareerPassportView: React.FC = () => {
   };
 
   const handlePrintPdf = () => {
-    window.print();
+    setActiveTab('passport');
+    setTimeout(() => {
+      window.print();
+    }, 120);
   };
 
   const handleVerifySearch = async (e: React.FormEvent) => {
@@ -221,27 +224,25 @@ export const CareerPassportView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Print-specific style sheet */}
-      <style>{`
-        @media print {
-          body {
-            background-color: #ffffff !important;
-            color: #0f172a !important;
-          }
-          header, nav, footer, .no-print, [role="navigation"] {
-            display: none !important;
-          }
-          .print-clean {
-            border: 2px solid #0f172a !important;
-            background: #ffffff !important;
-            color: #0f172a !important;
-            box-shadow: none !important;
-          }
-          .print-text-dark {
-            color: #0f172a !important;
-          }
-        }
-      `}</style>
+      {/* Official Government Print Banner (DES-001) */}
+      <div className="hidden print:block mb-6 border-b-2 border-slate-900 pb-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">RÉPUBLIQUE DE YOUTH CITY</h1>
+            <p className="text-xs font-bold text-slate-700 uppercase tracking-widest">
+              Direction de l'Émancipation Citoyenne &amp; Insertion Professionnelle
+            </p>
+            <p className="text-xs text-slate-600 mt-0.5">
+              Passeport de Compétences &amp; Portfolio Certifié par la Preuve (§34, §35)
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs font-mono font-bold text-slate-900">ID : {passport.citizenId}</p>
+            <p className="text-xs font-mono text-slate-700">Sceau SHA-256 : {passport.verificationCode}</p>
+            <p className="text-3xs text-slate-500">Délivré le {passport.issuedAt}</p>
+          </div>
+        </div>
+      </div>
 
       {/* En-tête de vue principale */}
       <div className="no-print">

@@ -412,3 +412,105 @@
     animation: var(--animate-shimmer);
   }
 }
+
+/* ============================================================
+   Print Stylesheet (DES-001)
+   Optimisation pour impression et export PDF du Career Passport
+   ============================================================ */
+@media print {
+  @page {
+    margin: 1.2cm;
+    size: auto;
+  }
+
+  html,
+  body {
+    background-color: #ffffff !important;
+    background-image: none !important;
+    color: #0f172a !important;
+    font-size: 11pt !important;
+    line-height: 1.4 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Cacher les éléments interactifs et décoratifs */
+  header,
+  nav,
+  aside,
+  footer,
+  .aurora,
+  .grid-lines,
+  .no-print,
+  [role="navigation"],
+  button:not(.print-keep),
+  .toast-container,
+  #nova-assistant {
+    display: none !important;
+  }
+
+  /* Normaliser les conteneurs et panneaux */
+  .panel,
+  .panel-inset,
+  .panel-accent,
+  .print-clean {
+    background-color: #ffffff !important;
+    background-image: none !important;
+    color: #0f172a !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Typographie et contrastes encrés */
+  .metric,
+  h1, h2, h3, h4, h5, h6,
+  p, span, dt, dd, div, strong, b, td, th, li {
+    color: #0f172a !important;
+    text-shadow: none !important;
+  }
+
+  .text-mist-400,
+  .text-mist-300,
+  .text-mist-500 {
+    color: #475569 !important;
+  }
+
+  .text-brand-300,
+  .text-brand-400,
+  .text-iris-300,
+  .text-gain-300,
+  .text-gain-400 {
+    color: #0f172a !important;
+    font-weight: 600 !important;
+  }
+
+  /* Badges et jauges */
+  .badge,
+  [data-component="badge"] {
+    border: 1px solid #94a3b8 !important;
+    color: #0f172a !important;
+    background: #f8fafc !important;
+    box-shadow: none !important;
+  }
+
+  .track {
+    background-color: #e2e8f0 !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+  }
+
+  .shimmer-fill {
+    background-color: #334155 !important;
+    background-image: none !important;
+  }
+
+  /* Liens sans URL imprimée superflue */
+  a[href]::after {
+    content: none !important;
+  }
+}
+

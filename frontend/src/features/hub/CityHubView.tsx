@@ -293,6 +293,7 @@ export const CityHubView: React.FC = () => {
         {/* Subtabs Switcher */}
         <div className="mt-8 pt-5 border-t border-white/[0.08] flex flex-wrap items-center gap-3">
           <button
+            type="button"
             onClick={() => setActiveSubTab('guilds')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border cursor-pointer ${
               activeSubTab === 'guilds'
@@ -305,6 +306,7 @@ export const CityHubView: React.FC = () => {
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveSubTab('hackathons')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border cursor-pointer ${
               activeSubTab === 'hackathons'
@@ -317,6 +319,7 @@ export const CityHubView: React.FC = () => {
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveSubTab('leaderboard')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border cursor-pointer ${
               activeSubTab === 'leaderboard'
@@ -329,6 +332,7 @@ export const CityHubView: React.FC = () => {
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveSubTab('directory')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border cursor-pointer ${
               activeSubTab === 'directory'
@@ -422,6 +426,7 @@ export const CityHubView: React.FC = () => {
 
                     {isCurrent ? (
                       <button
+                        type="button"
                         disabled={isSubmitting}
                         onClick={() => handleLeaveGuild(guild.key || guild.id)}
                         className="w-full py-2.5 px-4 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 font-semibold text-xs transition-all cursor-pointer"
@@ -430,6 +435,7 @@ export const CityHubView: React.FC = () => {
                       </button>
                     ) : (
                       <button
+                        type="button"
                         disabled={isSubmitting}
                         onClick={() => handleJoinGuild(guild.key || guild.id)}
                         className="w-full py-2.5 px-4 rounded-xl bg-iris-600 hover:bg-iris-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-iris-600/20 cursor-pointer"
@@ -540,6 +546,7 @@ export const CityHubView: React.FC = () => {
                       </div>
                     ) : (
                       <button
+                        type="button"
                         onClick={() => {
                           setSelectedHackathon(hackathon);
                           setModalError('');
@@ -924,7 +931,9 @@ export const CityHubView: React.FC = () => {
                 <h2 className="text-xl font-extrabold text-white">Soumettre le Projet Hackathon</h2>
               </div>
               <button
+                type="button"
                 onClick={() => setSelectedHackathon(null)}
+                aria-label="Fermer la modale"
                 className="text-mist-400 hover:text-white text-lg font-bold p-1 cursor-pointer"
               >
                 ✕

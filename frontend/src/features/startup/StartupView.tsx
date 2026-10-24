@@ -132,6 +132,7 @@ export const StartupView: React.FC = () => {
 
           <div className="flex flex-wrap items-center gap-3">
             <button
+              type="button"
               onClick={() => setIsCreateModalOpen(true)}
               className="px-5 py-3 rounded-xl bg-linear-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-surface-950 font-bold text-sm flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all hover:scale-102 active:scale-98 cursor-pointer"
             >
@@ -147,6 +148,7 @@ export const StartupView: React.FC = () => {
             <span className="text-xs font-bold text-mist-400 uppercase tracking-wider shrink-0">Tes Projets :</span>
             {startupProjects.map((proj, idx) => (
               <button
+                type="button"
                 key={proj.id || proj.key}
                 onClick={() => setSelectedProjectIndex(idx)}
                 className={`px-4 py-2 rounded-xl text-xs font-medium transition-all shrink-0 flex items-center gap-2 border cursor-pointer ${
@@ -317,6 +319,7 @@ export const StartupView: React.FC = () => {
                     </div>
                   </div>
                   <button
+                    type="button"
                     disabled={isSubmitting || citizen.energy < 15}
                     onClick={() => handleAction('market_study')}
                     className="w-full py-2 px-3 rounded-lg border border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
@@ -344,6 +347,7 @@ export const StartupView: React.FC = () => {
                     </div>
                   </div>
                   <button
+                    type="button"
                     disabled={isSubmitting || citizen.energy < 15 || currentProject.treasury < 25000}
                     onClick={() => handleAction('develop_mvp')}
                     className="w-full py-2 px-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
@@ -371,6 +375,7 @@ export const StartupView: React.FC = () => {
                     </div>
                   </div>
                   <button
+                    type="button"
                     disabled={isSubmitting || citizen.energy < 15 || currentProject.treasury < 20000}
                     onClick={() => handleAction('launch_campaign')}
                     className="w-full py-2 px-3 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
@@ -398,6 +403,7 @@ export const StartupView: React.FC = () => {
                     </div>
                   </div>
                   <button
+                    type="button"
                     disabled={isSubmitting || citizen.energy < 15}
                     onClick={() => handleAction('recruit_partner', 'Co-fondateur(rice) Croissance')}
                     className="w-full py-2 px-3 rounded-lg border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
@@ -421,6 +427,7 @@ export const StartupView: React.FC = () => {
                     </p>
                   </div>
                   <button
+                    type="button"
                     disabled={isSubmitting}
                     onClick={() => handleAction('collect_revenue')}
                     className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-surface-950 font-bold text-xs flex items-center gap-1.5 transition-all shrink-0 cursor-pointer shadow-md"
@@ -477,6 +484,7 @@ export const StartupView: React.FC = () => {
                   </div>
                 ) : (
                   <button
+                    type="button"
                     disabled={isSubmitting || (currentProject.reputation < 30 && currentProject.stage === 'idea')}
                     onClick={handleGrant}
                     className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
@@ -527,6 +535,7 @@ export const StartupView: React.FC = () => {
             Lance ta première startup dans la tech, greentech ou agritech et accélère ton ascension à Youth City.
           </p>
           <button
+            type="button"
             onClick={() => setIsCreateModalOpen(true)}
             className="px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-surface-950 font-bold text-sm inline-flex items-center gap-2 transition-all cursor-pointer"
           >
@@ -546,6 +555,8 @@ export const StartupView: React.FC = () => {
                 <h2 className="text-xl font-extrabold text-white">Lancer une Nouvelle Startup</h2>
               </div>
               <button
+                type="button"
+                aria-label="Fermer la modale"
                 onClick={() => setIsCreateModalOpen(false)}
                 className="text-mist-400 hover:text-white text-lg font-bold p-1 cursor-pointer"
               >
