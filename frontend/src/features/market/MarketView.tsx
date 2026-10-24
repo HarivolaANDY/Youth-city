@@ -222,7 +222,7 @@ export const MarketView: React.FC = () => {
             <h3 className="text-sm font-bold uppercase tracking-wider text-mist-200">
               Articles disponibles ({filteredItems.length})
             </h3>
-            <span className="text-xs text-mist-400">Prix affichés en Francs Malagasy (MGA)</span>
+            <span className="text-xs text-mist-400">Prix affichés en Ariary (MGA)</span>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

@@ -291,11 +291,11 @@ export const CityHubView: React.FC = () => {
         </div>
 
         {/* Subtabs Switcher */}
-        <div className="mt-8 pt-5 border-t border-white/[0.08] flex flex-wrap items-center gap-3">
+        <div className="mt-8 pt-5 border-t border-white/[0.08] flex items-center gap-2.5 overflow-x-auto no-scrollbar -mx-2 px-2 pb-1 sm:mx-0 sm:px-0 sm:pb-0 sm:flex-wrap">
           <button
             type="button"
             onClick={() => setActiveSubTab('guilds')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border cursor-pointer ${
               activeSubTab === 'guilds'
                 ? 'border-iris-500/50 bg-iris-500/20 text-iris-200 shadow-sm'
                 : 'border-white/[0.06] bg-white/[0.02] text-mist-400 hover:text-white'
@@ -308,7 +308,7 @@ export const CityHubView: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveSubTab('hackathons')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border cursor-pointer ${
               activeSubTab === 'hackathons'
                 ? 'border-iris-500/50 bg-iris-500/20 text-iris-200 shadow-sm'
                 : 'border-white/[0.06] bg-white/[0.02] text-mist-400 hover:text-white'
@@ -321,7 +321,7 @@ export const CityHubView: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveSubTab('leaderboard')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border cursor-pointer ${
               activeSubTab === 'leaderboard'
                 ? 'border-iris-500/50 bg-iris-500/20 text-iris-200 shadow-sm'
                 : 'border-white/[0.06] bg-white/[0.02] text-mist-400 hover:text-white'
@@ -334,7 +334,7 @@ export const CityHubView: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveSubTab('directory')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border cursor-pointer ${
               activeSubTab === 'directory'
                 ? 'border-iris-500/50 bg-iris-500/20 text-iris-200 shadow-sm'
                 : 'border-white/[0.06] bg-white/[0.02] text-mist-400 hover:text-white'
@@ -354,7 +354,7 @@ export const CityHubView: React.FC = () => {
       {/* --- SUBTAB 1: GUILDES THÉMATIQUES (§30) --- */}
       {activeSubTab === 'guilds' && (
         <section className="space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <h2 className="text-xl font-bold text-white">Communautés & Guildes Professionnelles</h2>
               <p className="text-xs text-mist-400">Rejoindre une guilde t'accorde des bonus d'apprentissage permanents.</p>

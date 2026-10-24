@@ -47,7 +47,7 @@ export const ToastContainer: React.FC = () => {
       aria-label="Notifications"
       aria-live="polite"
       aria-relevant="additions"
-      className="pointer-events-none fixed right-3 bottom-24 z-50 flex w-[min(22rem,calc(100vw-1.5rem))] flex-col gap-2.5 sm:right-6 sm:bottom-6"
+      className="pointer-events-none fixed top-20 right-3 z-50 flex w-[min(22rem,calc(100vw-1.5rem))] flex-col gap-2.5 sm:right-6"
     >
       {notifications.map((n) => {
         const Icon = ICONS[n.type];

@@ -106,6 +106,139 @@ export const CityMap: React.FC = () => {
         }
       />
 
+      {/* Visual 2D City Network Schematic (DES-010) */}
+      <Panel className="relative overflow-hidden p-4 sm:p-6 bg-night-900/90 border border-brand-500/20 backdrop-blur-xl">
+        <div className="flex items-center justify-between mb-3 border-b border-white/[0.08] pb-3">
+          <div className="flex items-center gap-2">
+            <span className="size-2.5 rounded-full bg-brand-400 animate-pulse" />
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider">Plan Schématique des Districts de Youth City</h3>
+          </div>
+          <span className="text-3xs text-mist-400 hidden sm:inline">Clique sur un quartier pour y accéder instantanément</span>
+        </div>
+
+        <div className="relative w-full aspect-21/9 min-h-[220px] sm:min-h-[260px] rounded-2xl bg-night-950/80 border border-white/[0.06] overflow-hidden flex items-center justify-center p-2">
+          {/* Subtle Grid / Roads Background */}
+          <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-40" viewBox="0 0 800 320" fill="none">
+            <path d="M 160 90 L 400 160 L 640 90" stroke="url(#cyan-glow)" strokeWidth="2" strokeDasharray="4 4" />
+            <path d="M 160 230 L 400 160 L 640 230" stroke="url(#purple-glow)" strokeWidth="2" strokeDasharray="4 4" />
+            <path d="M 160 90 L 160 230" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" />
+            <path d="M 640 90 L 640 230" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" />
+            <path d="M 400 60 L 400 260" stroke="rgba(124,58,237,0.3)" strokeWidth="1.5" strokeDasharray="2 4" />
+            
+            <circle cx="400" cy="160" r="90" stroke="rgba(124,58,237,0.2)" strokeWidth="1" strokeDasharray="6 6" />
+            <circle cx="400" cy="160" r="140" stroke="rgba(99,102,241,0.1)" strokeWidth="1" />
+
+            <defs>
+              <linearGradient id="cyan-glow" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.8" />
+                <stop offset="50%" stopColor="#8b5cf6" stopOpacity="0.9" />
+                <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.8" />
+              </linearGradient>
+              <linearGradient id="purple-glow" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#10b981" stopOpacity="0.8" />
+                <stop offset="50%" stopColor="#8b5cf6" stopOpacity="0.9" />
+                <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.8" />
+              </linearGradient>
+            </defs>
+          </svg>
+
+          {/* Interactive District Nodes */}
+          <div className="relative z-10 w-full h-full max-w-4xl mx-auto grid grid-cols-3 grid-rows-3 gap-2 items-center place-items-center py-2">
+            {/* Top Left: Campus */}
+            <button
+              type="button"
+              onClick={() => selectDistrict('campus')}
+              className="group flex flex-col items-center gap-1.5 p-2 rounded-xl transition-transform hover:scale-110 cursor-pointer"
+            >
+              <div className="size-11 rounded-xl bg-blue-500/20 border border-blue-400/40 text-blue-300 grid place-items-center shadow-lg shadow-blue-500/20 group-hover:bg-blue-500/30">
+                <GraduationCap className="size-5" />
+              </div>
+              <span className="text-[11px] font-bold text-white group-hover:text-blue-300">Campus District</span>
+            </button>
+
+            {/* Top Center: Résidentiel (Position courante) */}
+            <button
+              type="button"
+              onClick={() => selectDistrict('residential')}
+              className="group flex flex-col items-center gap-1.5 p-2 rounded-xl transition-transform hover:scale-110 cursor-pointer -translate-y-1"
+            >
+              <div className="relative size-12 rounded-xl bg-pink-500/20 border-2 border-pink-400/60 text-pink-300 grid place-items-center shadow-lg shadow-pink-500/25 group-hover:bg-pink-500/30">
+                <Home className="size-5" />
+                <span className="absolute -top-1 -right-1 size-3 rounded-full bg-gain-400 border-2 border-night-950 animate-ping" />
+                <span className="absolute -top-1 -right-1 size-3 rounded-full bg-gain-400 border-2 border-night-950" />
+              </div>
+              <span className="text-[11px] font-bold text-white group-hover:text-pink-300 flex items-center gap-1">
+                Résidentiel <span className="text-[9px] text-gain-400 font-semibold">(Actuel)</span>
+              </span>
+            </button>
+
+            {/* Top Right: Business */}
+            <button
+              type="button"
+              onClick={() => selectDistrict('business')}
+              className="group flex flex-col items-center gap-1.5 p-2 rounded-xl transition-transform hover:scale-110 cursor-pointer"
+            >
+              <div className="size-11 rounded-xl bg-purple-500/20 border border-purple-400/40 text-purple-300 grid place-items-center shadow-lg shadow-purple-500/20 group-hover:bg-purple-500/30">
+                <Briefcase className="size-5" />
+              </div>
+              <span className="text-[11px] font-bold text-white group-hover:text-purple-300">Business District</span>
+            </button>
+
+            {/* Mid Left: Market */}
+            <button
+              type="button"
+              onClick={() => selectDistrict('market')}
+              className="group flex flex-col items-center gap-1.5 p-2 rounded-xl transition-transform hover:scale-110 cursor-pointer"
+            >
+              <div className="size-11 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-300 grid place-items-center shadow-lg shadow-amber-500/20 group-hover:bg-amber-500/30">
+                <ShoppingBag className="size-5" />
+              </div>
+              <span className="text-[11px] font-bold text-white group-hover:text-amber-300">Market District</span>
+            </button>
+
+            {/* Center: City Hub */}
+            <button
+              type="button"
+              onClick={() => selectDistrict('cityhub')}
+              className="group flex flex-col items-center gap-1.5 p-2.5 rounded-2xl transition-transform hover:scale-115 cursor-pointer ring-2 ring-brand-500/30 bg-surface-900/60"
+            >
+              <div className="size-13 rounded-2xl bg-brand-500/30 border-2 border-brand-400/70 text-brand-200 grid place-items-center shadow-xl shadow-brand-500/30 group-hover:bg-brand-500/40">
+                <Users className="size-6" />
+              </div>
+              <span className="text-xs font-extrabold text-white group-hover:text-brand-300 tracking-wide">
+                City Hub (Agora)
+              </span>
+            </button>
+
+            {/* Mid Right: Startup Incubator */}
+            <button
+              type="button"
+              onClick={() => selectDistrict('startup')}
+              className="group flex flex-col items-center gap-1.5 p-2 rounded-xl transition-transform hover:scale-110 cursor-pointer"
+            >
+              <div className="size-11 rounded-xl bg-teal-500/20 border border-teal-400/40 text-teal-300 grid place-items-center shadow-lg shadow-teal-500/20 group-hover:bg-teal-500/30">
+                <Rocket className="size-5" />
+              </div>
+              <span className="text-[11px] font-bold text-white group-hover:text-teal-300">Startup District</span>
+            </button>
+
+            {/* Bottom: Finance (centered at bottom) */}
+            <div className="col-start-2 flex justify-center">
+              <button
+                type="button"
+                onClick={() => selectDistrict('finance')}
+                className="group flex flex-col items-center gap-1.5 p-2 rounded-xl transition-transform hover:scale-110 cursor-pointer translate-y-1"
+              >
+                <div className="size-11 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 grid place-items-center shadow-lg shadow-emerald-500/20 group-hover:bg-emerald-500/30">
+                  <Landmark className="size-5" />
+                </div>
+                <span className="text-[11px] font-bold text-white group-hover:text-emerald-300">Finance District</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </Panel>
+
       <ul className="grid grid-cols-12 gap-4 sm:gap-5">
         {DISTRICTS.map((district) => {
           const IconComponent = ICON_MAP[district.icon as keyof typeof ICON_MAP] || Sparkles;
@@ -147,7 +280,7 @@ export const CityMap: React.FC = () => {
                   <p className="line-clamp-2 text-xs leading-relaxed text-mist-400">{district.description}</p>
                 </div>
 
-                <div className="relative mt-5 flex items-center justify-between gap-3 border-t border-white/[0.07] pt-3.5">
+                <div className="relative mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.07] pt-3.5">
                   <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-mist-300">
                     <span
                       aria-hidden="true"
@@ -157,9 +290,9 @@ export const CityMap: React.FC = () => {
                           : 'border border-mist-500 bg-transparent'
                       }`}
                     />
-                    <span className="truncate">{meta.label}</span>
+                    <span className="line-clamp-1">{meta.label}</span>
                   </span>
-                  <span className="flex shrink-0 items-center gap-1 text-xs font-bold text-brand-400 transition-colors group-hover:text-brand-300">
+                  <span className="flex shrink-0 items-center gap-1 text-xs font-bold text-brand-400 transition-colors group-hover:text-brand-300 ml-auto">
                     Accéder
                     <ArrowUpRight className="size-3.5" aria-hidden="true" />
                   </span>

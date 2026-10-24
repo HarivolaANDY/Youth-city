@@ -486,12 +486,12 @@ export const CareerView: React.FC = () => {
                     </div>
 
                     <div className="mt-auto">
-                      <div className="mb-4 flex items-center justify-between gap-3 border-t border-white/[0.07] pt-3.5 text-xs">
-                        <span className="metric flex items-center gap-1 text-mist-500">
+                      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.07] pt-3.5 text-xs">
+                        <span className="metric flex items-center gap-1 text-mist-400 shrink-0">
                           <Zap className="size-3.5 text-warn-400" aria-hidden="true" />
                           &minus;{job.energyPerShift}% énergie/jour
                         </span>
-                        <span className="truncate text-mist-500">{job.minExperience}</span>
+                        <span className="text-mist-400 text-right text-2xs font-medium">{job.minExperience}</span>
                       </div>
 
                       <Button

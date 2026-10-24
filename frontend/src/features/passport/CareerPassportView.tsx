@@ -264,7 +264,12 @@ export const CareerPassportView: React.FC = () => {
                 {copiedUrl ? <Check className="size-4" aria-hidden="true" /> : <Share2 className="size-4" aria-hidden="true" />}
                 <span>Partager le passeport</span>
               </Button>
-              <Button variant="ghost" size="md" onClick={() => setIsVerifyModalOpen(true)}>
+              <Button
+                variant="secondary"
+                size="md"
+                aria-label="Vérifier l'authenticité d'un sceau SHA-256"
+                onClick={() => setIsVerifyModalOpen(true)}
+              >
                 <Search className="size-4" aria-hidden="true" />
                 <span className="hidden sm:inline">Vérifier un sceau</span>
               </Button>
@@ -274,11 +279,11 @@ export const CareerPassportView: React.FC = () => {
       </div>
 
       {/* Navigation secondaire / Onglets de consultation */}
-      <div className="no-print flex flex-wrap items-center gap-1 border-b border-white/10 pb-3">
+      <div className="no-print -mx-4 flex items-center gap-1.5 overflow-x-auto border-b border-white/10 px-4 pb-3 no-scrollbar sm:mx-0 sm:flex-wrap sm:px-0">
         <button
           type="button"
           onClick={() => setActiveTab('passport')}
-          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-colors ${
+          className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2 text-xs font-bold transition-colors ${
             activeTab === 'passport'
               ? 'bg-brand-500/20 text-brand-300 ring-1 ring-brand-500/40'
               : 'text-mist-400 hover:bg-white/5 hover:text-white'
@@ -291,7 +296,7 @@ export const CareerPassportView: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveTab('portfolio')}
-          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-colors ${
+          className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2 text-xs font-bold transition-colors ${
             activeTab === 'portfolio'
               ? 'bg-iris-500/20 text-iris-300 ring-1 ring-iris-500/40'
               : 'text-mist-400 hover:bg-white/5 hover:text-white'
@@ -304,7 +309,7 @@ export const CareerPassportView: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveTab('badges')}
-          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-colors ${
+          className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2 text-xs font-bold transition-colors ${
             activeTab === 'badges'
               ? 'bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/40'
               : 'text-mist-400 hover:bg-white/5 hover:text-white'
@@ -317,7 +322,7 @@ export const CareerPassportView: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveTab('verify')}
-          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-colors ${
+          className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2 text-xs font-bold transition-colors ${
             activeTab === 'verify'
               ? 'bg-gain-500/20 text-gain-300 ring-1 ring-gain-500/40'
               : 'text-mist-400 hover:bg-white/5 hover:text-white'
@@ -341,18 +346,18 @@ export const CareerPassportView: React.FC = () => {
             >
               <div className="space-y-5">
                 <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex min-w-0 items-center gap-2.5">
                     <IconChip tone="brand" size="sm">
                       <ShieldCheck />
                     </IconChip>
-                    <div>
-                      <span className="block font-display text-2xs font-black tracking-[0.16em] text-brand-300 uppercase">
+                    <div className="min-w-0">
+                      <span className="block truncate font-display text-2xs font-black tracking-wider text-brand-300 uppercase sm:tracking-[0.16em]">
                         République de Youth City
                       </span>
                       <span className="block text-3xs text-mist-400">Direction de l'Émancipation</span>
                     </div>
                   </div>
-                  <Badge tone="gain">Infalsifiable</Badge>
+                  <Badge tone="gain" className="shrink-0">Infalsifiable</Badge>
                 </div>
 
                 <div className="flex items-center gap-4">

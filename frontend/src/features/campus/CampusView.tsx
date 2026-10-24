@@ -156,9 +156,9 @@ export const CampusView: React.FC = () => {
           <div className="panel-inset flex items-center gap-3 px-4 py-3">
             <Award className="size-6 shrink-0 text-warn-400" aria-hidden="true" />
             <div>
-              <span className="block text-2xs tracking-wider text-mist-500 uppercase">Certifications validées</span>
+              <span className="block text-2xs tracking-wider text-mist-400 uppercase">Certifications validées</span>
               <span className="metric mt-1 block text-sm font-bold text-white">
-                {citizen.certifications.length} diplôme(s)
+                {citizen.certifications.length} {citizen.certifications.length > 1 ? 'diplômes' : 'diplôme'}
               </span>
             </div>
           </div>

@@ -122,19 +122,25 @@ export const FinanceView: React.FC = () => {
           </div>
 
           <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-white/[0.07] pt-5">
-            <label htmlFor="savings-amount" className="text-2xs tracking-wider text-mist-500 uppercase">
+            <label htmlFor="savings-amount" className="text-2xs tracking-wider text-mist-400 font-semibold uppercase">
               Transfert rapide
             </label>
-            <input
-              id="savings-amount"
-              type="number"
-              step="10000"
-              min="0"
-              inputMode="numeric"
-              value={savingsInput}
-              onChange={(event) => setSavingsInput(event.target.value)}
-              className={`metric h-9 w-32 px-2.5 text-right text-xs ${controlClass}`}
-            />
+            <div className="relative flex items-center">
+              <input
+                id="savings-amount"
+                type="number"
+                step="10000"
+                min="0"
+                inputMode="numeric"
+                value={savingsInput}
+                onChange={(event) => setSavingsInput(event.target.value)}
+                placeholder="Montant"
+                className={`metric h-9 w-36 pr-11 pl-2.5 text-right text-xs font-bold ${controlClass}`}
+              />
+              <span className="pointer-events-none absolute right-2.5 text-[10px] font-bold text-mist-400">
+                MGA
+              </span>
+            </div>
             <Button variant="gain" onClick={handleDeposit} className="shrink-0">
               <ArrowUpRight className="size-3.5" aria-hidden="true" />
               <span>Vers épargne</span>

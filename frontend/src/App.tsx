@@ -115,7 +115,7 @@ export const App: React.FC = () => {
           </main>
 
           <footer className="relative z-10 mt-auto border-t border-white/[0.06] px-4 pt-6 pb-24 text-center sm:px-6 md:pb-6">
-            <p className="text-2xs text-mist-500">
+            <p className="text-2xs font-medium text-mist-400">
               YOUTH CITY &mdash; Simulation pédagogique. Tous les montants sont virtuels (MGA), aucun
               argent réel n&rsquo;est engagé.
             </p>
