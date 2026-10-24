@@ -854,6 +854,28 @@ class YouthCityBackendAPITests(APITestCase):
         self.assertGreaterEqual(stats.get('totalEarned', 0), 120000)
         self.assertGreaterEqual(stats.get('totalCompleted', 0), 1)
 
+    def test_24_nova_proactive_guidance_and_next_action(self):
+        """Tests §27, §28, §57 universal next action, proactive tip and daily checklist generation."""
+        res = self.client.get('/api/nova/proactive-guidance/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        data = res.json()
+
+        self.assertIn('priorityAction', data)
+        self.assertIn('proactiveTip', data)
+        self.assertIn('dailyChecklist', data)
+        self.assertEqual(len(data['dailyChecklist']), 4)
+        self.assertTrue(len(data['proactiveTip']) > 10)
+
+        # Vérifie le diagnostic d'énergie critique
+        self.character.energy = 15
+        self.character.save()
+
+        res_low_energy = self.client.get('/api/nova/proactive-guidance/')
+        self.assertEqual(res_low_energy.status_code, status.HTTP_200_OK)
+        low_data = res_low_energy.json()
+        self.assertEqual(low_data['priorityAction']['targetTab'], 'residential')
+        self.assertEqual(low_data['priorityAction']['urgency'], 'urgent')
+
 
 
 

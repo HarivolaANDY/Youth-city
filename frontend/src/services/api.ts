@@ -24,6 +24,7 @@ import type {
   CareerPassportData,
   FreelanceContract,
   FreelanceResponse,
+  NovaProactiveGuidance,
 } from '../types/game';
 
 const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || '/api';
@@ -326,6 +327,8 @@ export const api = {
   // --- NOVA AI MENTOR API (§27, §28 — P2/P3) ---
   chatWithNova: (message: string) =>
     postWithResult<{ reply: string; citizenName: string; isGuardrailTriggered: boolean }>('/nova/chat/', { message }, 'Erreur lors de la communication avec NOVA.'),
+  getNovaProactiveGuidance: () =>
+    getJSON<NovaProactiveGuidance>('/nova/proactive-guidance/'),
 
   // --- CAREER PASSPORT & PORTFOLIO VÉRIFIABLE (§34, §35) ---
   getCareerPassport: () => getJSON<{ success: boolean; passport?: CareerPassportData }>('/passport/'),

@@ -53,6 +53,34 @@ export interface MarketItem {
   isOwned?: boolean;
 }
 
+export interface NovaPriorityAction {
+  id: string;
+  title: string;
+  description: string;
+  reward: string;
+  targetTab: 'campus' | 'career' | 'finance' | 'residential' | 'startup' | 'cityhub';
+  urgency: 'urgent' | 'high' | 'medium' | 'normal';
+  icon?: string;
+  buttonText: string;
+}
+
+export interface NovaDailyChecklistItem {
+  id: string;
+  label: string;
+  completed: boolean;
+  targetTab: 'campus' | 'career' | 'finance' | 'residential' | 'startup' | 'cityhub';
+  xpBonus: number;
+}
+
+export interface NovaProactiveGuidance {
+  citizenName: string;
+  day: number;
+  priorityAction: NovaPriorityAction;
+  proactiveTip: string;
+  dailyChecklist: NovaDailyChecklistItem[];
+  economicStats?: Record<string, any>;
+}
+
 export interface District {
   id: DistrictId;
   name: string;

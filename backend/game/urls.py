@@ -71,8 +71,9 @@ urlpatterns = [
     path('moderation/reports/create/', views.create_moderation_report, name='moderation-create-report'),
     path('moderation/reports/<int:report_id>/resolve/', views.resolve_moderation_report, name='moderation-resolve-report'),
 
-    # NOVA AI Mentor Chat (§27, §28 — P2/P3)
+    # NOVA AI Mentor Chat & Proactive Next Action (§27, §28, §57)
     path('nova/chat/', views.chat_with_nova, name='nova-chat'),
+    path('nova/proactive-guidance/', views.get_nova_proactive_guidance, name='nova-proactive-guidance'),
 
     # Career Passport & Vérification Publique (§34, §35)
     path('passport/', views.get_career_passport, name='career-passport'),
