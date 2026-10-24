@@ -532,9 +532,15 @@ class CitizenDirectorySerializer(serializers.ModelSerializer):
         return "En recherche / Freelance"
 
     def get_certificationsCount(self, obj):
+        # Utilise le cache prefetch_related s'il existe pour éviter une requête SQL par citoyen
+        if hasattr(obj, '_prefetched_objects_cache') and 'certifications' in obj._prefetched_objects_cache:
+            return len(obj.certifications.all())
         return obj.certifications.count()
 
     def get_unreadMessagesCount(self, obj):
+        unread_map = self.context.get('unread_counts')
+        if unread_map is not None:
+            return unread_map.get(obj.id, 0)
         character = self.context.get('character')
         if not character:
             return 0

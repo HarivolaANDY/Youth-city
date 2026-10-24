@@ -5,8 +5,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
-from django.db import transaction as db_transaction
-from django.db.models import Q
+from django.db import models, transaction as db_transaction
+from django.db.models import Q, Count, Sum
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.conf import settings
@@ -768,13 +768,19 @@ def work_shift(request):
             'error': "Aucun emploi actif. Postule d'abord au Business District !"
         }, status=status.HTTP_400_BAD_REQUEST)
 
-    job = character.current_job
-    if character.energy < job.energy_per_shift:
-        return Response({
-            'error': "Énergie insuffisante pour accomplir ce shift. Repose-toi au Residential District !"
-        }, status=status.HTTP_400_BAD_REQUEST)
-
     with db_transaction.atomic():
+        character = Character.objects.select_for_update().get(id=character.id)
+        job = character.current_job
+        if not job:
+            return Response({
+                'error': "Aucun emploi actif. Postule d'abord au Business District !"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if character.energy < job.energy_per_shift:
+            return Response({
+                'error': "Énergie insuffisante pour accomplir ce shift. Repose-toi au Residential District !"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         daily_salary = round(job.salary / 20)
         character.money += daily_salary
         character.energy -= job.energy_per_shift
@@ -834,22 +840,23 @@ def complete_freelance_gig(request, key):
     character = get_active_character(request)
     gig = get_object_or_404(FreelanceGig, key=key, is_active=True)
 
-    if character.energy < gig.energy_cost:
-        return Response({
-            'error': f"Énergie vitale insuffisante ({character.energy}% disponible, {gig.energy_cost}% requis). Repose-toi au Residential District !"
-        }, status=status.HTTP_400_BAD_REQUEST)
-
-    cs = character.skills.filter(skill__key=gig.required_skill_key).first()
-    if not cs:
-        cs = character.skills.filter(skill__category=gig.required_skill_key).first()
-    skill_lvl = cs.level_percent if cs else 10
-
-    if skill_lvl < gig.min_skill_percent:
-        return Response({
-            'error': f"Niveau insuffisant en {gig.required_skill_name} ({skill_lvl}% actuel, {gig.min_skill_percent}% requis). Perfectionne tes compétences au Campus !"
-        }, status=status.HTTP_400_BAD_REQUEST)
-
     with db_transaction.atomic():
+        character = Character.objects.select_for_update().get(id=character.id)
+        if character.energy < gig.energy_cost:
+            return Response({
+                'error': f"Énergie vitale insuffisante ({character.energy}% disponible, {gig.energy_cost}% requis). Repose-toi au Residential District !"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        cs = character.skills.filter(skill__key=gig.required_skill_key).first()
+        if not cs:
+            cs = character.skills.filter(skill__category=gig.required_skill_key).first()
+        skill_lvl = cs.level_percent if cs else 10
+
+        if skill_lvl < gig.min_skill_percent:
+            return Response({
+                'error': f"Niveau insuffisant en {gig.required_skill_name} ({skill_lvl}% actuel, {gig.min_skill_percent}% requis). Perfectionne tes compétences au Campus !"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         character.energy = max(0, character.energy - gig.energy_cost)
         character.money += gig.reward_money
         level_up = add_xp_to_character(character, gig.reward_xp)
@@ -907,12 +914,13 @@ def deposit_savings(request):
     if amount <= 0:
         return Response({'error': 'Le montant doit être supérieur à zéro.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    if character.money < amount:
-        return Response({
-            'error': f"Fonds insuffisants. Solde courant : {character.money:,} MGA."
-        }, status=status.HTTP_400_BAD_REQUEST)
-
     with db_transaction.atomic():
+        character = Character.objects.select_for_update().get(id=character.id)
+        if character.money < amount:
+            return Response({
+                'error': f"Fonds insuffisants. Solde courant : {character.money:,} MGA."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         character.money -= amount
         character.savings += amount
         character.save()
@@ -948,12 +956,13 @@ def withdraw_savings(request):
     if amount <= 0:
         return Response({'error': 'Le montant doit être supérieur à zéro.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    if character.savings < amount:
-        return Response({
-            'error': f"Épargne insuffisante. Solde épargne : {character.savings:,} MGA."
-        }, status=status.HTTP_400_BAD_REQUEST)
-
     with db_transaction.atomic():
+        character = Character.objects.select_for_update().get(id=character.id)
+        if character.savings < amount:
+            return Response({
+                'error': f"Épargne insuffisante. Solde épargne : {character.savings:,} MGA."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         character.savings -= amount
         character.money += amount
         character.save()
@@ -1444,17 +1453,19 @@ def buy_market_item(request):
 
     character = get_active_character(request)
 
-    if not item.is_consumable:
-        inventory = list(character.inventory or [])
-        if item.key in inventory:
-            return Response({'error': "Tu possèdes déjà cet équipement dans ton inventaire."}, status=status.HTTP_400_BAD_REQUEST)
-
-    if character.money < item.price:
-        return Response({
-            'error': f"Fonds insuffisants. Tu as {character.money:,} MGA mais cet article coûte {item.price:,} MGA."
-        }, status=status.HTTP_400_BAD_REQUEST)
-
     with db_transaction.atomic():
+        character = Character.objects.select_for_update().get(id=character.id)
+
+        if not item.is_consumable:
+            inventory = list(character.inventory or [])
+            if item.key in inventory:
+                return Response({'error': "Tu possèdes déjà cet équipement dans ton inventaire."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if character.money < item.price:
+            return Response({
+                'error': f"Fonds insuffisants. Tu as {character.money:,} MGA mais cet article coûte {item.price:,} MGA."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         if not item.is_consumable:
             inventory = list(character.inventory or [])
             inventory.append(item.key)
@@ -2012,11 +2023,15 @@ def get_admin_overview(request):
     - File de modération citoyenne
     """
     total_citizens = Character.objects.count()
-    total_money = sum(c.money for c in Character.objects.all())
-    total_savings = sum(c.savings for c in Character.objects.all())
+    aggregates = Character.objects.aggregate(
+        total_money=Sum('money'),
+        total_savings=Sum('savings')
+    )
+    total_money = aggregates['total_money'] or 0
+    total_savings = aggregates['total_savings'] or 0
     avg_wealth = round((total_money + total_savings) / total_citizens) if total_citizens > 0 else 0
 
-    all_completed = sum(len(c.completed_courses or []) for c in Character.objects.all())
+    all_completed = sum(len(c.completed_courses or []) for c in Character.objects.only('completed_courses'))
     total_certs = Certification.objects.count()
     total_startups = StartupProject.objects.count()
     funded_startups = StartupProject.objects.filter(has_incubator_grant=True).count()
@@ -2042,7 +2057,7 @@ def get_admin_overview(request):
             'day': c.day,
             'completedCoursesCount': len(c.completed_courses or []),
         }
-        for c in Character.objects.all().order_by('-id')[:10]
+        for c in Character.objects.select_related('current_job').order_by('-id')[:10]
     ]
 
     return Response({
@@ -2520,16 +2535,15 @@ def generate_career_passport_data(character):
         })
     if not certs_list:
         completed_keys = character.completed_courses or ['course-web-dev']
-        for ckey in completed_keys:
-            course = Course.objects.filter(key=ckey).first()
-            if course:
-                certs_list.append({
-                    'id': course.id,
-                    'title': course.certification_name or course.title,
-                    'honors': 'Mention Très Bien',
-                    'issuedAt': '12/10/2026',
-                    'issuer': 'Campus District • République de Youth City',
-                })
+        courses = Course.objects.filter(key__in=completed_keys)
+        for course in courses:
+            certs_list.append({
+                'id': course.id,
+                'title': course.certification_name or course.title,
+                'honors': 'Mention Très Bien',
+                'issuedAt': '12/10/2026',
+                'issuer': 'Campus District • République de Youth City',
+            })
         if not certs_list:
             certs_list.append({
                 'id': 1,
@@ -2697,13 +2711,18 @@ def find_character_by_code(code_str):
     if not code_str:
         return None
     code_clean = code_str.strip().upper()
-    for char in Character.objects.all():
+    if code_clean.isdigit():
+        char = Character.objects.filter(id=int(code_clean)).first()
+        if char:
+            return char
+
+    for char in Character.objects.only('id', 'name'):
         token = f"YC-TOKEN:{char.id}:{char.name}"
         char_code = f"YC-VERIF-{hashlib.sha256(token.encode('utf-8')).hexdigest()[:8].upper()}"
         citizen_id_num = 84920 if char.id == 1 else 80000 + (char.id * 137) % 9000
         citizen_id_tag = f"YC-{citizen_id_num}"
         if code_clean in [char_code, char_code.replace('YC-VERIF-', ''), citizen_id_tag, f"#{citizen_id_tag}", str(char.id)]:
-            return char
+            return Character.objects.get(id=char.id)
     return None
 
 
@@ -2748,8 +2767,27 @@ def list_citizen_directory(request):
     Liste les profils citoyens avec compétences, guilde, poste et statut pour favoriser l'émulation saine.
     """
     character = get_active_character(request)
-    citizens = Character.objects.all().order_by('-level', '-xp')
-    serializer = CitizenDirectorySerializer(citizens, many=True, context={'character': character})
+    unread_counts = {}
+    if character:
+        counts_qs = (
+            CitizenMessage.objects
+            .filter(recipient=character, is_read=False)
+            .values('sender_id')
+            .annotate(count=Count('id'))
+        )
+        unread_counts = {item['sender_id']: item['count'] for item in counts_qs}
+
+    citizens = (
+        Character.objects.all()
+        .select_related('current_job', 'guild_membership__guild')
+        .prefetch_related('certifications')
+        .order_by('-level', '-xp')
+    )
+    serializer = CitizenDirectorySerializer(
+        citizens,
+        many=True,
+        context={'character': character, 'unread_counts': unread_counts}
+    )
     return Response(serializer.data)
 
 
@@ -2774,11 +2812,11 @@ def list_citizen_messages(request):
 
         messages = CitizenMessage.objects.filter(
             (Q(sender=character, recipient_id=cid) | Q(sender_id=cid, recipient=character))
-        ).order_by('created_at')
+        ).select_related('sender', 'recipient').order_by('created_at')
     else:
         messages = CitizenMessage.objects.filter(
             Q(sender=character) | Q(recipient=character)
-        ).order_by('created_at')
+        ).select_related('sender', 'recipient').order_by('created_at')
 
     serializer = CitizenMessageSerializer(messages, many=True, context={'character': character})
     return Response(serializer.data)

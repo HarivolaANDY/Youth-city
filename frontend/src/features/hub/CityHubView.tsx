@@ -137,9 +137,10 @@ export const CityHubView: React.FC = () => {
         setMessageInput('');
       } else {
         // Fallback local
+        const myCitizenId = typeof citizen.id === 'number' ? citizen.id : (Number(citizen.id) || 1);
         const localSent: CitizenMessage = {
           id: Date.now(),
-          senderId: 1,
+          senderId: myCitizenId,
           senderName: citizen.name,
           senderAvatar: citizen.avatarSeed,
           recipientId: selectedContact.id,
@@ -155,7 +156,7 @@ export const CityHubView: React.FC = () => {
           senderId: selectedContact.id,
           senderName: selectedContact.name,
           senderAvatar: selectedContact.avatarSeed,
-          recipientId: 1,
+          recipientId: myCitizenId,
           recipientName: citizen.name,
           content: `Salut ${citizen.name} ! Bien reçu ton message. Travaillons ensemble sur notre prochain projet au City Hub !`,
           contextTag,

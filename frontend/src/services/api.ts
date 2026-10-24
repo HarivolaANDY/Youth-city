@@ -31,7 +31,19 @@ import type {
   SendMessageResponse,
 } from '../types/game';
 
-const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || '/api';
+export interface FreelanceCompletionData {
+  success: boolean;
+  message: string;
+  payout: number;
+  xpEarned: number;
+  energySpent: number;
+  levelUp: boolean;
+  contract: FreelanceContract;
+  transaction: Transaction;
+  citizen: Citizen;
+}
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 const TOKEN_STORAGE_KEY = 'yc_access_token';
 const REFRESH_STORAGE_KEY = 'yc_refresh_token';
 
@@ -270,8 +282,8 @@ export const api = {
   hireJob: (jobKey: string) => postJSON<{ citizen: Citizen; levelUp: boolean }>(`/business/jobs/${jobKey}/hire/`),
   workShift: () => postJSON<{ citizen: Citizen; salaryEarned: number; transaction: Transaction; levelUp: boolean }>('/business/work_shift/'),
   simulateInterview: async (jobKey: string, answerIndex: number): Promise<{ citizen: Citizen; result: InterviewResult } | null> => {
-    const data = await postJSON<any>(`/business/jobs/${jobKey}/interview/`, { answerIndex });
-    return data ? { citizen: data.citizen, result: data as InterviewResult } : null;
+    const data = await postJSON<InterviewResult & { citizen: Citizen }>(`/business/jobs/${jobKey}/interview/`, { answerIndex });
+    return data ? { citizen: data.citizen, result: data } : null;
   },
 
   // --- FINANCE DISTRICT ---
@@ -360,7 +372,7 @@ export const api = {
     citizen?: Citizen;
     error?: string;
   }> => {
-    const res = await postWithResult<any>(
+    const res = await postWithResult<FreelanceCompletionData>(
       `/business/freelance/${encodeURIComponent(key)}/complete/`,
       undefined,
       'Impossible d\'exécuter ce contrat freelance.'
@@ -368,7 +380,7 @@ export const api = {
     if ('error' in res) {
       return { success: false, error: res.error };
     }
-    return { success: true, ...res };
+    return res;
   },
 
   // --- ANNUAIRE CITOYEN & MESSAGERIE SOCIALE DIRECTE (§29) ---
