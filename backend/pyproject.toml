@@ -1,0 +1,21 @@
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+extend-exclude = ["game/migrations", ".venv"]
+
+[tool.ruff.lint]
+# Erreurs de syntaxe, pyflakes (imports et variables inutilisés) et bugbear (pièges courants).
+select = ["E9", "F", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+# `from game.views.x import *` : ré-export volontaire des vues.
+"game/views/__init__.py" = ["F403", "F401"]
+
+[tool.coverage.run]
+source = ["game"]
+omit = ["game/migrations/*", "game/tests.py", "game/test_*.py"]
+
+[tool.coverage.report]
+fail_under = 80
+skip_empty = true
+show_missing = false
