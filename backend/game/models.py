@@ -83,23 +83,59 @@ class Character(models.Model):
     savings = models.BigIntegerField(default=50000, help_text="Épargne sécurisée en MGA")
     day = models.IntegerField(default=1)
     time_slot = models.CharField(max_length=32, default="Matin (08:00)")
-    
+
     current_objective = models.JSONField(default=dict, blank=True)
     current_housing = models.ForeignKey(Property, on_delete=models.SET_NULL, null=True, blank=True)
     current_job = models.ForeignKey(Job, on_delete=models.SET_NULL, null=True, blank=True)
-    
+
     completed_courses = models.JSONField(default=list, blank=True)
     completed_projects = models.IntegerField(default=0)
     completed_challenges = models.IntegerField(default=0)
     inventory = models.JSONField(default=list, blank=True, help_text="Liste des clés d'équipements possédés")
     active_dilemma_key = models.CharField(max_length=64, blank=True, default="", help_text="Clé du dilemme/aléa en cours de résolution")
     resolved_dilemmas = models.JSONField(default=list, blank=True, help_text="Clés des dilemmes déjà résolus")
-    
+    passed_interviews = models.JSONField(default=list, blank=True, help_text="Clés des offres dont l'entretien simulé a été réussi")
+    onboarding_completed = models.BooleanField(default=False, help_text="Création du personnage déjà effectuée (non rejouable)")
+
+    # Âge et consentement (§19.2, §31.1) : on ne stocke que l'année de naissance (donnée minimale)
+    birth_year = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Année de naissance déclarée (non modifiable par le joueur)")
+    guardian_consent_at = models.DateTimeField(null=True, blank=True, help_text="Date de la déclaration d'accord du représentant légal (mineurs)")
+    terms_accepted_at = models.DateTimeField(null=True, blank=True)
+
+    # Confidentialité (§19.2, §21) : visibilité dans l'annuaire et les classements
+    show_in_directory = models.BooleanField(default=True)
+    show_in_leaderboard = models.BooleanField(default=True)
+
+    # Career Passport (§22) : publication choisie par le joueur, via un code aléatoire révocable
+    passport_public = models.BooleanField(default=False)
+    passport_code = models.CharField(max_length=40, unique=True, null=True, blank=True)
+    passport_sections = models.JSONField(default=dict, blank=True, help_text="Sections rendues publiques : skills, certifications, projects, badges, stats")
+
+    # Garde-fous d'équilibrage (une récompense = une action réelle)
+    last_shift_day = models.IntegerField(default=0, help_text="Dernier jour de jeu où un shift salarié a été effectué (0 = jamais)")
+    guild_bonus_claimed = models.BooleanField(default=False, help_text="Bonus XP de première adhésion à une guilde déjà perçu")
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.name} — Niv. {self.level} ({self.money:,} MGA)"
+
+    @property
+    def is_simulated(self):
+        """Citoyen simulé (pair fictif du jeu) : aucun compte réel derrière."""
+        return self.user_id is None
+
+    @property
+    def age_group(self):
+        """'minor' | 'adult' | 'unknown' d'après l'année de naissance déclarée."""
+        from game.policy import age_group_for_birth_year
+        return age_group_for_birth_year(self.birth_year)
+
+    @property
+    def protection_bracket(self):
+        """Tranche de protection : un âge inconnu est traité comme mineur (principe de précaution)."""
+        return 'adult' if self.age_group == 'adult' else 'minor'
 
 
 class CharacterSkill(models.Model):
@@ -139,6 +175,8 @@ class Transaction(models.Model):
     transaction_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='expense')
     category = models.CharField(max_length=64, default="Général")
     timestamp = models.CharField(max_length=64, blank=True)
+    balance_before = models.BigIntegerField(null=True, blank=True, help_text="Solde courant avant l'opération (MGA)")
+    balance_after = models.BigIntegerField(null=True, blank=True, help_text="Solde courant après l'opération (MGA)")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -225,6 +263,7 @@ class StartupProject(models.Model):
     users_count = models.IntegerField(default=0, help_text="Nombre de clients ou utilisateurs actifs")
     has_incubator_grant = models.BooleanField(default=False, help_text="A reçu la subvention d'amorçage de l'incubateur")
     team = models.JSONField(default=list, blank=True, help_text="Liste des rôles/associés (ex: Développeur, Commercial)")
+    last_revenue_day = models.IntegerField(default=0, help_text="Jour de jeu du dernier encaissement de revenus (0 = jamais)")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -344,6 +383,8 @@ class ModerationReport(models.Model):
     status = models.CharField(max_length=32, choices=STATUS_CHOICES, default='pending')
     action_taken = models.CharField(max_length=32, choices=ACTION_CHOICES, default='none')
     moderator_notes = models.TextField(blank=True)
+    resolved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='moderation_decisions')
+    resolved_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -418,6 +459,7 @@ class CitizenMessage(models.Model):
     content = models.TextField(help_text="Contenu du message direct")
     context_tag = models.CharField(max_length=32, choices=CONTEXT_CHOICES, default='collaboration')
     is_read = models.BooleanField(default=False)
+    is_hidden = models.BooleanField(default=False, help_text="Message mis en quarantaine par la modération")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -431,5 +473,60 @@ class CitizenMessage(models.Model):
         return f"Msg {self.sender.name} -> {self.recipient.name}: {self.content[:30]}"
 
 
+class CourseEnrollment(models.Model):
+    """Inscription d'un citoyen à une formation : frais prélevés côté serveur, progression par module (§13.1, §36.3)"""
+    STATUS_CHOICES = (
+        ('in_progress', 'En cours'),
+        ('completed', 'Terminée'),
+    )
+    character = models.ForeignKey(Character, on_delete=models.CASCADE, related_name='enrollments')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='enrollments')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='in_progress')
+    validated_modules = models.IntegerField(default=0, help_text="Nombre de modules dont le quiz a été réussi, dans l'ordre")
+    paid_amount = models.IntegerField(default=0, help_text="Frais d'inscription prélevés (MGA)")
+    enrolled_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ('character', 'course')
+
+    def __str__(self):
+        return f"{self.character.name} - {self.course.title} ({self.get_status_display()})"
 
 
+class Badge(models.Model):
+    """Badge attribué selon une règle clairement définie (§8.3)"""
+    key = models.SlugField(max_length=64, unique=True)
+    name = models.CharField(max_length=100)
+    description = models.CharField(max_length=255, help_text="Condition d'obtention, lisible par le joueur")
+    icon = models.CharField(max_length=64, default="Award")
+
+    def __str__(self):
+        return self.name
+
+
+class CharacterBadge(models.Model):
+    """Badge obtenu par un citoyen (la règle est évaluée côté serveur dans game/badges.py)"""
+    character = models.ForeignKey(Character, on_delete=models.CASCADE, related_name='badges')
+    badge = models.ForeignKey(Badge, on_delete=models.CASCADE, related_name='awards')
+    awarded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('character', 'badge')
+        ordering = ['awarded_at']
+
+    def __str__(self):
+        return f"{self.character.name} - {self.badge.name}"
+
+
+class UserBlock(models.Model):
+    """Blocage d'un citoyen par un autre (§19.2) : plus aucun message dans les deux sens, et masquage de l'annuaire"""
+    blocker = models.ForeignKey(Character, on_delete=models.CASCADE, related_name='blocks_made')
+    blocked = models.ForeignKey(Character, on_delete=models.CASCADE, related_name='blocks_received')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('blocker', 'blocked')
+
+    def __str__(self):
+        return f"{self.blocker.name} bloque {self.blocked.name}"

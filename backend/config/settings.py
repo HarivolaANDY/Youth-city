@@ -52,12 +52,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
+
     # Third-party apps
     'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt',
-    
+    'drf_spectacular',
+
     # Local apps
     'game',
 ]
@@ -129,7 +130,7 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',
     ),
     'DEFAULT_THROTTLE_CLASSES': (
         'rest_framework.throttling.AnonRateThrottle',
@@ -141,8 +142,36 @@ REST_FRAMEWORK = {
         'auth_login': '10/minute',
         'auth_register': '5/minute',
         'nova_chat': '20/minute',
+        'nova_chat_daily': '200/day',
+        'passport_verify': '30/minute',
     },
     'NUM_PROXIES': int(os.getenv('DJANGO_NUM_PROXIES', '1')),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+# Mentor IA NOVA (§17.2) : fournisseur interchangeable par configuration.
+# 'rules' (défaut) = conseils locaux gratuits ; 'anthropic' = Claude via le SDK officiel (requirements-ai.txt + ANTHROPIC_API_KEY).
+NOVA_AI_PROVIDER = os.getenv('NOVA_AI_PROVIDER', 'rules')
+NOVA_AI_MODEL = os.getenv('NOVA_AI_MODEL', 'claude-opus-5-5')
+NOVA_AI_TIMEOUT_SECONDS = float(os.getenv('NOVA_AI_TIMEOUT_SECONDS', '8'))
+NOVA_AI_MAX_TOKENS = int(os.getenv('NOVA_AI_MAX_TOKENS', '2000'))
+
+# Documentation OpenAPI (drf-spectacular)
+# Le schéma et l'interface Swagger ne sont exposés qu'en mode DEBUG, sauf activation
+# explicite via DJANGO_ENABLE_API_DOCS=True (ex. environnement de recette).
+API_DOCS_ENABLED = DEBUG or os.getenv('DJANGO_ENABLE_API_DOCS', 'False').lower() in ('true', '1', 'yes')
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Youth City API',
+    'DESCRIPTION': (
+        "API REST de la simulation Youth City : personnage, campus, emploi, finance, "
+        "marché, startup, City Hub, mentor NOVA et Career Passport."
+    ),
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SCHEMA_PATH_PREFIX': r'/api/v[0-9]+',
+    'COMPONENT_SPLIT_REQUEST': True,
+    'PREPROCESSING_HOOKS': ['config.openapi.only_current_api_version'],
 }
 
 # SimpleJWT settings - Stricter lifetimes and rotation
@@ -180,4 +209,3 @@ if SECURE_SSL_REDIRECT:
     SECURE_HSTS_SECONDS = int(os.getenv('DJANGO_SECURE_HSTS_SECONDS', '31536000'))
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
-

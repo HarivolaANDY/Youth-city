@@ -58,21 +58,38 @@ backend/
 │   ├── __init__.py
 │   ├── asgi.py                     # Point d'entrée ASGI
 │   ├── settings.py                 # Paramètres Django, sécurité, JWT, rate limiting, CORS
-│   ├── urls.py                     # Routage racine (admin Django et préfixe /api/)
+│   ├── openapi.py                  # Hook du schéma OpenAPI (documente uniquement /api/v1/)
+│   ├── urls.py                     # Routage racine (admin, /api/v1/, alias /api/ déprécié, docs)
 │   └── wsgi.py                     # Point d'entrée WSGI pour Gunicorn
 ├── game/                           # Application métier centrale du jeu Youth City
 │   ├── management/
 │   │   └── commands/
 │   │       └── seed_game_data.py   # Commande CLI de peuplement initial (catalogue, admin, démo)
+│   ├── views/                      # Vues REST, une par district (voir ci-dessous)
+│   │   ├── common.py               # Constantes, archétypes et helpers partagés
+│   │   ├── game_loop.py            # État, temps, sommeil, réinitialisation
+│   │   ├── accounts.py             # Inscription, connexion, profil, création du personnage
+│   │   ├── campus.py               # Formations et quiz
+│   │   ├── business.py             # Emplois, entretiens, shifts, missions freelance
+│   │   ├── finance.py              # Épargne et transactions
+│   │   ├── residential.py          # Logements
+│   │   ├── market.py               # Achats
+│   │   ├── startup.py              # Incubateur et projets
+│   │   ├── hub.py                  # Guildes, hackathons, classement, annuaire, messagerie
+│   │   ├── dilemmas.py             # Dilemmes et événements aléatoires
+│   │   ├── admin_moderation.py     # Back-office, modération, analytics d'impact
+│   │   ├── nova.py                 # Mentor IA NOVA
+│   │   └── passport.py             # Career Passport et vérification publique
 │   ├── admin.py                    # Enregistrement des modèles dans l'interface d'administration
+│   ├── api_docs.py                 # Serializers d'entrée et décorateur @document (OpenAPI)
 │   ├── apps.py                     # Configuration de l'application Django game
 │   ├── models.py                   # Schéma relationnel (Citizen, Skills, Jobs, Housing, etc.)
 │   ├── sanitizers.py               # Fonctions d'assainissement textuel strict anti-XSS
 │   ├── serializers.py              # Sérialiseurs DRF avec validation des données entrantes
+│   ├── test_api_versioning.py      # Tests du versionnement /api/v1/ et du schéma OpenAPI
 │   ├── tests.py                    # Suite complète de tests unitaires et d'intégration
 │   ├── throttles.py                # Classes de limitation de débit (login, register, chat NOVA)
-│   ├── urls.py                     # Déclaration des 40+ endpoints REST (/api/*)
-│   └── views.py                    # Vues et contrôleurs métier de la simulation
+│   └── urls.py                     # Déclaration des 50+ endpoints REST (/api/v1/*)
 ├── .env.example                    # Modèle des variables d'environnement
 ├── Dockerfile                      # Image de production durcie (Python 3.12-slim, non-root 10001)
 ├── manage.py                       # CLI d'administration Django
@@ -126,7 +143,7 @@ backend/
 
 6. **Peupler la base de données avec le catalogue de jeu :**
    ```bash
-   python manage.py seed_game_data
+   python manage.py seed_game_data --demo-citizen
    ```
    > 💡 Cette commande initialise les logements, les cours, les métiers, les articles du marché, les hackathons, le personnage de démonstration (*Emmanuel*) ainsi que le compte administrateur initial (`admin` / `admin@youthcity.mg`).
 
@@ -134,7 +151,20 @@ backend/
    ```bash
    python manage.py runserver 8000
    ```
-   L'API est accessible sur **`http://localhost:8000/api/`** et l'interface d'administration sur **`http://localhost:8000/admin/`**.
+   L'API est accessible sur **`http://localhost:8000/api/v1/`**, la documentation interactive (Swagger) sur **`http://localhost:8000/api/v1/docs/`** et l'interface d'administration sur **`http://localhost:8000/admin/`**.
+
+### Versionnement & Documentation de l'API
+
+| URL | Rôle |
+| :--- | :--- |
+| `/api/v1/...` | **Version courante**, à utiliser pour tout nouveau client (le frontend l'utilise par défaut). |
+| `/api/...` | Alias historique de la v1, conservé pour la compatibilité des clients existants. **Déprécié** : il sera retiré à l'arrivée d'une v2. |
+| `/api/v1/schema/` | Schéma OpenAPI 3 (YAML/JSON), généré par `drf-spectacular`. |
+| `/api/v1/docs/` | Interface Swagger UI. |
+
+- Le schéma et Swagger ne sont exposés qu'en mode `DJANGO_DEBUG=True`. Pour les activer ailleurs (recette), définir `DJANGO_ENABLE_API_DOCS=True`.
+- Exporter le schéma dans un fichier (utile pour générer des types TypeScript) : `python manage.py spectacular --file openapi.yml`.
+- Pour documenter une nouvelle vue, décorez-la avec `@document(tag, résumé, request=..., response=...)` (voir [`game/api_docs.py`](game/api_docs.py)), au-dessus de `@api_view`.
 
 ---
 
@@ -160,7 +190,7 @@ python manage.py makemigrations
 python manage.py migrate
 
 # Réinitialiser ou peupler le jeu avec les données d'origine
-python manage.py seed_game_data
+python manage.py seed_game_data --demo-citizen
 
 # Créer un compte administrateur Django interactif
 python manage.py createsuperuser
@@ -190,7 +220,7 @@ Le fichier `.env` à la racine de `backend/` (chargé nativement par `settings.p
 | `DJANGO_DEBUG` | Booléen | Active ou désactive le mode débogage. | `True` |
 | `DJANGO_ALLOWED_HOSTS` | Liste (CSV) | Noms d'hôtes ou adresses IP autorisés. | `localhost,127.0.0.1,[::1]` |
 | `CORS_ALLOWED_ORIGINS` | Liste (CSV) | Origines HTTP frontend autorisées pour le CORS. | `http://localhost:5173,http://127.0.0.1:5173` |
-| `DJANGO_ADMIN_PASSWORD` | Chaîne | Mot de passe du superutilisateur créé par `seed_game_data`. | `YouthCityAdmin2026!` |
+| `DJANGO_ADMIN_PASSWORD` | Chaîne | Mot de passe du superutilisateur créé par `seed_game_data`. | Aucun hors `DJANGO_DEBUG=True` (dev : `YouthCityAdmin2026!`). Obligatoire en production. |
 | `DJANGO_NUM_PROXIES` | Entier | Nombre de proxys amont pour le calcul de l'IP cliente (`X-Forwarded-For`). | `1` |
 | `DJANGO_SECURE_SSL_REDIRECT` | Booléen | Force la redirection automatique de tout le trafic vers HTTPS. | `False` |
 | `DJANGO_SESSION_COOKIE_SECURE`| Booléen | Active le flag `Secure` sur les cookies de session. | `False` |

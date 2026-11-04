@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 import os
@@ -14,12 +15,26 @@ from game.models import (
     MarketItem,
     FreelanceGig,
     CitizenMessage,
+    Badge,
+    Guild,
+    Hackathon,
+    ModerationReport,
+    StartupProject,
 )
+from game.badges import BADGE_DEFINITIONS
 
 class Command(BaseCommand):
     help = "Seed initial game data for Youth City MVP (MGA currency, housing, jobs, courses, character)"
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--demo-citizen',
+            action='store_true',
+            help="Crée aussi le citoyen de démonstration « Emmanuel » et ses données d'exemple (développement uniquement).",
+        )
+
     def handle(self, *args, **options):
+        with_demo = options.get('demo_citizen', False)
         self.stdout.write("--- Seeding Youth City MVP Initial Data ---")
 
         # 1. Housing / Properties
@@ -744,85 +759,191 @@ class Command(BaseCommand):
             created_gigs_count += 1
         self.stdout.write(f"Freelance gigs seeded: {created_gigs_count}")
 
-        # 6. Default Demo Character: Emmanuel
-        character, _ = Character.objects.update_or_create(
-            name="Emmanuel",
-            defaults={
-                "avatar_seed": "Felix",
-                "title": "Apprenti Développeur & Citoyen Actif",
-                "level": 5,
-                "xp": 1450,
-                "xp_to_next_level": 2000,
-                "energy": 72,
-                "wellbeing": 81,
-                "money": 425000,
-                "savings": 200000,
-                "day": 14,
-                "time_slot": "Matin (08:00)",
-                "current_housing": created_properties.get("housing-studio"),
-                "current_job": None,
-                "current_objective": {
-                    "title": "Décrocher un poste de Développeur Junior",
-                    "target": "Atteindre 60% en JavaScript et valider 1 projet web",
-                    "progress": 76,
-                },
-                "completed_courses": ["course-web-intro"],
-                "completed_projects": 2,
-                "completed_challenges": 4,
-            }
-        )
+        # 6. City Hub : catalogue de guildes et de hackathons (idempotent : une entrée existante n'est jamais écrasée)
+        guilds_catalog = [
+            Guild(key="guild-devs", name="Developers Guild", category="tech", motto="Code is Poetry, Impact is Real", description="Entraide entre développeurs, revues de code et hackathons logiciels.", icon="Code", member_count=48, xp_bonus_percent=10, badge_reward="Master Coder"),
+            Guild(key="guild-designers", name="Designers Collective", category="design", motto="L'élégance au service de l'utilisateur", description="Critiques d'interfaces, défis artistiques et ateliers UI/UX pour Madagascar.", icon="Palette", member_count=32, xp_bonus_percent=8, badge_reward="Pixel Master"),
+            Guild(key="guild-entrepreneurs", name="Entrepreneurs Club", category="business", motto="De l'idée à la licorne malgache", description="Pitchs, recherche d'associés, mentorat et structuration de business plans.", icon="Rocket", member_count=55, xp_bonus_percent=10, badge_reward="Venture Builder"),
+            Guild(key="guild-finance", name="Business & Finance League", category="finance", motto="Rigueur comptable & investissements avisés", description="Stratégie patrimoniale, comptabilité d'entreprise et micro-investissement.", icon="TrendingUp", member_count=27, xp_bonus_percent=8, badge_reward="Capital Architect"),
+            Guild(key="guild-green", name="Social & Green Impact", category="green", motto="Pour un développement durable et inclusif", description="Initiatives écologiques, recyclage, AgriTech et impact sociétal à Antananarivo.", icon="Leaf", member_count=41, xp_bonus_percent=8, badge_reward="Eco Champion"),
+        ]
+        for obj in guilds_catalog:
+            if not Guild.objects.filter(key=obj.key).exists():
+                obj.save()
 
-        # Character skills
-        char_skills_map = {
-            "javascript": 55,
-            "react": 35,
-            "git": 45,
-            "budget": 65,
-            "communication": 60,
-            "entrepreneuriat": 40,
-        }
-        for skill_key, lvl in char_skills_map.items():
-            if skill_key in created_skills:
-                CharacterSkill.objects.update_or_create(
+        hackathons_catalog = [
+            Hackathon(
+                key="hackathon-madainnov-2026",
+                title="Mada Innov 2026 : Tech for Good",
+                theme="Impact Écologique & Inclusion Numérique",
+                status="open",
+                team_size=4,
+                duration_hours=48,
+                xp_pool=5000,
+                prize_money=500000,
+                description="48 heures de sprint intensif en équipe de 4 pour prototyper une solution numérique répondant aux défis environnementaux et d'inclusion à Madagascar.",
+                evaluation_criteria=["Innovation & Originalité (25%)", "Faisabilité Technique (25%)", "Impact Local Madagascar (30%)", "Qualité du Pitch (20%)"]
+            ),
+            Hackathon(
+                key="hackathon-fintech-mada",
+                title="Sprint FinTech & Mobile Money",
+                theme="Inclusion Financière & Paiement Mobile",
+                status="open",
+                team_size=3,
+                duration_hours=36,
+                xp_pool=3500,
+                prize_money=350000,
+                description="Conçois un module de micro-épargne et de paiement mobile ultra-léger adapté aux commerçants et aux jeunes d'Antananarivo.",
+                evaluation_criteria=["Sécurité & Fiabilité (30%)", "Simplicité Ergonomique (30%)", "Modèle Économique (40%)"]
+            ),
+            Hackathon(
+                key="hackathon-agritech-challenge",
+                title="AgriTech Challenge Madagascar",
+                theme="Circuits Courts & Agriculture Connectée",
+                status="open",
+                team_size=3,
+                duration_hours=48,
+                xp_pool=4000,
+                prize_money=400000,
+                description="Bâtis une passerelle directe entre paysans ruraux et marchés urbains pour sécuriser l'approvisionnement alimentaire local.",
+                evaluation_criteria=["Impact Producteurs (35%)", "Accessibilité Téléphone Basique (35%)", "Viabilité Opérationnelle (30%)"]
+            ),
+        ]
+        for obj in hackathons_catalog:
+            if not Hackathon.objects.filter(key=obj.key).exists():
+                obj.save()
+        self.stdout.write("City Hub catalog seeded.")
+
+        # 7. Badges (les règles d'attribution vivent dans game/badges.py)
+        for badge_def in BADGE_DEFINITIONS:
+            Badge.objects.update_or_create(
+                key=badge_def["key"],
+                defaults={k: badge_def[k] for k in ("name", "description", "icon")},
+            )
+        self.stdout.write(f"Badges seeded: {len(BADGE_DEFINITIONS)}")
+
+        # 8. Citoyen de démonstration « Emmanuel » : opt-in (--demo-citizen), jamais en production
+        character = None
+        if with_demo:
+            character, _ = Character.objects.update_or_create(
+                name="Emmanuel",
+                defaults={
+                    "avatar_seed": "Felix",
+                    "title": "Apprenti Développeur & Citoyen Actif",
+                    "level": 5,
+                    "xp": 1450,
+                    "xp_to_next_level": 2000,
+                    "energy": 72,
+                    "wellbeing": 81,
+                    "money": 425000,
+                    "savings": 200000,
+                    "day": 14,
+                    "time_slot": "Matin (08:00)",
+                    "current_housing": created_properties.get("housing-studio"),
+                    "current_job": None,
+                    "current_objective": {
+                        "title": "Décrocher un poste de Développeur Junior",
+                        "target": "Atteindre 60% en JavaScript et valider 1 projet web",
+                        "progress": 76,
+                    },
+                    "completed_courses": ["course-web-intro"],
+                    "completed_projects": 2,
+                    "completed_challenges": 4,
+                }
+            )
+
+            # Character skills
+            char_skills_map = {
+                "javascript": 55,
+                "react": 35,
+                "git": 45,
+                "budget": 65,
+                "communication": 60,
+                "entrepreneuriat": 40,
+            }
+            for skill_key, lvl in char_skills_map.items():
+                if skill_key in created_skills:
+                    CharacterSkill.objects.update_or_create(
+                        character=character,
+                        skill=created_skills[skill_key],
+                        defaults={"level_percent": lvl}
+                    )
+
+            # Character certifications
+            Certification.objects.get_or_create(
+                character=character,
+                title="Certification Fondamentaux du Web"
+            )
+
+            # Character transactions
+            Transaction.objects.filter(character=character).delete()
+            Transaction.objects.create(
+                character=character,
+                timestamp="J-1 18:00",
+                label="Mission Freelance Landing Page",
+                amount=100000,
+                transaction_type="income",
+                category="Carrière"
+            )
+            Transaction.objects.create(
+                character=character,
+                timestamp="J-2 10:00",
+                label="Inscription Formation Web (Campus)",
+                amount=-50000,
+                transaction_type="expense",
+                category="Éducation"
+            )
+            Transaction.objects.create(
+                character=character,
+                timestamp="J-3 12:00",
+                label="Loyer mensuel Studio City",
+                amount=-150000,
+                transaction_type="expense",
+                category="Logement"
+            )
+
+            # Projet startup d'exemple (créé auparavant dans le GET /startup/projects/)
+            StartupProject.objects.get_or_create(
+                key="startup-ecotana",
+                defaults=dict(
                     character=character,
-                    skill=created_skills[skill_key],
-                    defaults={"level_percent": lvl}
+                    name="EcoCollect Tana",
+                    sector="greentech",
+                    pitch="Plateforme de collecte géolocalisée et valorisation des déchets recyclables à Antananarivo.",
+                    stage="idea",
+                    progress=25,
+                    treasury=150000,
+                    monthly_revenue=0,
+                    reputation=20,
+                    users_count=0,
+                    team=["Fondateur & Porteur de Projet"],
+                ),
+            )
+
+            # Signalements d'exemple pour le back-office (créés auparavant dans le GET /moderation/reports/)
+            if ModerationReport.objects.count() == 0:
+                ModerationReport.objects.create(
+                    reporter=character, target_type='chat_message', target_id='msg-101',
+                    target_name='Canal Entraide Campus', reason='spam',
+                    details="Un utilisateur fait la promotion répétée d'un lien externe non vérifié promettant des gains faciles.",
+                    status='pending', action_taken='none', moderator_notes='',
+                )
+                ModerationReport.objects.create(
+                    reporter=character, target_type='project_pitch', target_id='pitch-42',
+                    target_name='Projet AgroQuick', reason='inappropriate',
+                    details="Description de projet contenant des propos agressifs envers les autres équipes candidates au concours.",
+                    status='investigating', action_taken='none',
+                    moderator_notes="Signalement pris en charge par l'équipe pédagogique.",
+                )
+                ModerationReport.objects.create(
+                    reporter=character, target_type='citizen_profile', target_id='cit-99',
+                    target_name='Profil Testeur', reason='fraud',
+                    details="Soupçon d'utilisation de macro automatisée pour valider des shifts de travail en continu.",
+                    status='resolved', action_taken='warning',
+                    moderator_notes="Avertissement officiel envoyé avec réinitialisation des quotas horaires.",
                 )
 
-        # Character certifications
-        Certification.objects.get_or_create(
-            character=character,
-            title="Certification Fondamentaux du Web"
-        )
-
-        # Character transactions
-        Transaction.objects.filter(character=character).delete()
-        Transaction.objects.create(
-            character=character,
-            timestamp="J-1 18:00",
-            label="Mission Freelance Landing Page",
-            amount=100000,
-            transaction_type="income",
-            category="Carrière"
-        )
-        Transaction.objects.create(
-            character=character,
-            timestamp="J-2 10:00",
-            label="Inscription Formation Web (Campus)",
-            amount=-50000,
-            transaction_type="expense",
-            category="Éducation"
-        )
-        Transaction.objects.create(
-            character=character,
-            timestamp="J-3 12:00",
-            label="Loyer mensuel Studio City",
-            amount=-150000,
-            transaction_type="expense",
-            category="Logement"
-        )
-
-        # Peer citizens for Annuaire & Messagerie Directe (§29)
+        # 9. Citoyens pairs simulés pour l'annuaire et la messagerie (§29)
         peer_citizens_data = [
             {
                 "name": "Aina",
@@ -873,31 +994,36 @@ class Command(BaseCommand):
             )
             created_peers[p["name"]] = peer_obj
 
-        # Seed initial peer messages (§29)
-        if "Aina" in created_peers:
-            CitizenMessage.objects.get_or_create(
-                sender=created_peers["Aina"],
-                recipient=character,
-                defaults={
-                    "content": "Salut Emmanuel ! J'ai vu que tu progressais bien en frontend au Campus. Si tu cherches une designer pour faire équipe sur le prochain Hackathon du City Hub, fais-moi signe !",
-                    "context_tag": "collaboration",
-                    "is_read": False,
-                }
-            )
-        if "Rova" in created_peers:
-            CitizenMessage.objects.get_or_create(
-                sender=created_peers["Rova"],
-                recipient=character,
-                defaults={
-                    "content": "Bonjour Emmanuel, bienvenue dans la communauté tech de Youth City. N'hésite pas si tu as besoin d'une revue de code sur tes projets ou des conseils sur l'architecture.",
-                    "context_tag": "mentoring",
-                    "is_read": False,
-                }
-            )
+        if character is not None:
+            # Seed initial peer messages (§29)
+            if "Aina" in created_peers:
+                CitizenMessage.objects.get_or_create(
+                    sender=created_peers["Aina"],
+                    recipient=character,
+                    defaults={
+                        "content": "Salut Emmanuel ! J'ai vu que tu progressais bien en frontend au Campus. Si tu cherches une designer pour faire équipe sur le prochain Hackathon du City Hub, fais-moi signe !",
+                        "context_tag": "collaboration",
+                        "is_read": False,
+                    }
+                )
+            if "Rova" in created_peers:
+                CitizenMessage.objects.get_or_create(
+                    sender=created_peers["Rova"],
+                    recipient=character,
+                    defaults={
+                        "content": "Bonjour Emmanuel, bienvenue dans la communauté tech de Youth City. N'hésite pas si tu as besoin d'une revue de code sur tes projets ou des conseils sur l'architecture.",
+                        "context_tag": "mentoring",
+                        "is_read": False,
+                    }
+                )
 
         # Default staff administrator for Back-Office (§43, §45, §46)
-        if not User.objects.filter(is_superuser=True).exists():
-            admin_pwd = os.getenv('DJANGO_ADMIN_PASSWORD', 'YouthCityAdmin2026!')
+        admin_pwd = os.getenv('DJANGO_ADMIN_PASSWORD') or ('YouthCityAdmin2026!' if settings.DEBUG else None)
+        if not User.objects.filter(is_superuser=True).exists() and not admin_pwd:
+            self.stdout.write(self.style.WARNING(
+                "Aucun administrateur créé : définissez DJANGO_ADMIN_PASSWORD (obligatoire hors mode DEBUG)."
+            ))
+        elif not User.objects.filter(is_superuser=True).exists():
             admin_user = User.objects.create_superuser(
                 username='admin',
                 email='admin@youthcity.mg',
@@ -905,4 +1031,7 @@ class Command(BaseCommand):
             )
             self.stdout.write(f"Default administrator '{admin_user.username}' created.")
 
-        self.stdout.write(self.style.SUCCESS(f"Successfully seeded Character '{character.name}' with initial balance {character.money:,} MGA."))
+        if character is not None:
+            self.stdout.write(self.style.SUCCESS(f"Successfully seeded Character '{character.name}' with initial balance {character.money:,} MGA."))
+        else:
+            self.stdout.write(self.style.SUCCESS("Catalog seeded (no demo citizen)."))

@@ -1,0 +1,4 @@
+# Dépendances optionnelles du mentor IA NOVA (NOVA_AI_PROVIDER=anthropic).
+# Sans ce fichier, NOVA fonctionne avec les règles locales (NOVA_AI_PROVIDER=rules, par défaut).
+-r requirements.txt
+anthropic>=2.5,<3

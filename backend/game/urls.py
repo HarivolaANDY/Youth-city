@@ -11,6 +11,11 @@ urlpatterns = [
 
     # Character Creation & Customization (§14, §47)
     path('character/customize/', views.customize_character, name='character-customize'),
+    path('character/age-declaration/', views.declare_age, name='character-age-declaration'),
+    path('character/privacy/', views.privacy_settings, name='character-privacy'),
+
+    # Sonde de santé publique (healthcheck Docker)
+    path('health/', views.health_check, name='health-check'),
 
     # Game Loop & Citizen Status
     path('game/state/', views.get_game_state, name='game-state'),
@@ -22,7 +27,7 @@ urlpatterns = [
 
     # Campus District
     path('campus/courses/', views.list_courses, name='list-courses'),
-    path('campus/courses/<str:key>/complete/', views.complete_course, name='complete-course'),
+    path('campus/courses/<str:key>/enroll/', views.enroll_in_course, name='enroll-course'),
     path('campus/courses/<str:key>/validate-quiz/', views.validate_course_quiz, name='validate-course-quiz'),
 
     # Business District & Freelance (§8, §21, §52)
@@ -77,6 +82,7 @@ urlpatterns = [
 
     # Career Passport & Vérification Publique (§34, §35)
     path('passport/', views.get_career_passport, name='career-passport'),
+    path('passport/publication/', views.update_passport_publication, name='career-passport-publication'),
     path('passport/verify/<str:code>/', views.verify_career_passport, name='verify-career-passport'),
 
     # Annuaire Citoyen & Messagerie Directe (§29)
@@ -84,5 +90,6 @@ urlpatterns = [
     path('hub/messages/', views.list_citizen_messages, name='hub-messages'),
     path('hub/messages/send/', views.send_citizen_message, name='hub-send-message'),
     path('hub/messages/<int:message_id>/read/', views.mark_message_read, name='hub-mark-message-read'),
+    path('hub/blocks/', views.list_blocks, name='hub-blocks'),
+    path('hub/blocks/<int:citizen_id>/', views.toggle_block, name='hub-toggle-block'),
 ]
-

@@ -1,6 +1,9 @@
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
+from game import policy
 from game.models import (
     Property,
     Skill,
@@ -31,6 +34,27 @@ class RegisterSerializer(serializers.Serializer):
     email = serializers.EmailField(required=False, allow_blank=True)
     password = serializers.CharField(write_only=True, min_length=6)
     citizenName = serializers.CharField(required=False, allow_blank=True, max_length=64)
+    birthYear = serializers.IntegerField()
+    acceptTerms = serializers.BooleanField()
+    guardianConsent = serializers.BooleanField(required=False, default=False)
+
+    def validate_birthYear(self, value):
+        error = policy.validate_birth_year(value)
+        if error:
+            raise serializers.ValidationError(error)
+        return value
+
+    def validate_acceptTerms(self, value):
+        if not value:
+            raise serializers.ValidationError("L'acceptation des conditions d'utilisation est obligatoire.")
+        return value
+
+    def validate(self, attrs):
+        if policy.age_group_for_birth_year(attrs['birthYear']) == 'minor' and not attrs.get('guardianConsent'):
+            raise serializers.ValidationError({
+                'guardianConsent': "Un accord du représentant légal est requis pour les moins de 18 ans.",
+            })
+        return attrs
 
     def validate_username(self, value):
         val = value.strip()
@@ -123,6 +147,15 @@ class JobSerializer(serializers.ModelSerializer):
             'sampleAnswers',
         ]
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Le barème de l'entretien reste côté serveur : le client ne voit que le texte des réponses.
+        data['sampleAnswers'] = [
+            {k: v for k, v in answer.items() if k not in ('score', 'feedback')}
+            for answer in (data.get('sampleAnswers') or [])
+        ]
+        return data
+
 
 class CourseSerializer(serializers.ModelSerializer):
     id = serializers.CharField(source='key')
@@ -146,6 +179,19 @@ class CourseSerializer(serializers.ModelSerializer):
             'modules',
         ]
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # La bonne réponse des quiz reste côté serveur (§10.3) : elle n'est révélée qu'après validation.
+        cleaned = []
+        for module in (data.get('modules') or []):
+            module = dict(module)
+            quiz = module.get('quiz')
+            if isinstance(quiz, dict):
+                module['quiz'] = {k: v for k, v in quiz.items() if k not in ('correctIndex', 'explanation')}
+            cleaned.append(module)
+        data['modules'] = cleaned
+        return data
+
 
 class DilemmaSerializer(serializers.ModelSerializer):
     id = serializers.CharField(source='key')
@@ -157,10 +203,12 @@ class DilemmaSerializer(serializers.ModelSerializer):
 
 class TransactionSerializer(serializers.ModelSerializer):
     type = serializers.CharField(source='transaction_type')
+    balanceBefore = serializers.IntegerField(source='balance_before', read_only=True, allow_null=True)
+    balanceAfter = serializers.IntegerField(source='balance_after', read_only=True, allow_null=True)
 
     class Meta:
         model = Transaction
-        fields = ['id', 'timestamp', 'label', 'amount', 'type', 'category']
+        fields = ['id', 'timestamp', 'label', 'amount', 'type', 'category', 'balanceBefore', 'balanceAfter']
 
 
 class MarketItemSerializer(serializers.ModelSerializer):
@@ -185,6 +233,7 @@ class MarketItemSerializer(serializers.ModelSerializer):
             'isOwned',
         ]
 
+    @extend_schema_field(bool)
     def get_isOwned(self, obj):
         char = self.context.get('character')
         if not char or not char.inventory:
@@ -204,6 +253,12 @@ class CitizenDetailSerializer(serializers.ModelSerializer):
     completedChallenges = serializers.IntegerField(source='completed_challenges')
     skills = serializers.SerializerMethodField()
     certifications = serializers.SerializerMethodField()
+    badges = serializers.SerializerMethodField()
+    onboardingCompleted = serializers.BooleanField(source='onboarding_completed', read_only=True)
+    ageGroup = serializers.SerializerMethodField()
+    needsAgeDeclaration = serializers.SerializerMethodField()
+    privacy = serializers.SerializerMethodField()
+    workedToday = serializers.SerializerMethodField()
 
     class Meta:
         model = Character
@@ -228,6 +283,40 @@ class CitizenDetailSerializer(serializers.ModelSerializer):
             'completedProjects',
             'completedChallenges',
             'inventory',
+            'badges',
+            'onboardingCompleted',
+            'ageGroup',
+            'needsAgeDeclaration',
+            'privacy',
+            'workedToday',
+        ]
+
+    @extend_schema_field(str)
+    def get_ageGroup(self, obj):
+        return obj.age_group
+
+    @extend_schema_field(bool)
+    def get_needsAgeDeclaration(self, obj):
+        return obj.user_id is not None and obj.birth_year is None
+
+    @extend_schema_field(OpenApiTypes.OBJECT)
+    def get_privacy(self, obj):
+        return {'showInDirectory': obj.show_in_directory, 'showInLeaderboard': obj.show_in_leaderboard}
+
+    @extend_schema_field(bool)
+    def get_workedToday(self, obj):
+        return obj.last_shift_day == obj.day
+
+    def get_badges(self, obj):
+        return [
+            {
+                'key': cb.badge.key,
+                'name': cb.badge.name,
+                'description': cb.badge.description,
+                'icon': cb.badge.icon,
+                'awardedAt': cb.awarded_at.isoformat(),
+            }
+            for cb in obj.badges.select_related('badge')
         ]
 
     def get_currentHousingId(self, obj):
@@ -293,6 +382,7 @@ class GuildSerializer(serializers.ModelSerializer):
             'isJoined',
         ]
 
+    @extend_schema_field(bool)
     def get_isJoined(self, obj):
         character = self.context.get('character')
         if not character:
@@ -351,6 +441,7 @@ class HackathonSerializer(serializers.ModelSerializer):
             'myParticipation',
         ]
 
+    @extend_schema_field(OpenApiTypes.OBJECT)
     def get_myParticipation(self, obj):
         my_parts = self.context.get('my_participations')
         if my_parts is not None:
@@ -372,6 +463,8 @@ class ModerationReportSerializer(serializers.ModelSerializer):
     actionTaken = serializers.CharField(source='action_taken')
     moderatorNotes = serializers.CharField(source='moderator_notes')
     createdAt = serializers.DateTimeField(source='created_at', format='%d/%m/%Y %H:%M', read_only=True)
+    resolvedAt = serializers.DateTimeField(source='resolved_at', format='%d/%m/%Y %H:%M', read_only=True)
+    resolvedBy = serializers.SerializerMethodField()
 
     class Meta:
         model = ModerationReport
@@ -387,8 +480,15 @@ class ModerationReportSerializer(serializers.ModelSerializer):
             'actionTaken',
             'moderatorNotes',
             'createdAt',
+            'resolvedAt',
+            'resolvedBy',
         ]
 
+    @extend_schema_field(str)
+    def get_resolvedBy(self, obj):
+        return obj.resolved_by.username if obj.resolved_by else None
+
+    @extend_schema_field(str)
     def get_reporterName(self, obj):
         return obj.reporter.name if obj.reporter else "Système Citoyen"
 
@@ -509,6 +609,7 @@ class CitizenDirectorySerializer(serializers.ModelSerializer):
     certificationsCount = serializers.SerializerMethodField()
     unreadMessagesCount = serializers.SerializerMethodField()
     isMe = serializers.SerializerMethodField()
+    isSimulated = serializers.SerializerMethodField()
 
     class Meta:
         model = Character
@@ -525,24 +626,33 @@ class CitizenDirectorySerializer(serializers.ModelSerializer):
             'certificationsCount',
             'unreadMessagesCount',
             'isMe',
+            'isSimulated',
         ]
 
+    @extend_schema_field(bool)
+    def get_isSimulated(self, obj):
+        return obj.is_simulated
+
+    @extend_schema_field(str)
     def get_guildName(self, obj):
         if hasattr(obj, 'guild_membership') and obj.guild_membership:
             return obj.guild_membership.guild.name
         return "Sans guilde"
 
+    @extend_schema_field(str)
     def get_jobTitle(self, obj):
         if obj.current_job:
             return obj.current_job.title
         return "En recherche / Freelance"
 
+    @extend_schema_field(int)
     def get_certificationsCount(self, obj):
         # Utilise le cache prefetch_related s'il existe pour éviter une requête SQL par citoyen
         if hasattr(obj, '_prefetched_objects_cache') and 'certifications' in obj._prefetched_objects_cache:
             return len(obj.certifications.all())
         return obj.certifications.count()
 
+    @extend_schema_field(int)
     def get_unreadMessagesCount(self, obj):
         unread_map = self.context.get('unread_counts')
         if unread_map is not None:
@@ -552,6 +662,7 @@ class CitizenDirectorySerializer(serializers.ModelSerializer):
             return 0
         return CitizenMessage.objects.filter(sender=obj, recipient=character, is_read=False).count()
 
+    @extend_schema_field(bool)
     def get_isMe(self, obj):
         character = self.context.get('character')
         return bool(character and obj.id == character.id)
@@ -568,11 +679,13 @@ class CitizenMessageSerializer(serializers.ModelSerializer):
     isRead = serializers.BooleanField(source='is_read')
     createdAt = serializers.DateTimeField(source='created_at', format="%d/%m/%Y %H:%M")
     isFromMe = serializers.SerializerMethodField()
+    senderIsSimulated = serializers.SerializerMethodField()
 
     class Meta:
         model = CitizenMessage
         fields = [
             'id',
+            'senderIsSimulated',
             'senderId',
             'senderName',
             'senderAvatar',
@@ -585,9 +698,11 @@ class CitizenMessageSerializer(serializers.ModelSerializer):
             'isFromMe',
         ]
 
+    @extend_schema_field(bool)
     def get_isFromMe(self, obj):
         character = self.context.get('character')
         return bool(character and obj.sender_id == character.id)
 
-
-
+    @extend_schema_field(bool)
+    def get_senderIsSimulated(self, obj):
+        return obj.sender.is_simulated

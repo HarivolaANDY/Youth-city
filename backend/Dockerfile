@@ -37,7 +37,7 @@ EXPOSE 8000
 
 # Healthcheck périodique via la bibliothèque standard Python
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/game/state/', timeout=3)" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/', timeout=3)" || exit 1
 
 # Démarrage sécurisé : migrations automatiques et serveur WSGI de production Gunicorn
 CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py seed_game_data && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --threads 2 --timeout 60 --access-logfile - --error-logfile -"]

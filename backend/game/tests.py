@@ -1,26 +1,31 @@
-from django.test import TestCase
 from django.core.management import call_command
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 from rest_framework import status
 from game.models import (
     Character,
-    Property,
-    Job,
     Course,
     Transaction,
     Hackathon,
     StartupProject,
-    ModerationReport,
-    FreelanceGig,
     FreelanceContract,
 )
 
 class YouthCityBackendAPITests(APITestCase):
     def setUp(self):
-        # Run seed command to populate baseline data
-        call_command('seed_game_data')
-        self.character = Character.objects.first()
+        # Seed du catalogue + citoyen de démonstration, rattaché à un vrai compte authentifié :
+        # l'API n'a plus de personnage partagé pour les visiteurs anonymes.
+        call_command('seed_game_data', '--demo-citizen')
+        self.user = User.objects.create_user(username='player_one', password='SecurePassword2026!')
+        self.character = Character.objects.get(name='Emmanuel')
+        self.character.user = self.user
+        self.character.onboarding_completed = True
+        self.character.birth_year = 1995
+        self.character.save()
+        self.client.force_authenticate(user=self.user)
+
+    def as_anonymous(self):
+        self.client.force_authenticate(user=None)
 
     def test_01_get_game_state(self):
         """Tests that game state returns properly formatted citizen, day, time slot, and transactions."""
@@ -59,19 +64,104 @@ class YouthCityBackendAPITests(APITestCase):
         self.character.refresh_from_db()
         self.assertEqual(self.character.current_housing.key, 'housing-room')
 
-    def test_05_list_and_complete_course(self):
-        """Tests campus course catalog and course module validation."""
+    def test_05_list_enroll_and_complete_course(self):
+        """Catalogue, inscription payante côté serveur, progression par module, récompense unique."""
         list_res = self.client.get('/api/campus/courses/')
         self.assertEqual(list_res.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(len(list_res.json()), 1)
 
-        complete_res = self.client.post('/api/campus/courses/course-web-dev/complete/')
-        self.assertEqual(complete_res.status_code, status.HTTP_200_OK)
+        course = Course.objects.get(key='course-web-dev')
+        total_modules = len(course.modules)
+        self.assertGreaterEqual(total_modules, 1)
+
+        # Sans inscription : pas de quiz, et surtout aucun endpoint de complétion directe
+        no_enroll = self.client.post(
+            '/api/campus/courses/course-web-dev/validate-quiz/', {'moduleIndex': 0, 'answerIndex': 0}, format='json'
+        )
+        self.assertEqual(no_enroll.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.client.post('/api/campus/courses/course-web-dev/complete/').status_code, status.HTTP_404_NOT_FOUND)
+
+        # Inscription : les frais sont réellement débités et tracés
+        money_before = self.character.money
+        enroll = self.client.post('/api/campus/courses/course-web-dev/enroll/')
+        self.assertEqual(enroll.status_code, status.HTTP_201_CREATED)
+        self.character.refresh_from_db()
+        self.assertEqual(self.character.money, money_before - course.cost)
+        tx = Transaction.objects.filter(character=self.character, category='Éducation').latest('id')
+        self.assertEqual(tx.amount, -course.cost)
+        self.assertEqual(tx.balance_before, money_before)
+        self.assertEqual(tx.balance_after, money_before - course.cost)
+
+        # Ré-inscription : idempotente et gratuite
+        again = self.client.post('/api/campus/courses/course-web-dev/enroll/')
+        self.assertEqual(again.status_code, status.HTTP_200_OK)
+        self.assertTrue(again.json()['alreadyEnrolled'])
+        self.character.refresh_from_db()
+        self.assertEqual(self.character.money, money_before - course.cost)
+
+        # Les modules se valident dans l'ordre : sauter au dernier est refusé
+        if total_modules > 1:
+            skip = self.client.post(
+                '/api/campus/courses/course-web-dev/validate-quiz/',
+                {'moduleIndex': total_modules - 1, 'answerIndex': course.modules[-1]['quiz']['correctIndex']},
+                format='json',
+            )
+            self.assertEqual(skip.status_code, status.HTTP_400_BAD_REQUEST)
+
+        xp_before = self.character.xp
+        level_before = self.character.level
+        last = None
+        for idx, module in enumerate(course.modules):
+            last = self.client.post(
+                '/api/campus/courses/course-web-dev/validate-quiz/',
+                {'moduleIndex': idx, 'answerIndex': module['quiz']['correctIndex']},
+                format='json',
+            )
+            self.assertEqual(last.status_code, status.HTTP_200_OK)
+            self.assertTrue(last.json()['isCorrect'])
+        self.assertTrue(last.json()['isCourseCompleted'])
         self.character.refresh_from_db()
         self.assertIn('course-web-dev', self.character.completed_courses)
+        xp_after_completion = (self.character.level, self.character.xp)
+        self.assertNotEqual((level_before, xp_before), xp_after_completion)
+
+        # Rejouer le dernier quiz ne rapporte plus rien (pas d'XP ni de compétences en boucle)
+        skills_before = dict(self.character.skills.values_list('skill__key', 'level_percent'))
+        replay = self.client.post(
+            '/api/campus/courses/course-web-dev/validate-quiz/',
+            {'moduleIndex': total_modules - 1, 'answerIndex': course.modules[-1]['quiz']['correctIndex']},
+            format='json',
+        )
+        self.assertEqual(replay.status_code, status.HTTP_200_OK)
+        self.assertFalse(replay.json()['isCourseCompleted'])
+        self.assertEqual(replay.json()['xpAwarded'], 0)
+        self.character.refresh_from_db()
+        self.assertEqual((self.character.level, self.character.xp), xp_after_completion)
+        self.assertEqual(dict(self.character.skills.values_list('skill__key', 'level_percent')), skills_before)
+
+    def test_05c_enrollment_requires_funds(self):
+        """Une inscription sans fonds suffisants est refusée et ne crée rien."""
+        self.character.money = 1000
+        self.character.save()
+        res = self.client.post('/api/campus/courses/course-web-dev/enroll/')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(self.character.enrollments.exists())
+
+    def test_05d_quiz_answers_not_exposed_by_catalog(self):
+        """Le catalogue public ne livre ni les bonnes réponses des quiz ni le barème des entretiens."""
+        courses = self.client.get('/api/campus/courses/').json()
+        for course in courses:
+            for module in course.get('modules', []):
+                self.assertNotIn('correctIndex', module.get('quiz', {}))
+                self.assertNotIn('explanation', module.get('quiz', {}))
+        jobs = self.client.get('/api/business/jobs/').json()
+        for job in jobs:
+            for answer in job.get('sampleAnswers', []):
+                self.assertNotIn('score', answer)
 
     def test_05b_course_interactive_quiz_pipeline(self):
         """Tests Section 23 interactive pedagogical pipeline quiz validation and certification unlock."""
+        self.assertEqual(self.client.post('/api/campus/courses/course-finance-budget/enroll/').status_code, status.HTTP_201_CREATED)
         # Test wrong answer
         wrong_res = self.client.post(
             '/api/campus/courses/course-finance-budget/validate-quiz/',
@@ -100,11 +190,34 @@ class YouthCityBackendAPITests(APITestCase):
         self.assertTrue(self.character.certifications.filter(title="Passeport Épargne & Rigueur Budgétaire").exists())
 
     def test_06_hire_and_work_shift(self):
-        """Tests job hiring and work shift daily wage in MGA."""
-        hire_res = self.client.post('/api/business/jobs/job-dev-junior/hire/')
-        self.assertEqual(hire_res.status_code, status.HTTP_200_OK)
+        """L'embauche passe par l'entretien ; le salaire du shift est crédité et tracé."""
+        self.character.skills.filter(skill__key__in=['javascript', 'react', 'git']).update(level_percent=70)
+
+        # Signer sans entretien réussi : refusé
+        refused = self.client.post('/api/business/jobs/job-dev-junior/hire/')
+        self.assertEqual(refused.status_code, status.HTTP_400_BAD_REQUEST)
+        self.character.refresh_from_db()
+        self.assertIsNone(self.character.current_job)
+
+        # Entretien réussi (réponse 0 = 95/100), puis XP unique
+        xp_before = (self.character.level, self.character.xp)
+        interview = self.client.post('/api/business/jobs/job-dev-junior/interview/', {'answerIndex': 0})
+        self.assertEqual(interview.status_code, status.HTTP_200_OK)
+        self.assertTrue(interview.json()['hired'])
         self.character.refresh_from_db()
         self.assertEqual(self.character.current_job.key, 'job-dev-junior')
+        self.assertIn('job-dev-junior', self.character.passed_interviews)
+        xp_after = (self.character.level, self.character.xp)
+        self.assertNotEqual(xp_before, xp_after)
+
+        # Déjà en poste : ni nouvel entretien ni nouvelle signature (pas d'XP en boucle)
+        self.assertEqual(self.client.post('/api/business/jobs/job-dev-junior/hire/').status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            self.client.post('/api/business/jobs/job-dev-junior/interview/', {'answerIndex': 0}).status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+        self.character.refresh_from_db()
+        self.assertEqual((self.character.level, self.character.xp), xp_after)
 
         initial_money = self.character.money
         shift_res = self.client.post('/api/business/work_shift/')
@@ -112,6 +225,9 @@ class YouthCityBackendAPITests(APITestCase):
         self.character.refresh_from_db()
         expected_daily_wage = round(450000 / 20)
         self.assertEqual(self.character.money, initial_money + expected_daily_wage)
+        tx = Transaction.objects.filter(character=self.character, category='Salaire').latest('id')
+        self.assertEqual(tx.balance_before, initial_money)
+        self.assertEqual(tx.balance_after, initial_money + expected_daily_wage)
 
     def test_07_finance_savings_deposit_and_withdraw(self):
         """Tests depositing and withdrawing savings in MGA."""
@@ -128,7 +244,26 @@ class YouthCityBackendAPITests(APITestCase):
         self.assertEqual(self.character.money, 395000)
 
     def test_08_resolve_dilemma(self):
-        """Tests dilemma choice consequence execution."""
+        """Le dilemme résolu est celui déclenché par le serveur, et il ne se résout qu'une fois."""
+        # Aucun dilemme en cours : le client ne peut pas en choisir un à sa convenance
+        self.character.active_dilemma_key = ''
+        self.character.save()
+        none_res = self.client.post('/api/dilemmas/resolve/', {
+            'dilemma_key': 'dilemma-broken-laptop', 'option_id': 'opt-repair',
+        })
+        self.assertEqual(none_res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.character.refresh_from_db()
+        self.assertEqual(self.character.money, 425000)
+
+        self.character.active_dilemma_key = 'dilemma-broken-laptop'
+        self.character.save()
+
+        # Une clé différente de celle en cours est refusée
+        wrong_key = self.client.post('/api/dilemmas/resolve/', {
+            'dilemma_key': 'another-dilemma', 'option_id': 'opt-repair',
+        })
+        self.assertEqual(wrong_key.status_code, status.HTTP_400_BAD_REQUEST)
+
         res = self.client.post('/api/dilemmas/resolve/', {
             'dilemma_key': 'dilemma-broken-laptop',
             'option_id': 'opt-repair',
@@ -137,13 +272,24 @@ class YouthCityBackendAPITests(APITestCase):
         self.character.refresh_from_db()
         self.assertEqual(self.character.money, 425000 - 90000)
 
+        # Rejouer la même résolution est impossible
+        replay = self.client.post('/api/dilemmas/resolve/', {
+            'dilemma_key': 'dilemma-broken-laptop', 'option_id': 'opt-repair',
+        })
+        self.assertEqual(replay.status_code, status.HTTP_400_BAD_REQUEST)
+        self.character.refresh_from_db()
+        self.assertEqual(self.character.money, 425000 - 90000)
+
     def test_09_auth_registration_and_login_flow(self):
         """Tests user registration, JWT generation, login, and profile retrieval."""
+        self.as_anonymous()
         reg_payload = {
             'username': 'harivola_test',
             'email': 'harivola@test.local',
             'password': 'SecurePassword2026!',
             'citizenName': 'Harivola Citoyen',
+            'birthYear': 1995,
+            'acceptTerms': True,
         }
         reg_res = self.client.post('/api/auth/register/', reg_payload)
         self.assertEqual(reg_res.status_code, status.HTTP_201_CREATED)
@@ -178,6 +324,7 @@ class YouthCityBackendAPITests(APITestCase):
 
     def test_10_auth_throttling_and_security_controls(self):
         """Verifies generic error responses and brute-force throttling on login."""
+        self.as_anonymous()
         # 1. Non-existent account returns generic 401
         res = self.client.post('/api/auth/login/', {
             'username': 'ghost_user',
@@ -202,11 +349,14 @@ class YouthCityBackendAPITests(APITestCase):
 
     def test_11_character_creation_and_customization(self):
         """Verifies character onboarding and customization with archetype and vocation (§14, §47)."""
+        self.as_anonymous()
         # Register user
         reg_res = self.client.post('/api/auth/register/', {
             'username': 'aina_maker',
             'password': 'SecurePassword2026!',
             'citizenName': 'Initial Name',
+            'birthYear': 1995,
+            'acceptTerms': True,
         })
         self.assertEqual(reg_res.status_code, status.HTTP_201_CREATED)
         access_token = reg_res.json()['tokens']['access']
@@ -244,6 +394,16 @@ class YouthCityBackendAPITests(APITestCase):
         self.assertIn("épargne", citizen['currentObjective']['title'].lower())
         self.assertEqual(len(data['transactions']), 1)
         self.assertEqual(data['transactions'][0]['category'], 'Bienvenue')
+        self.assertEqual(data['transactions'][0]['balanceBefore'], 0)
+        self.assertEqual(data['transactions'][0]['balanceAfter'], 180000)
+
+        # 3. La création n'est pas rejouable (sinon : dotation de départ gratuite à volonté)
+        again = self.client.post(
+            '/api/character/customize/',
+            {'name': 'Autre Nom', 'archetype': 'resourceful_self_taught', 'vocation': 'tech'},
+            HTTP_AUTHORIZATION=f'Bearer {access_token}'
+        )
+        self.assertEqual(again.status_code, status.HTTP_409_CONFLICT)
 
     def test_12_market_items_and_purchase_flow(self):
         """Verifies market catalog listing, consumable nourishment, and equipment inventory flow (§11, §19)."""
@@ -450,6 +610,7 @@ class YouthCityBackendAPITests(APITestCase):
     def test_16_admin_backoffice_and_moderation_flow(self):
         """Verifies Admin Back-Office, Moderation queue, Impact Analytics and Stipend Grant (§43, §45, §46)."""
         # 1. Broken Access Control Defense: Unauthenticated access MUST be blocked (P0)
+        self.as_anonymous()
         res_anon_overview = self.client.get('/api/admin/overview/')
         self.assertIn(res_anon_overview.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
 
@@ -565,7 +726,6 @@ class YouthCityBackendAPITests(APITestCase):
     def test_18_third_party_content_sanitization_and_indirect_injection(self):
         """Verifies third-party user content sanitization and indirect prompt injection defenses (P4)."""
         from game.sanitizers import (
-            strip_control_and_invisible_chars,
             sanitize_text,
             detect_indirect_prompt_injection,
         )
@@ -642,7 +802,6 @@ class YouthCityBackendAPITests(APITestCase):
         self.assertGreater(cycle['rentAmount'], 0)
 
         # 2. Advance time using advance_day to reach cycle settlement (Day 31)
-        initial_money = self.character.money
         initial_savings = self.character.savings
         housing_rent = self.character.current_housing.rent_price if self.character.current_housing else 70000
 
@@ -672,7 +831,6 @@ class YouthCityBackendAPITests(APITestCase):
         self.assertEqual(summary2['status'], 'covered_by_savings')
         self.character.refresh_from_db()
         self.assertEqual(self.character.money, 0)
-        shortfall = housing_rent - 20000
         # Savings decreased by shortfall then gained interest
         self.assertTrue(self.character.savings < 150000)
 
@@ -690,47 +848,62 @@ class YouthCityBackendAPITests(APITestCase):
         self.character.refresh_from_db()
         self.assertEqual(self.character.wellbeing, max(10, initial_wellbeing - 20))
 
-    def test_20_career_passport_and_cryptographic_verification(self):
-        """Vérifie le Career Passport infalsifiable et la vérification cryptographique (§34, §35)."""
+    def test_20_career_passport_is_real_and_publication_is_opt_in(self):
+        """Le passeport ne contient que des faits enregistrés ; il n'est public que sur demande du joueur (§22)."""
         res = self.client.get('/api/passport/')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
-        data = res.json()
-        self.assertTrue(data.get('success'))
-        passport = data.get('passport')
-        self.assertIsNotNone(passport)
+        passport = res.json()['passport']
 
-        # 1. Vérification des attributs clés
-        self.assertEqual(passport['citizenId'], '#YC-84920')
+        # 1. Contenu réel uniquement (plus de projets, certifications ou statistiques de remplissage)
         self.assertEqual(passport['citizenName'], self.character.name)
-        self.assertTrue(passport['verificationCode'].startswith('YC-VERIF-'))
-        self.assertTrue(passport['cryptographicSignature'].startswith('SHA256:'))
-        self.assertTrue(passport['aptitudeScore'] > 0)
-        self.assertGreaterEqual(len(passport['skills']), 1)
-        self.assertGreaterEqual(len(passport['certifications']), 1)
-        self.assertGreaterEqual(len(passport['projects']), 1)
-        self.assertGreaterEqual(len(passport['badges']), 5)
+        self.assertTrue(passport['cryptographicSignature'].startswith('HMAC-SHA256:'))
+        self.assertEqual(len(passport['certifications']), self.character.certifications.count())
+        titles = ' '.join(p['title'] for p in passport['projects'])
+        self.assertNotIn('PrediStock', titles)
+        self.assertNotIn('Portfolio interactif', titles)
+        self.assertEqual(passport['stats']['certificationsCount'], self.character.certifications.count())
+        self.assertEqual(passport['stats']['challengesResolved'], self.character.completed_challenges)
+        self.assertGreaterEqual(len(passport['badges']), 5)  # catalogue complet côté propriétaire
+        self.assertFalse(passport['isPublic'])
+        self.assertEqual(passport['shareCode'], '')
 
-        # 2. Vérification par code public
-        code = passport['verificationCode']
-        res_verify = self.client.get(f'/api/passport/verify/{code}/')
-        self.assertEqual(res_verify.status_code, status.HTTP_200_OK)
-        verify_data = res_verify.json()
-        self.assertTrue(verify_data.get('success'))
-        self.assertTrue(verify_data.get('verified'))
-        self.assertEqual(verify_data.get('verificationCode'), code)
-        self.assertEqual(verify_data['passport']['citizenName'], self.character.name)
+        # 2. Non publié : introuvable, y compris par identifiant numérique ou par l'ancien format d'identifiant
+        for guess in (str(self.character.id), 'YC-84920', f'YC-VERIF-{self.character.id}', 'INVALID-FORGED-CODE-9999'):
+            self.as_anonymous()
+            res_guess = self.client.get(f'/api/passport/verify/{guess}/')
+            self.assertEqual(res_guess.status_code, status.HTTP_404_NOT_FOUND, guess)
+            self.assertFalse(res_guess.json().get('success'))
+        self.client.force_authenticate(user=self.user)
 
-        # 3. Vérification par identifiant citoyen
-        res_verify_id = self.client.get('/api/passport/verify/YC-84920/')
-        self.assertEqual(res_verify_id.status_code, status.HTTP_200_OK)
-        self.assertTrue(res_verify_id.json().get('verified'))
+        # 3. Publication avec une section masquée
+        bad = self.client.post('/api/passport/publication/', {'public': True, 'sections': {'unknown': True}}, format='json')
+        self.assertEqual(bad.status_code, status.HTTP_400_BAD_REQUEST)
+        pub = self.client.post('/api/passport/publication/', {'public': True, 'sections': {'projects': False}}, format='json')
+        self.assertEqual(pub.status_code, status.HTTP_200_OK)
+        code = pub.json()['passport']['shareCode']
+        self.assertTrue(code.startswith('YC-'))
+        self.assertGreaterEqual(len(code), 12)
 
-        # 4. Vérification avec code inexistant ou forgé (fail-closed, doit renvoyer 404)
-        res_invalid = self.client.get('/api/passport/verify/INVALID-FORGED-CODE-9999/')
-        self.assertEqual(res_invalid.status_code, status.HTTP_404_NOT_FOUND)
-        invalid_data = res_invalid.json()
-        self.assertFalse(invalid_data.get('success'))
-        self.assertIn('error', invalid_data)
+        # 4. Vérification publique : sections autorisées seulement, aucune donnée personnelle superflue
+        self.as_anonymous()
+        verify = self.client.get(f'/api/passport/verify/{code}/')
+        self.assertEqual(verify.status_code, status.HTTP_200_OK)
+        data = verify.json()
+        self.assertTrue(data['verified'])
+        public = data['passport']
+        self.assertEqual(public['citizenName'], self.character.name)
+        self.assertEqual(public['projects'], [])
+        self.assertIn('projects', public['hiddenSections'])
+        self.assertEqual(public['citizenId'], '')
+        self.assertEqual(public['avatarSeed'], '')
+        self.assertEqual(public['shareCode'], '')
+        self.assertTrue(all(b['unlocked'] for b in public['badges']))
+
+        # 5. Retrait : le lien cesse de fonctionner immédiatement
+        self.client.force_authenticate(user=self.user)
+        self.assertEqual(self.client.post('/api/passport/publication/', {'public': False}, format='json').status_code, status.HTTP_200_OK)
+        self.as_anonymous()
+        self.assertEqual(self.client.get(f'/api/passport/verify/{code}/').status_code, status.HTTP_404_NOT_FOUND)
 
     def test_21_dynamic_events_and_contextual_dilemmas(self):
         """Vérifie le moteur d'événements dynamiques et d'aléas contextuels (§26, §48, §53)."""
@@ -926,12 +1099,134 @@ class YouthCityBackendAPITests(APITestCase):
         )
         self.assertEqual(self_res.status_code, status.HTTP_400_BAD_REQUEST)
 
+    # ------------------------------------------------------------------
+    # Sécurité et équité de la boucle de jeu (revue d'écart au cahier des charges)
+    # ------------------------------------------------------------------
 
+    def test_26_anonymous_visitors_have_no_character(self):
+        """Aucun personnage partagé : les routes liées à un joueur exigent un compte ; le catalogue reste public."""
+        self.as_anonymous()
+        money_before = Character.objects.get(id=self.character.id).money
 
+        protected = [
+            ('get', '/api/game/state/'), ('get', '/api/finance/transactions/'), ('get', '/api/passport/'),
+            ('get', '/api/hub/directory/'), ('get', '/api/market/items/'), ('get', '/api/hub/guilds/'),
+            ('post', '/api/game/sleep/'), ('post', '/api/game/advance_day/'), ('post', '/api/game/reset/'),
+            ('post', '/api/finance/deposit/'), ('post', '/api/market/buy/'), ('post', '/api/nova/chat/'),
+            ('post', '/api/business/work_shift/'), ('post', '/api/campus/courses/course-web-dev/enroll/'),
+            ('post', '/api/character/customize/'), ('post', '/api/dilemmas/resolve/'),
+        ]
+        for method, url in protected:
+            res = getattr(self.client, method)(url, {}, format='json') if method == 'post' else self.client.get(url)
+            self.assertIn(res.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN], f"{method.upper()} {url}")
 
+        for url in ['/api/campus/courses/', '/api/business/jobs/', '/api/residential/properties/']:
+            self.assertEqual(self.client.get(url).status_code, status.HTTP_200_OK, url)
 
+        self.assertEqual(Character.objects.get(id=self.character.id).money, money_before)
 
+    def test_27_sleeping_consumes_the_day(self):
+        """Dormir fait passer la nuit : plus d'énergie gratuite en boucle, le temps (et le loyer) avancent."""
+        self.character.energy = 10
+        self.character.day = 5
+        self.character.save()
 
+        first = self.client.post('/api/game/sleep/')
+        self.assertEqual(first.status_code, status.HTTP_200_OK)
+        self.assertEqual(first.json()['day'], 6)
+        second = self.client.post('/api/game/sleep/')
+        self.assertEqual(second.json()['day'], 7)
+        self.character.refresh_from_db()
+        self.assertEqual(self.character.day, 7)
+        self.assertLessEqual(self.character.energy, 100)
 
+    def test_28_startup_revenue_has_a_monthly_cooldown(self):
+        """Les revenus d'une startup ne s'encaissent qu'une fois par mois de jeu."""
+        project = StartupProject.objects.create(
+            character=self.character, key='startup-cooldown', name='Cooldown Inc', sector='tech',
+            pitch='Projet de test', stage='launched', monthly_revenue=100000, treasury=0,
+        )
+        self.character.energy = 100
+        self.character.day = 10
+        self.character.save()
+        money_before = self.character.money
 
+        first = self.client.post(f'/api/startup/{project.key}/action/', {'actionType': 'collect_revenue'}, format='json')
+        self.assertEqual(first.status_code, status.HTTP_200_OK)
+        self.character.refresh_from_db()
+        self.assertEqual(self.character.money, money_before + 50000)
 
+        second = self.client.post(f'/api/startup/{project.key}/action/', {'actionType': 'collect_revenue'}, format='json')
+        self.assertEqual(second.status_code, status.HTTP_400_BAD_REQUEST)
+        self.character.refresh_from_db()
+        self.assertEqual(self.character.money, money_before + 50000)
+
+        self.character.day = 41
+        self.character.save()
+        third = self.client.post(f'/api/startup/{project.key}/action/', {'actionType': 'collect_revenue'}, format='json')
+        self.assertEqual(third.status_code, status.HTTP_200_OK)
+
+    def test_29_transactions_carry_coherent_balances(self):
+        """Chaque transaction enregistre le solde courant avant/après (audit, §29)."""
+        self.client.post('/api/finance/deposit/', {'amount': 40000})
+        self.client.post('/api/market/buy/', {'itemKey': 'meal-street'})
+        self.client.post('/api/finance/withdraw/', {'amount': 10000})
+        txs = list(Transaction.objects.filter(character=self.character).order_by('id'))
+        recent = txs[-3:]
+        for tx in recent:
+            self.assertIsNotNone(tx.balance_before, tx.label)
+            self.assertIsNotNone(tx.balance_after, tx.label)
+        # Chaînage : le solde « après » d'une opération est le solde « avant » de la suivante
+        self.assertEqual(recent[0].balance_after, recent[1].balance_before)
+        self.assertEqual(recent[1].balance_after, recent[2].balance_before)
+        self.character.refresh_from_db()
+        self.assertEqual(recent[-1].balance_after, self.character.money)
+
+    def test_30_badges_are_awarded_from_real_actions(self):
+        """Les badges viennent d'actions réelles, sont persistés et exposés sur le citoyen et le passeport."""
+        self.character.skills.filter(skill__key__in=['javascript', 'react', 'git']).update(level_percent=70)
+        self.assertEqual(self.character.badges.count(), 0)
+
+        self.client.post('/api/business/jobs/job-dev-junior/interview/', {'answerIndex': 0})
+        self.assertTrue(self.character.badges.filter(badge__key='first_job').exists())
+
+        self.client.post('/api/hub/guilds/guild-devs/join/')
+        self.assertTrue(self.character.badges.filter(badge__key='community_builder').exists())
+
+        state = self.client.get('/api/game/state/').json()
+        keys = {b['key'] for b in state['citizen']['badges']}
+        self.assertTrue({'first_job', 'community_builder'} <= keys)
+
+        passport = self.client.get('/api/passport/').json()['passport']
+        unlocked = {b['key'] for b in passport['badges'] if b['unlocked']}
+        self.assertEqual(unlocked, keys)
+        locked_dates = [b['date'] for b in passport['badges'] if not b['unlocked']]
+        self.assertTrue(all(d is None for d in locked_dates))
+
+    def test_31_reset_game_is_scoped_and_demo_preset_is_restricted(self):
+        """« Nouvelle partie » ne touche que le compte appelant ; le preset démo n'est pas un cheat pour les joueurs."""
+        other = User.objects.create_user(username='other_player', password='SecurePassword2026!')
+        other_char = Character.objects.create(user=other, name='Other', money=777)
+
+        demo = self.client.post('/api/game/reset/', {'preset': 'demo'}, format='json')
+        self.assertEqual(demo.status_code, status.HTTP_403_FORBIDDEN)
+
+        new = self.client.post('/api/game/reset/', {'preset': 'new'}, format='json')
+        self.assertEqual(new.status_code, status.HTTP_200_OK)
+        self.character.refresh_from_db()
+        self.assertEqual(self.character.money, 250000)
+        self.assertEqual(self.character.day, 1)
+        self.assertFalse(self.character.onboarding_completed)
+        other_char.refresh_from_db()
+        self.assertEqual(other_char.money, 777)
+
+    def test_32_switching_guilds_gives_no_xp(self):
+        """L'XP de bienvenue n'est accordée qu'à la première adhésion (pas de farm en changeant de guilde)."""
+        first = self.client.post('/api/hub/guilds/guild-devs/join/')
+        self.assertEqual(first.status_code, status.HTTP_200_OK)
+        self.character.refresh_from_db()
+        snapshot = (self.character.level, self.character.xp)
+        for key in ['guild-designers', 'guild-devs', 'guild-designers']:
+            self.assertEqual(self.client.post(f'/api/hub/guilds/{key}/join/').status_code, status.HTTP_200_OK)
+        self.character.refresh_from_db()
+        self.assertEqual((self.character.level, self.character.xp), snapshot)
