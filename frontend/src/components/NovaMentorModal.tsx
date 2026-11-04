@@ -5,7 +5,7 @@ import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { IconChip } from './ui/IconChip';
-import { controlClass } from './ui/control';
+import { controlClass } from '../lib/control';
 import { formatNumber } from '../lib/format';
 import { sanitizeUserInputForAgent, MAX_USER_INPUT_LENGTH } from '../lib/guidance';
 import { api } from '../services/api';

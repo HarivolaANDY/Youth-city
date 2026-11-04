@@ -22,7 +22,7 @@ import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { Badge, type BadgeTone } from './ui/Badge';
 import { IconChip } from './ui/IconChip';
-import { controlClass } from './ui/control';
+import { controlClass } from '../lib/control';
 import { formatNumber } from '../lib/format';
 import type { ModerationReason, ModerationStatus, ModerationAction } from '../types/game';
 

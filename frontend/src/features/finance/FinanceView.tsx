@@ -16,7 +16,7 @@ import { Panel } from '../../components/ui/Panel';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { IconChip } from '../../components/ui/IconChip';
-import { controlClass } from '../../components/ui/control';
+import { controlClass } from '../../lib/control';
 import { formatNumber } from '../../lib/format';
 
 const BUDGET_RULE = [
