@@ -1,0 +1,7 @@
+# Normalise les fins de ligne : LF dans le dépôt, quel que soit le système du développeur.
+* text=auto
+*.sh text eol=lf
+*.sqlite3 binary
+*.png binary
+*.jpg binary
+*.ico binary
