@@ -144,7 +144,7 @@ Dans le fichier `package.json`, les commandes suivantes sont déclarées :
   Ainsi, le frontend communique avec l'API Django sans problème de CORS en mode dev, en interrogeant simplement les chemins relatifs `/api/...`.
 
 - **Gestion des Tokens JWT (`src/services/api.ts`)** :  
-  Le client `api.ts` stocke le jeton d'accès en mémoire ou dans le stockage local, l'injecte dans l'en-tête `Authorization: Bearer <token>`, et intercepte les réponses `401 Unauthorized` pour tenter un rafraîchissement transparent via `/api/auth/token/refresh/`.
+  Le client `api.ts` stocke le jeton d'accès en mémoire ou dans le stockage local, l'injecte dans l'en-tête `Authorization: Bearer <token>`, et intercepte les réponses `401 Unauthorized` pour tenter un rafraîchissement transparent via `/api/v1/auth/token/refresh/`. L'URL de base de l'API vaut `/api/v1` par défaut (surchargeable avec `VITE_API_URL`).
 
 ---
 

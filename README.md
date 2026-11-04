@@ -12,6 +12,7 @@
 - [3. Architecture & Technologies](#3-architecture--technologies)
 - [4. Prérequis Système](#4-prérequis-système)
 - [5. Guide de Démarrage en Développement Local](#5-guide-de-démarrage-en-développement-local)
+  - [0. Cloner le dépôt](#0-cloner-le-dépôt)
   - [A. Démarrage du Backend (Django DRF)](#a-démarrage-du-backend-django-drf)
   - [B. Démarrage du Frontend (React + Vite)](#b-démarrage-du-frontend-react--vite)
 - [6. Démarrage avec Docker Compose (Environnement Complet)](#6-démarrage-avec-docker-compose-environnement-complet)
@@ -63,7 +64,7 @@ La ville est organisée en **7 quartiers spécialisés**, interconnectés à un 
 - **Cycle Nycthéméral & Énergie** : Gestion des créneaux horaires de la journée (*Matin*, *Après-midi*, *Soirée*, *Nuit*), avance du temps, cycle de sommeil et gestion de la fatigue.
 - **Dilemmes & Événements Aléatoires** : Choix éthiques, opportunités impromptues et imprévus financiers avec impact direct sur la réputation, l'énergie et le portefeuille.
 - **Mentor IA NOVA** : Conseiller virtuel capable de suggérer la prochaine action stratégique la plus pertinente et de dialoguer en temps réel avec le joueur.
-- **Career Passport** : Passeport citoyen exportable et vérifiable via un code unique (`/api/passport/verify/<code_unique>/`).
+- **Career Passport** : Passeport citoyen exportable et vérifiable via un code unique (`/api/v1/passport/verify/<code_unique>/`).
 - **Back-Office d'Administration & Modération** : Supervision des métriques d'impact, octroi de bourses/stipends d'urgence, et traitement des signalements citoyens.
 
 ---
@@ -115,6 +116,14 @@ Assurez-vous d'avoir installé sur votre machine :
 
 Pour exécuter le projet en local avec rechargement à chaud (Hot Module Reload) pour le frontend et le backend :
 
+### 0. Cloner le dépôt
+
+```bash
+git clone <url-du-depot> "Youth City"
+cd "Youth City"
+```
+> Remplacez `<url-du-depot>` par l'URL de votre dépôt Git. Les commandes suivantes partent de ce dossier racine (le clonage vaut aussi pour la section Docker).
+
 ### A. Démarrage du Backend (Django DRF)
 
 1. **Ouvrir un terminal et se placer dans le répertoire du backend :**
@@ -141,11 +150,11 @@ Pour exécuter le projet en local avec rechargement à chaud (Hot Module Reload)
    ```
 
 4. **Configurer l'environnement :**
-   Créez un fichier `.env` dans le dossier `backend` (ou copiez `.env.example`) :
+   Copiez le modèle d'environnement (`copy .env.example .env` sous Windows cmd, `Copy-Item .env.example .env` sous PowerShell) :
    ```bash
    cp .env.example .env
    ```
-   *En développement, les valeurs par défaut de `.env.example` conviennent parfaitement (`DJANGO_DEBUG=True`).*
+   *En développement, les valeurs de `backend/.env.example` fonctionnent telles quelles (`DJANGO_DEBUG=True` et une clé de développement). Ne les réutilisez jamais en production.*
 
 5. **Appliquer les migrations de base de données :**
    ```bash
@@ -155,9 +164,11 @@ Pour exécuter le projet en local avec rechargement à chaud (Hot Module Reload)
 6. **Peupler la base de données avec les données initiales du jeu (Seed Data) :**
    Cette commande crée le catalogue initial (formations, emplois, logements, articles du marché, hackathons, bourses et le personnage de démonstration *Emmanuel*) :
    ```bash
-   python manage.py seed_game_data
+   python manage.py seed_game_data --demo-citizen
    ```
-   > ℹ️ **Compte d'administration automatique** : `seed_game_data` configure automatiquement un compte superutilisateur si aucun n'existe (`admin` / `admin@youthcity.mg` avec le mot de passe défini dans `DJANGO_ADMIN_PASSWORD` ou `YouthCityAdmin2026!` par défaut).
+   > ℹ️ **Catalogue vs. données de démonstration** : `seed_game_data` crée toujours le catalogue (logements, compétences, formations, emplois, marché, dilemmes, guildes, hackathons, badges). L'option `--demo-citizen` ajoute en plus le citoyen de démonstration *Emmanuel* et ses données d'exemple : **à réserver au développement**. Sans cette option (cas de Docker et de la production), aucun personnage de démonstration n'est créé.
+   > 🔐 **Authentification obligatoire** : il n'y a plus de personnage partagé pour les visiteurs anonymes. Seuls les catalogues publics (formations, offres d'emploi, logements), l'inscription/connexion, la vérification publique d'un passeport et `/api/v1/health/` sont accessibles sans compte. Créez un compte depuis l'interface (ou via `/api/v1/auth/register/`) pour jouer.
+   > ℹ️ **Compte d'administration** : `seed_game_data` crée un superutilisateur (`admin` / `admin@youthcity.mg`) si aucun n'existe, avec le mot de passe de `DJANGO_ADMIN_PASSWORD`. En mode `DJANGO_DEBUG=True` seulement, un mot de passe de développement public (`YouthCityAdmin2026!`) est utilisé si la variable est absente ; **hors DEBUG, aucun administrateur n'est créé sans `DJANGO_ADMIN_PASSWORD`**.
 
 7. **(Optionnel) Créer un compte administrateur Django personnalisé :**
    ```bash
@@ -168,7 +179,8 @@ Pour exécuter le projet en local avec rechargement à chaud (Hot Module Reload)
    ```bash
    python manage.py runserver 8000
    ```
-   > 🚀 L'API Django est désormais accessible sur : **`http://localhost:8000/api/`**  
+   > 🚀 L'API Django est désormais accessible sur : **`http://localhost:8000/api/v1/`**  
+   > 📘 Documentation interactive de l'API (Swagger, en mode debug) : **`http://localhost:8000/api/v1/docs/`**  
    > L'interface d'administration Django est accessible sur : **`http://localhost:8000/admin/`**
 
 ---
@@ -201,21 +213,27 @@ Pour exécuter le projet en local avec rechargement à chaud (Hot Module Reload)
 Pour lancer la totalité de la stack (Frontend Nginx + Backend Gunicorn) dans des conteneurs isolés et sécurisés :
 
 1. **Prérequis de sécurité obligatoire :**
-   Le conteneur backend impose la présence de la variable `DJANGO_SECRET_KEY` (conformité OWASP Fail-Closed). Si `backend/.env` n'existe pas encore :
+   Docker Compose impose la présence de `DJANGO_SECRET_KEY` (conformité OWASP Fail-Closed). Cette variable est lue dans le fichier **`.env` à la racine du projet** (et non dans `backend/.env`). Depuis la racine :
    ```bash
-   cp backend/.env.example backend/.env
+   cp .env.example .env
    ```
-   *(Assurez-vous que `DJANGO_SECRET_KEY` contient une chaîne aléatoire de 32 caractères minimum).*
+   Générez ensuite une clé aléatoire :
+   ```bash
+   python -c "import secrets; print(secrets.token_urlsafe(48))"
+   ```
+   et collez-la dans `.env` : `DJANGO_SECRET_KEY=<la-cle-generee>` (32 caractères minimum). Sans clé valide, le démarrage échoue volontairement.
 
 2. **À la racine du projet, exécuter la commande de build et démarrage :**
    ```bash
    docker compose up --build
    ```
+   > ℹ️ Au démarrage, le conteneur backend exécute automatiquement `migrate` puis `seed_game_data` : inutile de les lancer à la main. Le compte `admin` est créé comme décrit en section 5 (pensez à définir `DJANGO_ADMIN_PASSWORD` dans `.env`).
 
 3. **Points d'accès :**
    - **Application Web complète** : `http://localhost:80`
-   - **API REST Backend** : `http://localhost:8000/api/`
-   - **État du jeu (Healthcheck)** : `http://localhost:8000/api/game/state/`
+   - **API REST Backend** : `http://localhost:8000/api/v1/`
+   - **Santé du service (Healthcheck, public)** : `http://localhost:8000/api/v1/health/`
+   - **Documentation Swagger** : désactivée par défaut en mode non-debug (voir `DJANGO_ENABLE_API_DOCS` ci-dessous)
 
 4. **Pour arrêter la stack :**
    ```bash
@@ -232,14 +250,32 @@ Le backend lit ses variables depuis `backend/.env` ou l'environnement système :
 | :--- | :--- | :--- | :--- |
 | `DJANGO_SECRET_KEY` | Clé secrète de cryptographie Django | Clé de dev interne | **Obligatoire (min. 32 car.)** |
 | `DJANGO_DEBUG` | Mode débogage Django | `True` | `False` |
+| `DJANGO_ENABLE_API_DOCS` | Expose le schéma OpenAPI et Swagger (`/api/v1/docs/`) hors mode debug | `False` (actif si `DJANGO_DEBUG=True`) | `False` (ou `True` en recette) |
 | `DJANGO_ALLOWED_HOSTS` | Hôtes autorisés (séparés par virgule) | `localhost,127.0.0.1,[::1]` | Domaines / IP de prod |
 | `CORS_ALLOWED_ORIGINS` | Origines HTTP autorisées pour le CORS | `http://localhost:5173` | Domaines frontend de prod |
-| `DJANGO_ADMIN_PASSWORD` | Mot de passe admin créé par `seed_game_data` | `YouthCityAdmin2026!` | Mot de passe fort personnalisé |
+| `DJANGO_ADMIN_PASSWORD` | Mot de passe admin créé par `seed_game_data` | `YouthCityAdmin2026!` (uniquement si `DJANGO_DEBUG=True`) | **Obligatoire** : sans elle, aucun administrateur n'est créé |
 | `DJANGO_NUM_PROXIES` | Nombre de proxys amont pour IP cliente (DRF) | `1` | `1` (ou selon infrastructure) |
 | `DJANGO_SECURE_SSL_REDIRECT` | Redirection automatique vers HTTPS | `False` | `True` |
 | `DJANGO_SESSION_COOKIE_SECURE` | Cookies de session en `Secure` | `False` | `True` |
 | `DJANGO_CSRF_COOKIE_SECURE` | Cookies CSRF en `Secure` | `False` | `True` |
 | `DJANGO_SECURE_HSTS_SECONDS` | Durée HSTS si SSL redirect actif | `31536000` | `31536000` (1 an) |
+
+---
+
+### Mentor IA NOVA (optionnel)
+
+Par défaut, NOVA répond avec des règles locales (gratuit, sans réseau). Pour brancher un modèle Claude :
+
+```bash
+cd backend
+pip install -r requirements-ai.txt
+```
+
+puis, côté serveur uniquement : `NOVA_AI_PROVIDER=anthropic`, `ANTHROPIC_API_KEY=...` et, si besoin, `NOVA_AI_MODEL` (par défaut `claude-opus-5-5` ; `claude-sonnet-5-5` ou `claude-haiku-5-5` réduisent le coût). En cas d'erreur, de refus ou d'absence de clé, NOVA retombe automatiquement sur les règles locales. L'IA ne produit que du texte et n'a aucune action sur le jeu ; les échanges sont limités à 20 par minute et 200 par jour et par compte.
+
+### Protection des mineurs et confidentialité
+
+L'inscription demande l'année de naissance et l'acceptation des conditions ; les moins de 18 ans déclarent l'accord de leur représentant légal. Mineurs et adultes ne se voient pas dans l'annuaire/classements et ne s'écrivent pas. Les seuils (13 et 18 ans) sont à valider par la revue juridique prévue au cahier des charges (§31.1, §48.2).
 
 ---
 
@@ -270,13 +306,15 @@ npm run build
 ```text
 Youth City/
 ├── docs/                           # Documentation et spécifications fonctionnelles du projet
-│   └── cahier-des-charges.md       # Document cadre de référence (68k car.)
+│   ├── cahier-des-charges.md       # Cahier des charges de référence (v1.2 : 47 sections + §48 décisions de mise en œuvre + §49 maintenabilité et qualité)
+│   └── cahier-des-charges.legacy-v0.md  # Ancienne version (§1-57) sur laquelle le code avait été écrit : références « §N » du code
 ├── backend/                        # Backend Django REST Framework (voir backend/README.md)
 │   ├── config/                     # Configuration Django (settings, urls, wsgi)
 │   ├── game/                       # Application centrale du jeu
 │   │   ├── management/commands/    # Scripts de peuplement (seed_game_data.py)
 │   │   ├── models.py               # Schéma relationnel (Citizen, Jobs, Courses, etc.)
-│   │   ├── views.py                # Contrôleurs API REST et règles de gestion
+│   │   ├── views/                  # Contrôleurs API REST, un module par district (campus, business, hub…)
+│   │   ├── api_docs.py             # Documentation OpenAPI des endpoints (Swagger)
 │   │   ├── serializers.py          # Sérialiseurs DRF avec validation stricte
 │   │   ├── sanitizers.py           # Assainissement des données textuelles entrantes
 │   │   ├── throttles.py            # Limitation du débit (Rate limiting)

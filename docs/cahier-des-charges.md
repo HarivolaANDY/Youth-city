@@ -1,1242 +1,2167 @@
-# 🏙️ CAHIER DES CHARGES — YOUTH CITY
-> **Plateforme web interactive et gamifiée de simulation de vie et d'apprentissage expérientiel pour jeunes adultes**
+# YOUTH CITY --- Cahier des charges fonctionnel et technique
 
----
+**Slogan proposé :** *Apprends la vie. Construis ton avenir.*
 
-### 📋 Fiche Signalétique du Projet
+**Version du document :** 1.2 (§48 : décisions de mise en œuvre ; §49 : maintenabilité et qualité)\
+**Type de produit :** plateforme web interactive, éducative et gamifiée\
+**Public principal :** jeunes de 15 à 30 ans\
+**Marché de lancement envisagé :** Madagascar, avec une architecture
+extensible à d'autres pays
 
-| Paramètre | Description |
-| :--- | :--- |
-| **Nom du projet** | **YOUTH CITY** |
-| **Statut du document** | Version de cadrage & spécifications initiales (v1.0) |
-| **Cible prioritaire** | Jeunes de 15 à 30 ans (Lycéens, Étudiants, Jeunes actifs, Porteurs de projet) |
-| **Typologie** | Plateforme web éducative, simulation de vie, gamification & mentorat IA |
-| **Devise principale** | **MGA** (Ariary malgache simulé) |
-| **Slogan officiel** | *« Apprends la vie. Construis ton avenir. »* |
+------------------------------------------------------------------------
 
----
+## 1. Présentation générale
 
-## 📑 Sommaire Général
+### 1.1. Nom du projet
 
-1. [Partie I — Vision, Philosophie & Objectifs](#-partie-i--vision-philosophie--objectifs)
-   - [1. Présentation générale](#1-présentation-générale)
-   - [2. Vision du produit](#2-vision-du-produit)
-   - [3. Public cible](#3-public-cible)
-   - [4. Objectifs stratégiques & pédagogiques](#4-objectifs-stratégiques--pédagogiques)
-   - [5. Philosophie du produit](#5-philosophie-du-produit)
-2. [Partie II — Architecture Urbaine & Districts de la Ville](#-partie-ii--architecture-urbaine--districts-de-la-ville)
-   - [6. Architecture globale de YOUTH CITY](#6-architecture-globale-de-youth-city)
-   - [7. Les quartiers — Campus District](#7-les-quartiers--campus-district)
-   - [8. Business District](#8-business-district)
-   - [9. Residential District](#9-residential-district)
-   - [10. Finance District](#10-finance-district)
-   - [11. Market District](#11-market-district)
-   - [12. Startup District](#12-startup-district)
-   - [13. City Hub](#13-city-hub)
-3. [Partie III — Moteur de Jeu, Personnage & Économie](#-partie-iii--moteur-de-jeu-personnage--économie)
-   - [14. Le personnage & Attributs](#14-le-personnage--attributs)
-   - [15. Système de compétences (Skill Tree)](#15-système-de-compétences-skill-tree)
-   - [16. Système XP (Expérience)](#16-système-xp-expérience)
-   - [17. Niveaux & Titres citoyens](#17-niveaux--titres-citoyens)
-   - [18. Système de gestion du temps](#18-système-de-gestion-du-temps)
-   - [19. Énergie, bien-être et équilibre de vie](#19-énergie-bien-être-et-équilibre-de-vie)
-   - [20. Système économique & Portefeuille](#20-système-économique--portefeuille)
-4. [Partie IV — Activités, Emploi, Projets & Événements](#-partie-iv--activités-emploi-projets--événements)
-   - [21. Emploi & Carrière](#21-emploi--carrière)
-   - [22. Entretiens d'embauche simulés](#22-entretiens-dembauche-simulés)
-   - [23. Éducation & Pipeline pédagogique](#23-éducation--pipeline-pédagogique)
-   - [24. Gestion de projets](#24-gestion-de-projets)
-   - [25. Système de décisions & Dilemmes moraux/financiers](#25-système-de-décisions--dilemmes-morauxfinanciers)
-   - [26. Moteur d'événements dynamiques](#26-moteur-dévénements-dynamiques)
-5. [Partie V — Intelligence Artificielle & Mentorat](#-partie-v--intelligence-artificielle--mentorat)
-   - [27. IA intégrée & Assistant adaptatif](#27-ia-intégrée--assistant-adaptatif)
-   - [28. Personal AI Mentor (NOVA)](#28-personal-ai-mentor-nova)
-6. [Partie VI — Dimension Sociale, Portfolio & Career Passport](#-partie-vi--dimension-sociale-portfolio--career-passport)
-   - [29. Système social & Coopération](#29-système-social--coopération)
-   - [30. Guildes & Communautés thématiques](#30-guildes--communautés-thématiques)
-   - [31. Challenges & Missions collaboratives](#31-challenges--missions-collaboratives)
-   - [32. Système de badges & Accomplissements](#32-système-de-badges--accomplissements)
-   - [33. Classements & Émulation saine](#33-classements--émulation-saine)
-   - [34. Portfolio citoyen vérifiable](#34-portfolio-citoyen-vérifiable)
-   - [35. Career Passport](#35-career-passport)
-7. [Partie VII — Interface, Carte & Expérience Utilisateur (UI/UX)](#-partie-vii--interface-carte--expérience-utilisateur-uiux)
-   - [36. Dashboard principal](#36-dashboard-principal)
-   - [37. Carte interactive de la ville](#37-carte-interactive-de-la-ville)
-   - [38. Conception Responsive & Vision Mobile](#38-conception-responsive--vision-mobile)
-8. [Partie VIII — Architecture Technique, Sécurité & Modération](#-partie-viii--architecture-technique-sécurité--modération)
-   - [39. Stack technique recommandée](#39-stack-technique-recommandée)
-   - [40. Architecture logicielle (Frontend & Backend)](#40-architecture-logicielle-frontend--backend)
-   - [41. Modèle de données principal](#41-modèle-de-données-principal)
-   - [42. Sécurité & Protection des utilisateurs](#42-sécurité--protection-des-utilisateurs)
-   - [43. Modération & Système de signalement](#43-modération--système-de-signalement)
-9. [Partie IX — Modèle Économique, Administration & Mesure d'Impact](#-partie-ix--modèle-économique-administration--mesure-dimpact)
-   - [44. Modèle de monétisation](#44-modèle-de-monétisation)
-   - [45. Back-Office d'administration](#45-back-office-dadministration)
-   - [46. Analytics & Indicateurs d'apprentissage](#46-analytics--indicateurs-dapprentissage)
-10. [Partie X — Roadmap, Gameplay Loop, UX & Synthèse](#-partie-x--roadmap-gameplay-loop-ux--synthèse)
-    - [47. MVP — Minimum Viable Product (Phase 1)](#47-mvp--minimum-viable-product-phase-1)
-    - [48. Version 2 — Consolidation & IA Mentor](#48-version-2--consolidation--ia-mentor)
-    - [49. Version 3 — Écosystème & Partenariats B2B](#49-version-3--écosystème--partenariats-b2b)
-    - [50. Vision à long terme](#50-vision-à-long-terme)
-    - [51. Boucle de gameplay fondamentale](#51-boucle-de-gameplay-fondamentale)
-    - [52. Scénario illustratif : Une journée type dans Youth City](#52-scénario-illustratif--une-journée-type-dans-youth-city)
-    - [53. Facteurs clés de différenciation & Innovations](#53-facteurs-clés-de-différenciation--innovations)
-    - [54. Étude comparative : Deux trajectoires citoyennes](#54-étude-comparative--deux-trajectoires-citoyennes)
-    - [55. Identité visuelle & Direction artistique](#55-identité-visuelle--direction-artistique)
-    - [56. Architecture UX & Parcours utilisateur](#56-architecture-ux--parcours-utilisateur)
-    - [57. Principe ergonomique clé : La « Next Action »](#57-principe-ergonomique-clé--la--next-action-)
-    - [58. Indicateurs de réussite du projet (KPIs)](#58-indicateurs-de-réussite-du-projet-kpis)
-    - [59. Résumé synthétique du produit](#59-résumé-synthétique-du-produit)
-
----
-
-## 🏛️ PARTIE I — Vision, Philosophie & Objectifs
-
-### 1. Présentation générale
-
-#### 1.1 Nom du projet
 **YOUTH CITY**
 
-#### 1.2 Slogan proposé
-> **« Apprends la vie. Construis ton avenir. »**
+### 1.2. Concept
 
-*Autres propositions explorées :*
-- *« Ta vie. Tes choix. Ta ville. »*
-- *« Joue aujourd'hui. Prépare demain. »*
-- *« Construis la vie que tu veux. »*
-- *« La ville où tu apprends à devenir adulte. »*
+YOUTH CITY est une plateforme web interactive qui représente une ville
+virtuelle dans laquelle les jeunes peuvent expérimenter différentes
+situations de la vie réelle dans un environnement simulé et sécurisé.
 
-#### 1.3 Concept
-**YOUTH CITY** est une plateforme web interactive et gamifiée représentant une ville virtuelle dans laquelle les utilisateurs peuvent simuler différentes situations de la vie réelle.
+L'utilisateur crée un personnage et construit progressivement son
+parcours. Il peut apprendre, développer ses compétences, rechercher un
+emploi, gérer un budget, trouver un logement, créer des projets, lancer
+une entreprise virtuelle, collaborer avec d'autres joueurs et prendre
+des décisions dont il observe les conséquences.
 
-L'utilisateur commence avec un personnage disposant de ressources limitées et doit progressivement :
-- 🧠 **Apprendre** et développer des compétences tangibles ;
-- 💼 **Trouver des opportunités** et travailler ;
-- 💰 **Gagner de l'argent virtuel** et gérer son budget rigoureusement ;
-- 🏠 **Trouver un logement** adapté à ses moyens ;
-- 🚀 **Créer des projets** et lancer son entreprise ;
-- 🤝 **Développer son réseau** professionnel et social ;
-- ⚖️ **Prendre des décisions complexes** et assumer les conséquences de ses choix.
+Le produit ne cherche pas à reproduire parfaitement la vie réelle. Il
+vise à créer un environnement d'apprentissage expérientiel, accessible
+et motivant.
 
-> [!NOTE]
-> L'objectif n'est pas de reproduire parfaitement la vie réelle dans ses moindres détails, mais de créer un **environnement d'apprentissage expérientiel** sécurisant et stimulant.
+### 1.3. Promesse du produit
 
----
+> Et si un jeune pouvait apprendre à gérer sa vie adulte sans risquer de
+> vraies conséquences ?
 
-### 2. Vision du produit
+YOUTH CITY transforme des notions abstraites --- budget, employabilité,
+organisation, entrepreneuriat, collaboration et prise de décision --- en
+expériences concrètes.
 
-YOUTH CITY répond à une interrogation centrale :
+Exemple de simulation budgétaire :
 
-> *« Et si un jeune pouvait apprendre à gérer sa vie adulte sans risquer de vraies conséquences négatives ? »*
+  Poste                       Montant
+  ------------------- ---------------
+  Salaire virtuel          350 000 Ar
+  Loyer                    120 000 Ar
+  Nourriture                80 000 Ar
+  Téléphone                 30 000 Ar
+  Transport                 50 000 Ar
+  **Solde restant**     **70 000 Ar**
 
-Le produit transforme des concepts abstraits en **expériences concrètes et mesurables**.
+Le joueur doit décider comment utiliser le solde : épargner, financer
+une formation, acheter un objet, investir dans un projet simulé ou
+conserver une réserve.
 
-#### Exemple concret : Gestion budgétaire
-Plutôt que d'expliquer théoriquement qu'*« il faut gérer son budget »*, la simulation met le joueur en situation réelle :
+### 1.4. Slogans alternatifs
 
-```
-┌────────────────────────────────────────────────────────┐
-│ 💰 BILAN FINANCIER DU MOIS (MGA)                       │
-├────────────────────────────────────────────────────────┤
-│ 💵 Salaire perçu          :  + 350 000 MGA            │
-│ 🏠 Loyer                  :  - 120 000 MGA            │
-│ 🍚 Nourriture             :  -  80 000 MGA            │
-│ 📱 Forfait Téléphone/Net  :  -  30 000 MGA            │
-│ 🚕 Transport quotidien    :  -  50 000 MGA            │
-├────────────────────────────────────────────────────────┤
-│ 💡 RESTE À VIVRE          :     70 000 MGA            │
-└────────────────────────────────────────────────────────┘
-```
+-   Ta vie. Tes choix. Ta ville.
+-   Joue aujourd'hui. Prépare demain.
+-   Construis la vie que tu veux.
+-   La ville où tu apprends à devenir adulte.
 
-Face à ce solde restant, le joueur doit arbitrer :
-- 🏦 **Épargner** en cas d'imprévu ?
-- 📈 **Investir** dans un actif ?
-- 🛒 **Consommer** pour booster son bien-être immédiat ?
-- 🎓 **Se former** pour viser un meilleur salaire le mois suivant ?
+------------------------------------------------------------------------
 
-Chaque choix réoriente dynamiquement la suite de son aventure.
+## 2. Vision et objectifs
 
----
+### 2.1. Vision
 
-### 3. Public cible
+Faire de YOUTH CITY un environnement numérique dans lequel les jeunes
+peuvent découvrir des possibilités, tester des décisions, apprendre des
+compétences utiles et construire progressivement un projet de vie.
 
-#### 3.1 Cœur de cible
+### 2.2. Objectif principal
+
+Permettre aux jeunes de développer des compétences utiles à la vie
+réelle grâce à la simulation, à la pratique et à la réflexion sur les
+conséquences de leurs décisions.
+
+### 2.3. Objectifs secondaires
+
+La plateforme doit contribuer au développement de :
+
+-   la culture financière ;
+-   l'orientation scolaire et professionnelle ;
+-   l'employabilité ;
+-   l'esprit entrepreneurial ;
+-   la gestion du temps ;
+-   la prise de décision ;
+-   la résolution de problèmes ;
+-   la communication et la collaboration ;
+-   l'autonomie ;
+-   les compétences numériques.
+
+------------------------------------------------------------------------
+
+## 3. Public cible
+
+### 3.1. Cœur de cible
+
 Jeunes de **15 à 30 ans**, notamment :
-- 🎒 Lycéens en quête d'orientation ;
-- 🎓 Étudiants de l'enseignement supérieur ;
-- 📜 Jeunes diplômés entrant sur le marché du travail ;
-- 💼 Jeunes travailleurs en début de carrière ;
-- 🔍 Personnes en recherche d'emploi ou en reconversion ;
-- 🚀 Jeunes entrepreneurs et porteurs de projet ;
-- 💻 Travailleurs indépendants et freelances ;
-- 🧭 Personnes cherchant leur voie professionnelle.
 
-#### 3.2 Utilisateurs secondaires & Partenaires B2B
-La plateforme offre des opportunités d'intégration institutionnelle pour :
-- Établissements scolaires, lycées et centres de formation ;
-- Universités et grandes écoles ;
-- Associations d'insertion et ONG jeunesse ;
-- Structures d'accompagnement et incubateurs ;
-- Entreprises (recrutement, valorisation de métiers) ;
-- Organismes publics et privés de formation continue.
+-   lycéens ;
+-   étudiants ;
+-   jeunes diplômés ;
+-   jeunes travailleurs ;
+-   personnes en recherche d'emploi ;
+-   jeunes entrepreneurs ;
+-   freelances ;
+-   personnes en recherche d'orientation.
 
----
+### 3.2. Utilisateurs secondaires
 
-### 4. Objectifs stratégiques & pédagogiques
+-   établissements scolaires ;
+-   universités ;
+-   associations ;
+-   ONG ;
+-   structures d'accompagnement ;
+-   incubateurs ;
+-   entreprises ;
+-   organismes de formation.
 
-#### Objectif principal
-Créer un environnement interactif et immersif permettant aux jeunes d'acquérir et perfectionner des compétences clés pour leur vie adulte à travers la simulation.
+### 3.3. Adaptation au contexte local
 
-#### Objectifs secondaires
-Développer de façon transversale :
-- 📊 **Culture financière** : épargne, budget, crédit responsable, investissement ;
-- 🎯 **Orientation professionnelle** : découverte de métiers, tests d'appétence ;
-- 💼 **Employabilité** : rédaction de CV, entretiens, soft skills, travail d'équipe ;
-- 🚀 **Esprit entrepreneurial** : business model, gestion du risque, vente ;
-- ⏳ **Gestion du temps** : organisation, priorisation, équilibre de vie ;
-- ⚖️ **Prise de décision & Résolution de problèmes** : esprit critique, anticipation ;
-- 🌐 **Compétences numériques** : outils modernes, collaboration en ligne.
+Pour le lancement à Madagascar, les scénarios devront pouvoir intégrer
+des réalités locales : monnaie en ariary, coûts de transport et de
+logement, accès aux formations, stages, bourses, entrepreneuriat,
+freelancing, langues et situations professionnelles locales.
 
----
+Les montants et données économiques devront être configurables et
+présentés comme des valeurs de simulation, non comme des statistiques
+officielles ou des conseils financiers.
 
-### 5. Philosophie du produit
+------------------------------------------------------------------------
 
-Le gameplay et l'architecture de YOUTH CITY reposent sur **5 piliers fondamentaux** :
+## 4. Principes fondamentaux du produit
 
-```mermaid
-graph TD
-    A["5 Piliers Fondamentaux"] --> B["5.1 Learning by doing<br><i>Apprentissage actif par l'action</i>"]
-    A --> C["5.2 Conséquences<br><i>Impact visible de chaque décision</i>"]
-    A --> D["5.3 Progression continue<br><i>Sentiment constant d'évolution</i>"]
-    A --> E["5.4 Réalisme accessible<br><i>Éducatif sans lourdeur technique</i>"]
-    A --> F["5.5 Liberté de parcours<br><i>Aucune voie unique imposée</i>"]
+1.  **Learning by doing :** l'utilisateur apprend principalement en
+    réalisant des actions.
+2.  **Conséquences visibles :** les décisions modifient l'état du
+    personnage, ses ressources ou son parcours.
+3.  **Progression :** chaque activité doit contribuer à une progression
+    compréhensible.
+4.  **Réalisme accessible :** les scénarios doivent être crédibles sans
+    devenir inutilement complexes.
+5.  **Liberté de parcours :** il n'existe pas une seule manière de
+    réussir.
+6.  **Pédagogie avant compétition :** les classements et récompenses ne
+    doivent pas remplacer l'apprentissage.
+7.  **Transparence :** les ressources, salaires, crédits et
+    investissements du jeu sont virtuels.
+
+------------------------------------------------------------------------
+
+## 5. Architecture fonctionnelle de la ville
+
+La ville est organisée en quartiers thématiques. Chaque quartier
+représente un domaine de la vie.
+
+``` text
+                         YOUTH CITY
+                              |
+        +---------------------+---------------------+
+        |                     |                     |
+      CAMPUS                BUSINESS             RESIDENTIAL
+        |                     |                     |
+    Universités            Entreprises            Logements
+    Formations             Startups               Colocations
+    Bibliothèque           Coworking              Quartiers
+        |                     |                     |
+        +-------------+-------+-------+-------------+
+                      |               |
+                   FINANCE           MARKET
+                      |               |
+                    Banque          Commerce
+                    Épargne         Services
+                      |               |
+                      +-------+-------+
+                              |
+                           CITY HUB
+                              |
+                    Social et événements
+                              |
+                       STARTUP DISTRICT
+                              |
+                      Projets et entreprises
 ```
 
-1. **Learning by doing (Apprentissage par l'action)** : L'apprentissage est toujours issu d'une expérience directe, jamais d'une théorie passive.
-2. **Conséquences visibles** : Toute décision (financière, professionnelle, temporelle) engendre des répercussions claires et mesurables.
-3. **Progression continue** : Le joueur a toujours un nouvel objectif accessible (palier de compétence, équipement, niveau, opportunité).
-4. **Réalisme accessible** : La simulation s'inspire du monde réel tout en conservant une ergonomie intuitive, ludique et gratifiante.
-5. **Liberté totale de parcours** : Il n'existe pas de chemin « gagnant ». Salariat, entrepreneuriat, artisanat, recherche : chaque citoyen bâtit son propre modèle de réussite.
+### 5.1. Campus District
 
----
+Quartier consacré à l'éducation et au développement des compétences.
 
-## 🗺️ PARTIE II — Architecture Urbaine & Districts de la Ville
+Fonctionnalités :
 
-### 6. Architecture globale de YOUTH CITY
+-   universités et écoles virtuelles ;
+-   formations courtes ;
+-   bibliothèque et ressources ;
+-   exercices et quiz ;
+-   examens ;
+-   certifications internes ;
+-   challenges éducatifs ;
+-   événements étudiants.
 
-La ville virtuelle est organisée en **7 districts spécialisés**, chacun relié aux mécaniques de vie :
+Exemple de formation :
 
-```text
-                         ┌─────────────────────────┐
-                         │       YOUTH CITY        │
-                         └────────────┬────────────┘
-                                      │
-         ┌────────────────────────────┼────────────────────────────┐
-         │                            │                            │
-   🎓 CAMPUS                    💼 BUSINESS                  🏠 RESIDENTIAL
-   Université / Écoles          Entreprises / Bureaux        Logements / Foyers
-   Formations / Certifs         Coworking / Recrutement      Colocations / Quartiers
-         │                            │                            │
-         └─────────────┬──────────────┴──────────────┬─────────────┘
-                       │                             │
-                    🏦 FINANCE                    🛒 MARKET
-                    Banques / Épargne             Boutiques / Services
-                    Crédits / Investissements     Équipement / Loisirs
-                       │                             │
-                       └──────────────┬──────────────┘
-                                      │
-                                 🌐 CITY HUB
-                                 Événements / Réseau
-                                      │
-                                🚀 STARTUP
-                                Incubateur / Projets
+  Élément       Valeur simulée
+  ------------- --------------------------------
+  Formation     Développement Web
+  Durée         30 jours virtuels
+  Coût          50 000 Ar virtuels
+  Compétences   HTML, CSS, JavaScript
+  Évaluation    Exercices, quiz et mini-projet
+
+### 5.2. Business District
+
+Quartier professionnel comprenant :
+
+-   entreprises ;
+-   agences ;
+-   startups ;
+-   espaces de coworking ;
+-   bureaux ;
+-   offres d'emploi ;
+-   stages ;
+-   missions freelance ;
+-   entretiens et tests de recrutement.
+
+Exemple d'offre :
+
+**Développeur junior**
+
+-   Salaire : 450 000 Ar virtuels par mois
+-   Compétences demandées : JavaScript, React, Git
+-   Expérience : au moins un projet pratique
+-   Condition : réussir une évaluation et un entretien simulé
+
+### 5.3. Residential District
+
+Le joueur peut choisir un logement selon ses moyens et ses besoins.
+
+  Logement        Loyer mensuel simulé   Confort
+  ------------- ---------------------- ---------
+  Chambre                    70 000 Ar       2/5
+  Studio                    150 000 Ar       3/5
+  Appartement               300 000 Ar       4/5
+  Villa                     700 000 Ar       5/5
+
+Un logement plus coûteux améliore éventuellement le confort, mais
+augmente les dépenses récurrentes. Les prix sont des exemples
+configurables, non des références de marché.
+
+### 5.4. Finance District
+
+Quartier consacré à l'apprentissage de la gestion financière.
+
+Fonctionnalités :
+
+-   compte bancaire virtuel ;
+-   épargne ;
+-   budget mensuel ;
+-   crédit simulé ;
+-   investissement simulé ;
+-   assurance simulée ;
+-   objectifs financiers ;
+-   historique des transactions.
+
+**Règle essentielle :** toutes les opérations de ce quartier sont
+fictives et éducatives. Aucun dépôt d'argent réel ne doit être requis
+pour jouer.
+
+### 5.5. Market District
+
+Marché virtuel permettant d'acheter des biens et services :
+
+-   nourriture ;
+-   vêtements ;
+-   téléphone ;
+-   ordinateur ;
+-   meubles ;
+-   transport ;
+-   loisirs ;
+-   outils professionnels ;
+-   services.
+
+Chaque achat modifie le budget et peut avoir des effets sur le confort,
+les compétences ou la productivité du personnage.
+
+### 5.6. Startup District
+
+Quartier dédié à la création et à la gestion d'entreprises virtuelles.
+
+Parcours de création :
+
+``` text
+IDÉE
+  |
+PROBLÈME À RÉSOUDRE
+  |
+CLIENTS ET MARCHÉ
+  |
+BUSINESS MODEL
+  |
+PROTOTYPE
+  |
+PREMIERS CLIENTS
+  |
+REVENUS
+  |
+CROISSANCE
 ```
 
----
+Le joueur doit gérer :
 
-### 7. Les quartiers — Campus District
+-   les coûts ;
+-   le marketing ;
+-   les employés ;
+-   les clients ;
+-   les revenus ;
+-   la réputation ;
+-   la trésorerie ;
+-   les risques et imprévus.
 
-#### 7.1 🎓 Campus District : Quartier de l'Éducation
-Espace dédié à l'acquisition de savoirs académiques, techniques et pratiques.
+### 5.7. City Hub
 
-**Infrastructures & fonctionnalités :**
-- Université et écoles spécialisées ;
-- Modules de formations courtes et diplômantes ;
-- Bibliothèque de ressources documentaires ;
-- Passages d'examens et certifications reconnues dans le jeu ;
-- Challenges et hackathons académiques.
+Centre social de la ville.
 
-#### Exemple de module de formation
-```text
-┌────────────────────────────────────────────────────────┐
-│ 📚 MODULE : DÉVELOPPEMENT WEB FONDAMENTAL              │
-├────────────────────────────────────────────────────────┤
-│ • Durée requise  : 30 jours virtuels (ou sessions)    │
-│ • Coût d'accès   : 50 000 MGA                         │
-│ • Compétences    : HTML (+25%), CSS (+25%), JS (+20%) │
-│ • Livrable final : Création d'un mini-site web        │
-│ • Récompense     : +150 XP & Certificat Junior Web     │
-└────────────────────────────────────────────────────────┘
+Fonctionnalités :
+
+-   événements ;
+-   communautés ;
+-   groupes ;
+-   classements facultatifs ;
+-   défis collectifs ;
+-   rencontres ;
+-   collaborations ;
+-   annonces officielles de la ville.
+
+Exemple : hackathon virtuel de 48 heures, en équipes de 3 à 5 personnes,
+avec récompenses en XP et éléments cosmétiques.
+
+------------------------------------------------------------------------
+
+## 6. Personnage et profil utilisateur
+
+Chaque utilisateur dispose d'un personnage représentant son parcours
+dans la ville.
+
+### 6.1. Profil du personnage
+
+Le profil peut contenir :
+
+-   nom public ou pseudonyme ;
+-   avatar ;
+-   niveau ;
+-   expérience (XP) ;
+-   énergie ;
+-   bien-être simulé ;
+-   argent virtuel ;
+-   épargne virtuelle ;
+-   logement ;
+-   emploi ;
+-   études ;
+-   compétences ;
+-   projets ;
+-   badges ;
+-   historique des accomplissements.
+
+Exemple :
+
+``` text
+PERSONNAGE : Alex
+Niveau : 17
+XP : 8 450
+
+Argent virtuel : 125 000 Ar
+Épargne virtuelle : 300 000 Ar
+Bien-être simulé : 78 %
+Énergie : 64 %
+
+Éducation : 72 %
+Employabilité : 68 %
+Finance : 51 %
+Entrepreneuriat : 42 %
+Social : 74 %
 ```
 
----
+Ces indicateurs sont des mécaniques de jeu, pas des évaluations
+psychologiques ou médicales.
 
-### 8. 💼 Business District
+### 6.2. Personnalisation
 
-Quartier d'affaires regroupant les entreprises, startups partenaires et agences de recrutement.
+Prévoir progressivement :
 
-**Infrastructures & fonctionnalités :**
-- Sièges d'entreprises locales et multinationales virtuelles ;
-- Espaces de coworking ;
-- Tableaux d'affichage d'offres d'emploi (stage, CDD, CDI, freelance) ;
-- Salles d'entretiens d'embauche assistés par IA.
+-   choix du genre ou d'un avatar neutre ;
+-   apparence ;
+-   vêtements ;
+-   accessoires ;
+-   décoration du logement ;
+-   titre public ;
+-   éléments cosmétiques débloqués.
 
-#### Exemple de fiche de poste
-```text
-┌────────────────────────────────────────────────────────┐
-│ 💼 OFFRE D'EMPLOI : Développeur Web Junior            │
-├────────────────────────────────────────────────────────┤
-│ • Entreprise     : TechSolutions S.A.                  │
-│ • Rémunération   : 450 000 MGA / mois                  │
-│ • Prérequis      : JavaScript (≥50%), React, Git       │
-│ • Expérience     : 6 mois simulés ou 1 projet validé   │
-│ • Impact Énergie : -20 points par journée de travail   │
-└────────────────────────────────────────────────────────┘
+La personnalisation ne doit pas donner d'avantage injuste dans les
+activités éducatives.
+
+------------------------------------------------------------------------
+
+## 7. Système de compétences
+
+Le système de compétences constitue l'un des piliers du produit.
+
+### 7.1. Catégories
+
+**Soft skills**
+
+-   communication ;
+-   leadership ;
+-   organisation ;
+-   travail d'équipe ;
+-   créativité ;
+-   résolution de problèmes ;
+-   négociation.
+
+**Hard skills**
+
+-   programmation ;
+-   design ;
+-   marketing ;
+-   comptabilité ;
+-   analyse de données ;
+-   langues ;
+-   gestion de projet.
+
+**Life skills**
+
+-   gestion d'un budget ;
+-   cuisine ;
+-   gestion du temps ;
+-   recherche d'emploi ;
+-   préparation d'un entretien ;
+-   organisation administrative ;
+-   prise de décision.
+
+### 7.2. Acquisition et validation
+
+Une compétence peut progresser grâce à :
+
+-   une leçon ;
+-   un exercice ;
+-   un quiz ;
+-   une mission ;
+-   un projet ;
+-   une collaboration ;
+-   une évaluation pratique.
+
+Le système doit distinguer une compétence simplement étudiée d'une
+compétence démontrée par une réalisation.
+
+------------------------------------------------------------------------
+
+## 8. Expérience, niveaux et récompenses
+
+### 8.1. Points d'expérience
+
+Exemples de récompenses :
+
+  Action                            XP
+  ----------------------------- ------
+  Lire une leçon                   +10
+  Réussir un quiz                  +25
+  Terminer une formation          +150
+  Réussir un entretien simulé     +100
+  Créer un projet                 +300
+  Participer à un événement        +50
+  Aider un autre joueur            +30
+
+Les valeurs devront être équilibrées par des tests. Le système doit
+éviter les abus, les répétitions artificielles et les récompenses
+disproportionnées.
+
+### 8.2. Niveaux
+
+Exemple de progression :
+
+    Niveau Titre
+  -------- -----------------
+         1 Nouveau citoyen
+         5 Explorateur
+        10 Apprenti
+        20 Professionnel
+        30 Entrepreneur
+        50 City Builder
+
+### 8.3. Badges
+
+Exemples :
+
+-   First Job ;
+-   Entrepreneur ;
+-   Developer ;
+-   Smart Saver ;
+-   Scholar ;
+-   Team Player ;
+-   30 Day Streak ;
+-   Community Builder.
+
+Les badges doivent correspondre à des actions ou accomplissements
+clairement définis.
+
+------------------------------------------------------------------------
+
+## 9. Temps, énergie et bien-être
+
+### 9.1. Temps virtuel
+
+Le jeu peut proposer une journée organisée en périodes :
+
+``` text
+MATIN
+  |
+JOURNÉE
+  |
+SOIR
+  |
+NUIT
 ```
 
----
+Certaines actions consomment du temps virtuel :
 
-### 9. 🏠 Residential District
+  Activité             Durée simulée
+  ------------------ ---------------
+  Formation                 3 heures
+  Travail                   8 heures
+  Sport                      1 heure
+  Projet personnel          2 heures
 
-Espace d'hébergement où le citoyen choisit son cadre de vie selon son pouvoir d'achat.
+La conversion entre temps réel et temps virtuel doit être définie dans
+les paramètres du jeu. Une hypothèse initiale possible est qu'une
+journée virtuelle dure 15 minutes réelles, mais ce choix devra être
+testé auprès des utilisateurs.
 
-| Type de logement | Loyer mensuel moyen | Indice Confort / Bien-être | Charges associées |
-| :--- | :--- | :--- | :--- |
-| **Chambre partagée** | 70 000 MGA | ⭐⭐ *(+10% récup énergie)* | Faibles |
-| **Studio individuel** | 150 000 MGA | ⭐⭐⭐ *(+25% récup énergie)* | Moyennes |
-| **Appartement F2/F3** | 300 000 MGA | ⭐⭐⭐⭐ *(+45% récup énergie)* | Élevées |
-| **Villa résidentielle**| 700 000 MGA | ⭐⭐⭐⭐⭐ *(+70% récup énergie)* | Très élevées |
+### 9.2. Énergie
 
-> [!TIP]
-> Un logement de prestige accélère la régénération d'énergie, mais augmente considérablement le point mort financier mensuel.
+Les activités consomment de l'énergie. Le personnage peut la récupérer
+en dormant ou en se reposant.
 
----
+### 9.3. Bien-être
 
-### 10. 🏦 Finance District
+Le bien-être est un indicateur de jeu influencé par l'équilibre entre
+travail, repos, loisirs et dépenses. Il ne doit jamais être présenté
+comme un diagnostic de santé.
 
-Le centre névralgique de l'apprentissage financier.
+Le jeu doit éviter les mécaniques punitives excessives : un joueur qui
+manque quelques jours ne doit pas perdre brutalement toute sa
+progression.
 
-**Fonctions disponibles :**
-- Compte bancaire courant (dépôts, virements, relevés) ;
-- Livrets d'épargne avec intérêts simulés ;
-- Outil interactif de budgétisation mensuelle ;
-- Simulateur de crédit bancaire (emprunt professionnel ou personnel avec tableau d'amortissement) ;
-- Initiation aux placements et investissements simulés ;
-- Assurances contre les sinistres et aléas de la vie.
+------------------------------------------------------------------------
 
-> [!IMPORTANT]
-> **Règle absolue d'éthique financière** : Tous les mécanismes financiers sont **100 % simulés et pédagogiques**. Aucun dépôt d'argent réel n'est possible ni requis pour progresser dans l'économie du jeu.
+## 10. Économie virtuelle
 
----
+### 10.1. Monnaie
 
-### 11. 🛒 Market District
+La monnaie de simulation peut être appelée **Y-AR** ou être affichée en
+**Ar virtuels**.
 
-Le quartier commercial permettant de subvenir aux besoins de son personnage et de booster son quotidien :
-- 🍞 **Alimentation & Produits de première nécessité** (maintien de l'énergie et de la santé) ;
-- 👕 **Vêtements & Apparence** (impact sur l'estime de soi et les entretiens professionnels) ;
-- 💻 **High-Tech & Matériel professionnel** (smartphones, PC performants nécessaires à certains métiers) ;
-- 🛵 **Moyens de transport** (tickets de bus, scooter, voiture : impact direct sur le temps de trajet) ;
-- 🛋️ **Mobilier & Décoration** (optimisation du confort du logement).
+L'interface doit signaler clairement qu'il ne s'agit pas d'argent réel.
 
----
+### 10.2. Wallet
 
-### 12. 🚀 Startup District
+Le portefeuille présente :
 
-Quartier dédié à l'innovation, à l'incubation et à l'entrepreneuriat. Le joueur peut y concevoir, financer et piloter son entreprise virtuelle.
+-   solde disponible ;
+-   revenus ;
+-   dépenses ;
+-   épargne ;
+-   historique ;
+-   transactions en attente, si nécessaire.
 
-#### Pipeline entrepreneurial
-```text
-  [ IDÉE & OPPORTUNITÉ ]
-            │
-            ▼
-  [ ÉTUDE DU PROBLÈME & MARCHÉ ]
-            │
-            ▼
-  [ CONCEPTION DU BUSINESS MODEL ]
-            │
-            ▼
-  [ PROTOTYPAGE (MVP) ]
-            │
-            ▼
-  [ ACQUISITION PREMIERS CLIENTS ]
-            │
-            ▼
-  [ GESTION DE TRÉSORERIE & RÉSULTAT ]
-            │
-            ▼
-  [ CROISSANCE & RECRUTEMENT ]
+Exemple :
+
+``` text
+WALLET
+Solde : 250 000 Ar virtuels
+Revenus du mois : +450 000 Ar
+Dépenses du mois : -320 000 Ar
+Épargne : 150 000 Ar
 ```
 
-**Variables de gestion à piloter :**
-- Maîtrise des coûts de structure et charges d'exploitation ;
-- Stratégies de communication et marketing ;
-- Recrutement et management d'employés virtuels ou de partenaires réels ;
-- Satisfaction client et e-réputation de la marque ;
-- Gestion stricte du flux de trésorerie (*Cash flow*).
+### 10.3. Règles économiques
 
----
+Le moteur économique doit gérer :
 
-### 13. 🌐 City Hub
+-   revenus ;
+-   dépenses récurrentes ;
+-   achats ;
+-   loyers ;
+-   salaires ;
+-   frais de formation ;
+-   remboursements simulés ;
+-   épargne ;
+-   événements économiques.
 
-Le cœur communautaire et événementiel de YOUTH CITY :
-- 📅 **Agenda des événements de la cité** (forums de l'emploi, webinaires, salons) ;
-- 🏆 **Hackathons & Challenges inter-quartiers** (ex : *Hackathon 48h en équipe de 3 à 5 avec 5 000 XP à la clé*) ;
-- 👥 **Groupes d'intérêt et espaces de collaboration** ;
-- 📢 **Médiathèque citoyenne et tableaux d'affichage publics**.
+Toutes les transactions doivent être enregistrées côté serveur avec une
+trace de leur origine. Le client ne doit jamais pouvoir modifier
+directement son solde ou s'attribuer des récompenses.
 
----
+------------------------------------------------------------------------
 
-## 🎮 PARTIE III — Moteur de Jeu, Personnage & Économie
+## 11. Emploi et carrière
 
-### 14. Le personnage & Attributs
+### 11.1. Offres
 
-Chaque citoyen crée un avatar unique disposant d'une fiche d'état civil, de jauges physiologiques et de statistiques d'accomplissement.
+Chaque offre doit contenir :
 
-```text
-┌────────────────────────────────────────────────────────┐
-│ 👤 PROFIL CITOYEN : Emmanuel                           │
-├────────────────────────────────────────────────────────┤
-│ 🎖️ Niveau : 17               ⚡ Énergie   : 64%        │
-│ ✨ XP Total : 8 450 pts       ❤️ Bien-être : 78%        │
-├────────────────────────────────────────────────────────┤
-│ 💰 Solde courant  : 125 000 MGA                        │
-│ 🏦 Épargne bloquée: 300 000 MGA                        │
-├────────────────────────────────────────────────────────┤
-│ 📊 Jauges d'Accomplissement :                          │
-│   • 🎓 Éducation         : [██████████████░░░] 72%     │
-│   • 💼 Employabilité     : [█████████████░░░░] 68%     │
-│   • 💰 Maîtrise Finance  : [██████████░░░░░░░] 51%     │
-│   • 🚀 Entrepreneuriat   : [████████░░░░░░░░░] 42%     │
-│   • 🤝 Capital Social    : [██████████████░░░] 74%     │
-└────────────────────────────────────────────────────────┘
+-   titre ;
+-   entreprise ;
+-   description ;
+-   salaire virtuel ;
+-   type de contrat ;
+-   compétences requises ;
+-   expérience attendue ;
+-   localisation dans la ville ;
+-   date limite ;
+-   étapes de recrutement.
+
+### 11.2. Parcours de candidature
+
+1.  Consulter l'offre.
+2.  Vérifier les prérequis.
+3.  Préparer son profil ou son CV virtuel.
+4.  Envoyer sa candidature.
+5.  Réaliser un test si nécessaire.
+6.  Passer un entretien simulé.
+7.  Recevoir une décision.
+8.  Consulter un retour pédagogique.
+
+### 11.3. Évolution professionnelle
+
+Le joueur peut obtenir une promotion, changer d'entreprise, se
+reconvertir ou passer au travail indépendant selon ses compétences et
+ses choix.
+
+------------------------------------------------------------------------
+
+## 12. Entretiens simulés avec l'IA
+
+L'IA peut jouer le rôle d'un recruteur.
+
+Exemple :
+
+> Recruteur : Pourquoi devrions-nous vous recruter ?
+
+L'utilisateur rédige ou prononce une réponse. Le système fournit un
+retour sur :
+
+-   pertinence ;
+-   clarté ;
+-   structure ;
+-   exemples concrets ;
+-   adéquation avec le poste.
+
+Le feedback doit être explicatif et encourageant. Il ne doit pas
+prétendre prédire avec certitude la réussite d'un véritable entretien.
+
+------------------------------------------------------------------------
+
+## 13. Éducation et formations
+
+### 13.1. Structure pédagogique
+
+``` text
+COURS
+  |
+EXERCICE
+  |
+QUIZ
+  |
+MISSION
+  |
+PROJET
+  |
+VALIDATION
 ```
 
----
+### 13.2. Types de contenus
 
-### 15. Système de compétences (Skill Tree)
+-   leçons textuelles ;
+-   illustrations ;
+-   vidéos ou ressources externes ;
+-   exercices interactifs ;
+-   quiz ;
+-   études de cas ;
+-   projets pratiques.
 
-Les compétences forment l'ossature de la progression du joueur, divisées en 3 piliers :
+### 13.3. Certifications
 
-| Catégorie | Compétences clés simulées | Modalité d'acquisition |
-| :--- | :--- | :--- |
-| **Soft Skills** | Communication, Leadership, Organisation, Travail d'équipe, Créativité, Résolution de conflits | Missions d'équipe, simulations d'entretiens, choix de dialogue |
-| **Hard Skills** | Programmation, Design graphique, Marketing digital, Comptabilité, Gestion, Langues | Cours au Campus, exercices pratiques, projets techniques |
-| **Life Skills** | Tenue d'un budget, Négociation de contrat, Cuisine & Nutrition, Gestion du stress, Démarches administratives | Événements quotidiens, gestion du logement, imprévus |
+Les certifications internes doivent préciser leur portée : elles
+attestent de la réussite d'un parcours YOUTH CITY, mais ne doivent pas
+être présentées comme des diplômes officiels ou des certifications
+professionnelles reconnues sans partenariat approprié.
 
----
+------------------------------------------------------------------------
 
-### 16. Système XP (Expérience)
+## 14. Projets et entrepreneuriat
 
-Toutes les actions positives rapportent de l'expérience citoyenne permettant de monter en rang :
+Le joueur peut créer un projet personnel ou collectif.
 
-| Action réalisée | Gain d'XP standard | Bénéfice pédagogique associé |
-| :--- | :---: | :--- |
-| **Consulter une leçon théorique** | `+10 XP` | Acquisition de notions fondamentales |
-| **Réussir un quiz d'évaluation** | `+25 XP` | Validation active des connaissances |
-| **Participer à un atelier / événement**| `+50 XP` | Réseau et ouverture citoyenne |
-| **Réussir un entretien d'embauche** | `+100 XP` | Maîtrise des codes professionnels |
-| **Finaliser un cursus de formation** | `+150 XP` | Certification de hard skills |
-| **Terminer et livrer un projet complet**| `+300 XP` | Capacité de concrétisation et portfolio |
-| **Entraider un autre joueur (mentorat)**| `+30 XP` | Développement du leadership et partage |
+### 14.1. Fiche projet
 
----
+-   nom ;
+-   problème ciblé ;
+-   description ;
+-   public cible ;
+-   catégorie ;
+-   budget virtuel ;
+-   membres ;
+-   objectifs ;
+-   étapes ;
+-   statut ;
+-   résultats.
 
-### 17. Niveaux & Titres citoyens
+### 14.2. Cycle de vie
 
-| Niveau | Titre officiel | Privilèges & Opportunités débloquées |
-| :---: | :--- | :--- |
-| **1 - 4** | 🔰 *Nouveau Citoyen* | Accès au Campus de base, logements d'urgence, petits boulots |
-| **5 - 9** | 🧭 *Explorateur* | Déblocage des formations intermédiaires, collocations, missions juniors |
-| **10 - 19** | 🛠️ *Apprenti / Spécialiste* | Accès aux CDD/CDI en entreprises, création de premiers projets |
-| **20 - 29** | 💼 *Professionnel Confirmé* | Postes à responsabilités, accès au crédit bancaire, studio personnel |
-| **30 - 49** | 🚀 *Entrepreneur Émérite* | Fondation de startups, embauche d'autres citoyens, investissements |
-| **50+** | 👑 *City Builder* | Mentorat de haut niveau, sièges au conseil de la ville, grands projets |
-
----
-
-### 18. Système de gestion du temps
-
-Pour simuler le défi de l'organisation personnelle, le temps est une ressource finie.
-
-**Deux approches au choix du moteur :**
-1. **Temps accéléré temps réel** : 1 journée citoyenne = 15 minutes réelles ;
-2. **Cycle par phases journalières (Recommandé pour la flexibilité)** :
-   `MATIN` ➔ `APRÈS-MIDI` ➔ `SOIRÉE` ➔ `NUIT`.
-
-#### Allocation du temps quotidien (sur une base de 24h virtuelles)
-```text
-┌────────────────────────────────────────────────────────┐
-│ ⏰ BUDGET TEMPS D'UNE JOURNÉE                          │
-├────────────────────────────────────────────────────────┤
-│ • Travail / Emploi           :  8 heures               │
-│ • Formation au Campus        :  3 heures               │
-│ • Sport & Détente            :  1 heure                │
-│ • Projet personnel / Side    :  2 heures               │
-│ • Déplacements & Intendance  :  2 heures               │
-│ • Sommeil réparateur         :  8 heures               │
-└────────────────────────────────────────────────────────┘
+``` text
+IDÉE
+  |
+PLANIFICATION
+  |
+CONSTITUTION DE L'ÉQUIPE
+  |
+PROTOTYPE
+  |
+TEST
+  |
+LANCEMENT SIMULÉ
+  |
+ÉVALUATION
 ```
 
----
+Le système peut simuler des réactions de clients, des coûts, des ventes
+et des imprévus. Les résultats doivent être identifiés comme des
+simulations et non comme des prévisions commerciales fiables.
 
-### 19. Énergie, bien-être et équilibre de vie
+------------------------------------------------------------------------
 
-Le personnage dispose d'une jauge d'énergie vitale (0 à 100 %) :
+## 15. Système de décisions et conséquences
 
-```text
-⚡ Énergie : [████████████████░░░░] 82%
+C'est l'une des mécaniques centrales de YOUTH CITY.
+
+Le jeu présente des situations qui demandent un choix. Chaque option
+entraîne des conséquences cohérentes, immédiates ou différées.
+
+Exemple :
+
+**Ton ordinateur tombe en panne.**
+
+-   A. Acheter un nouvel ordinateur.
+-   B. Réparer l'ancien.
+-   C. Emprunter temporairement un appareil.
+-   D. Utiliser un crédit simulé.
+
+Le système doit expliquer les conséquences : coût, temps, confort,
+risque, capacité à poursuivre une formation ou une mission.
+
+Les scénarios doivent proposer plusieurs choix viables, éviter les
+réponses moralisatrices et expliquer les compromis.
+
+------------------------------------------------------------------------
+
+## 16. Événements dynamiques
+
+La ville doit proposer des événements adaptés à la progression du
+joueur.
+
+Exemples :
+
+-   opportunité professionnelle ;
+-   concours ;
+-   hackathon ;
+-   promotion ;
+-   mission freelance ;
+-   problème budgétaire ;
+-   événement universitaire ;
+-   rencontre professionnelle ;
+-   nouveau projet ;
+-   offre de formation ;
+-   événement communautaire.
+
+Les événements peuvent être déclenchés selon le niveau, les compétences,
+le quartier, les projets ou les activités récentes du joueur.
+
+Un système de règles doit encadrer leur fréquence afin de ne pas
+submerger l'utilisateur.
+
+------------------------------------------------------------------------
+
+## 17. Intelligence artificielle intégrée
+
+L'IA doit agir comme un mentor et un outil d'accompagnement, pas
+seulement comme un chatbot.
+
+### 17.1. Fonctions
+
+-   mentor professionnel ;
+-   aide pédagogique ;
+-   simulation d'entretien ;
+-   génération de scénarios ;
+-   recommandations de missions ;
+-   explication des conséquences ;
+-   aide à la planification ;
+-   accompagnement de projets.
+
+### 17.2. Architecture indépendante du fournisseur
+
+Prévoir une couche d'abstraction permettant de connecter différents
+fournisseurs, par exemple OpenAI, Anthropic, Google ou des modèles
+accessibles via OpenRouter.
+
+Le changement de fournisseur ne doit pas nécessiter une réécriture de la
+logique métier.
+
+### 17.3. Garde-fous
+
+-   L'IA ne doit pas inventer des offres réelles ou des opportunités.
+-   Elle doit distinguer les faits, les hypothèses et les éléments
+    fictifs du jeu.
+-   Elle ne doit pas fournir de conseils financiers, médicaux ou
+    juridiques personnalisés présentés comme des avis professionnels.
+-   Les actions ayant un effet sur le compte ou l'économie doivent être
+    validées par le backend.
+-   Les échanges doivent respecter les règles de confidentialité et de
+    modération.
+
+------------------------------------------------------------------------
+
+## 18. NOVA --- Mentor personnel
+
+**NOVA** est le nom provisoire du mentor IA.
+
+Exemple d'interface :
+
+``` text
+NOVA
+
+Bonjour Alex !
+
+Voici tes priorités du jour :
+
+[ ] Terminer le module JavaScript
+[ ] Postuler à deux offres virtuelles
+[ ] Épargner 20 000 Ar virtuels
+[ ] Avancer sur ton projet
+
+Conseil :
+Tu as progressé en développement.
+Un projet concret pourrait maintenant t'aider
+à démontrer tes compétences.
 ```
 
-- **Facteurs d'épuisement** : Travail prolongé, heures supplémentaires, malnutrition, logements inconfortables, manque de sommeil.
-- **Facteurs de régénération** : Sommeil complet, alimentation saine achetée au Market, activités sportives, loisirs au City Hub.
-- **Impact pédagogique** : Si l'énergie tombe sous les 20 %, la productivité au travail s'effondre, les risques d'accidents augmentent et la note de bien-être baisse.
+NOVA doit tenir compte des objectifs choisis, des compétences validées,
+des activités réalisées et des préférences de l'utilisateur. Il doit
+permettre à l'utilisateur de corriger ou désactiver les recommandations.
 
----
+------------------------------------------------------------------------
 
-### 20. Système économique & Portefeuille
+## 19. Fonctionnalités sociales
 
-L'économie tourne exclusivement autour de la devise principale **MGA** (Ariary malgache virtuel).
+Les utilisateurs peuvent :
 
-```text
-┌────────────────────────────────────────────────────────┐
-│ 💳 PORTEFEUILLE VIRTUEL (YOUTH WALLET)                 │
-├────────────────────────────────────────────────────────┤
-│ 💵 Solde Disponible       :  250 000 MGA               │
-│ 📈 Revenus du mois courant : +450 000 MGA               │
-│ 📉 Dépenses engagées       : -320 000 MGA               │
-│ 🏦 Épargne de précaution   :  150 000 MGA               │
-├────────────────────────────────────────────────────────┤
-│ 🛡️ Ratio d'endettement    :  0% (Sain)                 │
-└────────────────────────────────────────────────────────┘
+-   ajouter des amis ;
+-   créer des équipes ;
+-   rejoindre des groupes ;
+-   participer à des événements ;
+-   collaborer sur des projets ;
+-   partager des accomplissements ;
+-   échanger dans des espaces modérés.
+
+Le social doit soutenir l'apprentissage et la collaboration, et non
+transformer YOUTH CITY en réseau social généraliste.
+
+### 19.1. Guildes et communautés
+
+Exemples :
+
+-   Developers ;
+-   Designers ;
+-   Entrepreneurs ;
+-   Business ;
+-   Students ;
+-   Environment ;
+-   AI Builders.
+
+Chaque communauté peut organiser des défis, ateliers et projets
+collectifs.
+
+### 19.2. Protection des utilisateurs
+
+Prévoir des paramètres de confidentialité, des contrôles de visibilité,
+le blocage d'utilisateurs, le signalement et une modération adaptée à
+l'âge. Les interactions entre mineurs et adultes doivent faire l'objet
+de règles spécifiques et de protections renforcées.
+
+------------------------------------------------------------------------
+
+## 20. Challenges et compétitions
+
+### 20.1. Défis individuels
+
+Exemples :
+
+-   créer son premier portfolio en 7 jours ;
+-   apprendre les bases d'Excel ;
+-   préparer un CV ;
+-   établir un budget mensuel ;
+-   terminer un parcours de formation.
+
+### 20.2. Défis collectifs
+
+Exemples :
+
+-   construire une startup virtuelle en équipe ;
+-   résoudre un problème de quartier ;
+-   participer à un hackathon ;
+-   créer une campagne de sensibilisation.
+
+### 20.3. Récompenses
+
+Les récompenses peuvent inclure XP, badges, titres, éléments cosmétiques
+et accès à de nouveaux scénarios. Les récompenses ne doivent pas
+encourager des comportements dangereux ou une compétition malsaine.
+
+------------------------------------------------------------------------
+
+## 21. Classements
+
+Les classements doivent être facultatifs et proposer plusieurs
+catégories :
+
+-   compétences ;
+-   projets ;
+-   challenges ;
+-   contribution communautaire.
+
+Éviter de faire du classement global le cœur du produit. Prévoir des
+périodes de classement, des règles anti-triche et la possibilité de
+masquer son profil.
+
+------------------------------------------------------------------------
+
+## 22. Portfolio et Career Passport
+
+### 22.1. Portfolio
+
+Chaque joueur dispose d'un portfolio généré à partir de ses réalisations
+:
+
+-   formations terminées ;
+-   projets ;
+-   compétences démontrées ;
+-   challenges ;
+-   contributions ;
+-   certifications internes.
+
+Le joueur choisit ce qu'il rend public.
+
+### 22.2. Career Passport
+
+*Précisions v1.1 : le passeport n'est construit que de faits enregistrés, sa publication est
+facultative et révocable, et la vérification publique se fait par code aléatoire (voir §48.3).*
+
+Le Career Passport est un profil partageable qui présente les
+compétences et preuves obtenues dans YOUTH CITY.
+
+Exemple :
+
+``` text
+YOUTH CITY PASSPORT
+
+Compétences validées : 8
+Projets : 12
+Challenges : 34
+Parcours terminés : 5
+Projets collectifs : 8
 ```
 
----
+Les indicateurs doivent être vérifiables dans la plateforme et ne pas
+être assimilés automatiquement à des qualifications officielles.
 
-## 💼 PARTIE IV — Activités, Emploi, Projets & Événements
+------------------------------------------------------------------------
 
-### 21. Emploi & Carrière
+## 23. Dashboard principal
 
-Chaque offre d'emploi est adossée à une fiche de compétences techniques et comportementales :
+Le tableau de bord doit être lisible, utile et orienté vers l'action.
 
-```text
-┌────────────────────────────────────────────────────────┐
-│ 💼 POSTE : Frontend Developer                          │
-├────────────────────────────────────────────────────────┤
-│ • Rémunération : 500 000 MGA / mois                    │
-│ • Prérequis    : JavaScript (70%), React (50%), Git (40%)│
-│ • Portfolio    : Au moins 1 projet fonctionnel validé  │
-└────────────────────────────────────────────────────────┘
+Exemple :
+
+``` text
+YOUTH CITY
+
+Bonjour Alex !
+
+OBJECTIF
+Devenir développeur
+Progression : 76 %
+
+RESSOURCES
+Argent virtuel : 425 000 Ar
+Énergie : 72 %
+Bien-être simulé : 81 %
+
+AUJOURD'HUI
+[✓] Formation
+[ ] Mission professionnelle
+[ ] Challenge
+
+NOVA
+« Voici ce que je te recommande aujourd'hui… »
 ```
 
-**Parcours de recrutement du joueur :**
-1. Consultation de l'offre sur le jobboard du Business District ;
-2. Dépôt de candidature (vérification automatique des prérequis) ;
-3. Test technique ou étude de cas interactive ;
-4. Entretien d'embauche simulé ;
-5. Décision d'embauche et signature du contrat virtuel.
+Le dashboard doit présenter les informations essentielles sans
+surcharger l'utilisateur.
 
----
+------------------------------------------------------------------------
 
-### 22. Entretiens d'embauche simulés
+## 24. Carte interactive
 
-Grâce au module d'IA, l'utilisateur passe de véritables entretiens interactifs :
+La carte constitue le point d'entrée visuel de la ville.
 
-```text
-┌────────────────────────────────────────────────────────┐
-│ 👔 LE RECRUTEUR VIRTUEL                                │
-├────────────────────────────────────────────────────────┤
-│ « Pourquoi devrions-nous retenir votre candidature     │
-│   plutôt qu'une autre pour ce poste chez TechSol ? »   │
-└────────────────────────────────────────────────────────┘
-                          ▼
-               [ Réponse du candidat ]
-                          ▼
-┌────────────────────────────────────────────────────────┐
-│ 🤖 ANALYSE PÉDAGOGIQUE DU MENTOR                       │
-├────────────────────────────────────────────────────────┤
-│ • Pertinence thématique  : ⭐⭐⭐⭐☆ (8/10)              │
-│ • Clarté & Structure     : ⭐⭐⭐☆☆ (6/10)              │
-│ • Valorisation des acquis: ⭐⭐⭐⭐☆ (8/10)              │
-│                                                        │
-│ 💡 Conseil pour progresser :                           │
-│   Tu as bien mis en avant tes acquis JavaScript.       │
-│   Pense toutefois à illustrer ton propos avec un       │
-│   exemple chiffré de projet réalisé.                   │
-└────────────────────────────────────────────────────────┘
+Exemple de disposition :
+
+``` text
+                  CAMPUS
+                     |
+                     |
+RESIDENTIAL --- CITY CENTER --- BUSINESS
+                     |
+                     |
+                  FINANCE
+                     |
+                  STARTUP
+                     |
+                   MARKET
 ```
 
----
+### 24.1. Interactions
 
-### 23. Éducation & Pipeline pédagogique
+-   cliquer sur un quartier ;
+-   afficher sa description ;
+-   consulter les bâtiments disponibles ;
+-   voir les activités possibles ;
+-   afficher les événements ;
+-   accéder aux missions du quartier.
 
-Chaque cursus de formation suit un entonnoir pédagogique éprouvé assurant la montée en compétences réelles :
+### 24.2. Approche technique
 
-```mermaid
-flowchart TD
-    A["📖 COURS THÉORIQUE<br><i>Apports fondamentaux synthétiques</i>"] --> B["✍️ EXERCICE D'APPLICATION<br><i>Mise en pratique guidée</i>"]
-    B --> C["❓ QUIZ DE VALIDATION<br><i>Contrôle des connaissances</i>"]
-    C --> D["🎯 MISSION PROFESSIONNELLE<br><i>Cas concret en situation réelle</i>"]
-    D --> E["🚀 PROJET CERTIFIANT<br><i>Réalisation intégrée au portfolio</i>"]
-    E --> F["🏆 DÉLIVRANCE DE LA CERTIFICATION<br><i>Reconnaissance citoyenne</i>"]
-```
+Pour le MVP, privilégier une carte 2D interactive, légère et responsive.
+Une ville 3D complexe n'est pas nécessaire au lancement.
 
----
+------------------------------------------------------------------------
 
-### 24. Gestion de projets
+## 25. Application web et expérience mobile
 
-Le joueur a l'opportunité d'initier ses propres projets transversaux (ex : *Application mobile de livraison de produits locaux*) :
-- Choix de l'équipe et association de partenaires ;
-- Définition du budget et recherche de financements ;
-- Choix de la stack technique ou des méthodes de production ;
-- Déploiement de la stratégie commerciale ;
-- Simulation des retombées : gain d'XP, revenus additionnels, visibilité.
+Le produit doit être conçu en **responsive-first**.
 
----
+Priorités :
 
-### 25. Système de décisions & Dilemmes moraux/financiers
+1.  smartphone ;
+2.  tablette ;
+3.  ordinateur.
 
-Le joueur est régulièrement confronté à des dilemmes réalistes :
+Une PWA pourra être envisagée pour proposer une installation sur l'écran
+d'accueil et certaines fonctions hors ligne. Une application native
+pourra être étudiée ultérieurement selon les besoins réels. *Décision v1.1 : la PWA est
+reportée après le MVP (voir §48.5).*
 
-> **Scénario d'imprévu** : *« Ton ordinateur portable indispensable pour tes études et ton emploi tombe en panne complète. »*
+### Navigation principale
 
-- [Option A] **Acheter un équipement neuf haut de gamme** (Coût : 600 000 MGA — *Épuise l'épargne, mais booste la productivité*) ;
-- [Option B] **Faire réparer l'ancien matériel** (Coût : 100 000 MGA — *Économique, mais risque de récidive de 30%*) ;
-- [Option C] **Emprunter un PC à un ami citoyen** (Coût : 0 MGA — *Renforce le lien social, mais indisponible le soir*) ;
-- [Option D] **Souscrire un crédit bancaire au Finance District** (Mensualités de 35 000 MGA sur 6 mois — *Impact sur le budget récurrent*).
+-   Ville ;
+-   Missions ;
+-   Apprendre ;
+-   Travail ;
+-   Projets ;
+-   Finance ;
+-   Social ;
+-   Profil ;
+-   NOVA.
 
-Chaque option entraîne une cascade de conséquences mesurables.
+Sur mobile, utiliser une navigation compacte, avec les accès les plus
+importants toujours visibles.
 
----
+------------------------------------------------------------------------
 
-### 26. Moteur d'événements dynamiques
+## 26. Direction artistique et UX/UI
 
-La ville génère des événements aléatoires contextualisés selon le profil et l'historique du citoyen :
-- Perte ou suspension d'un emploi ;
-- Opportunité soudaine de mission freelance bien rémunérée ;
-- Concours d'innovation ou hackathon du City Hub ;
-- Promotion professionnelle inattendue ;
-- Aléas domestiques (panne de chauffe-eau, loyer revu à la hausse) ;
-- Rencontre fortuite avec un mentor d'affaires.
+### 26.1. Identité visuelle
 
----
+Direction recommandée :
 
-## 🤖 PARTIE V — Intelligence Artificielle & Mentorat
+**moderne, jeune, légèrement futuriste, chaleureuse et accessible.**
 
-### 27. IA intégrée & Assistant adaptatif
+L'interface doit évoquer un mélange de :
 
-L'intelligence artificielle n'est pas un simple moteur conversationnel passif : c'est un **coach de vie et de carrière proactif**.
+-   jeu de simulation ;
+-   application de gestion ;
+-   plateforme éducative ;
+-   réseau professionnel.
 
-**Exemples d'interventions intelligentes :**
-> *« Attention : Tu consacres actuellement 72 % de tes revenus mensuels au loyer et au transport. Un tel ratio fragilise ton épargne. Envisage une colocation ou un mode de transport alternatif. »*
+### 26.2. Principes visuels
 
-> *« Tes compétences en design UI ont atteint le seuil de 65 %. Deux missions freelance au Business District correspondent exactement à ton niveau. Souhaites-tu postuler ? »*
+-   cartes claires ;
+-   bâtiments stylisés ;
+-   illustrations cohérentes ;
+-   animations légères ;
+-   micro-interactions ;
+-   avatar personnalisable ;
+-   hiérarchie typographique nette ;
+-   couleurs accessibles ;
+-   contrastes suffisants ;
+-   états de chargement, erreur et succès soignés.
 
----
+Éviter une interface trop enfantine ou trop proche d'un jeu mobile
+rempli de fenêtres et de récompenses.
 
-### 28. Personal AI Mentor (NOVA)
+### 26.3. Accessibilité
 
-Chaque citoyen est guidé par **NOVA**, son compagnon d'apprentissage personnalisé.
+Prévoir :
 
-```text
-┌────────────────────────────────────────────────────────┐
-│ 🤖 NOVA — TON MENTOR PERSONNEL                         │
-├────────────────────────────────────────────────────────┤
-│ Bonjour Emmanuel 👋 ! Voici ton plan d'action du jour :│
-│                                                        │
-│ [✓] Terminer le module JavaScript (Campus)             │
-│ [○] Postuler à 2 offres de stage (Business District)   │
-│ [○] Épargner 20 000 MGA sur ton livret de précaution   │
-│ [○] Avancer sur le projet de boutique en ligne         │
-│                                                        │
-│ 💬 Le conseil de NOVA :                                │
-│ « Tu as accompli d'excellents progrès théoriques.      │
-│   Il est temps de concrétiser cela en publiant un      │
-│   premier livrable sur ton portfolio public ! »        │
-└────────────────────────────────────────────────────────┘
-```
+-   navigation clavier ;
+-   textes lisibles ;
+-   contrastes conformes aux bonnes pratiques WCAG ;
+-   libellés accessibles ;
+-   alternatives textuelles aux images ;
+-   réduction des animations ;
+-   interfaces utilisables sur des écrans modestes.
 
----
+------------------------------------------------------------------------
 
-## 🌐 PARTIE VI — Dimension Sociale, Portfolio & Career Passport
+## 27. Architecture technique recommandée
 
-### 29. Système social & Coopération
+### 27.1. Frontend
 
-Les interactions entre utilisateurs sont pensées pour favoriser l'apprentissage collaboratif et l'émulation positive :
-- Liste d'amis et messagerie instantanée ;
-- Constitution d'équipes de travail pluridisciplinaires ;
-- Partage d'expériences et de recommandations ;
-- Co-création d'entreprises virtuelles.
+**React + TypeScript + Vite**
 
-> [!NOTE]
-> YOUTH CITY évite les dérives des réseaux sociaux traditionnels : aucune mécanique de scroll infini ni de validation superficielle. Les interactions sociales sont subordonnées à la réalisation de projets et à la progression citoyenne.
+Technologies et outils possibles :
 
----
-
-### 30. Guildes & Communautés thématiques
-
-Les citoyens peuvent rejoindre des guildes professionnelles autonomes :
-- 💻 **Developers Guild** (entraide code, revues de projets, hackathons) ;
-- 🎨 **Designers Collective** (critiques d'interfaces, défis artistiques) ;
-- 🚀 **Entrepreneurs Club** (pitchs, recherche d'associés, partage de business plans) ;
-- 📊 **Business & Finance League** (stratégie, comptabilité, investissement) ;
-- 🌍 **Social & Green Impact** (initiatives écologiques et associatives).
-
----
-
-### 31. Challenges & Missions collaboratives
-
-| Type de challenge | Intitulé exemple | Durée | Récompense |
-| :--- | :--- | :---: | :--- |
-| **Individuel** | *« Bâtir son premier portfolio complet »* | 7 jours | `+100 XP` & Badge Débutant |
-| **Collectif** | *« Monter un projet de startup à 3 »* | 30 jours | `+500 XP` & Accès Incubateur |
-| **Financier** | *« Réussir à épargner 100 000 MGA »* | 14 jours | `+150 XP` & Titre Épargnant Averti |
-
----
-
-### 32. Système de badges & Accomplissements
-
-- 🏆 **First Job** : Obtenir son tout premier contrat de travail ;
-- 🚀 **Serial Entrepreneur** : Créer une startup générant des bénéfices positifs ;
-- 💰 **Smart Saver** : Maintenir 3 mois de dépenses en épargne de sécurité ;
-- 🎓 **Scholar** : Valider 5 modules de formation avec mention ;
-- 🤝 **Team Player** : Mener à bien un projet collaboratif à 4 ;
-- 🔥 **30-Day Streak** : Se connecter et progresser 30 jours d'affilée.
-
----
-
-### 33. Classements & Émulation saine
-
-Les classements sont **thématiques, hebdomadaires et facultatifs** pour éviter toute compétition anxiogène :
-- Classement par compétences acquises ;
-- Classement des projets les plus innovants ;
-- Classement de la générosité citoyenne (mentorat bénévole) ;
-- Classement global d'XP.
-
----
-
-### 34. Portfolio citoyen vérifiable
-
-Chaque joueur dispose d'un espace vitrine exportable et consultable par des recruteurs réels ou des partenaires :
-
-```text
-┌────────────────────────────────────────────────────────┐
-│ 🎓 PORTFOLIO PUBLIC : Emmanuel                         │
-├────────────────────────────────────────────────────────┤
-│ 📚 Formations validées :                               │
-│   ✓ Développement Web Frontend (Mention Très Bien)     │
-│   ✓ Fondamentaux du Marketing Digital                  │
-│                                                        │
-│ 🚀 Projets réalisés :                                  │
-│   ✓ PrediStock (Outil de prévision des stocks)         │
-│   ✓ Portfolio interactif responsive                    │
-│                                                        │
-│ 💡 Compétences démontrées en pratique :                │
-│   • JavaScript (Avancé)    • React (Intermédiaire)     │
-│   • Git & GitHub           • Gestion budgétaire        │
-└────────────────────────────────────────────────────────┘
-```
-
----
-
-### 35. Career Passport
-
-Véritable CV dynamique nouvelle génération, le **Career Passport** capitalise toutes les actions probantes accomplies sur la plateforme, infalsifiable et orienté vers l'employabilité dans le monde réel.
-
-```text
-┌────────────────────────────────────────────────────────┐
-│ 🌐 YOUTH CITY — CAREER PASSPORT                        │
-├────────────────────────────────────────────────────────┤
-│ • Citoyen ID   : #YC-84920                             │
-│ • Compétences  : [██████████████░░] 85% d'aptitude pro │
-│ • Projets livrés en production : 12                    │
-│ • Challenges réussis           : 34                    │
-│ • Certifications validées      : 5                     │
-│ • Projets d'équipe collaboratifs: 8                    │
-└────────────────────────────────────────────────────────┘
-```
-
----
-
-## 🖥️ PARTIE VII — Interface, Carte & Expérience Utilisateur (UI/UX)
-
-### 36. Dashboard principal
-
-Le tableau de bord central propose une synthèse visuelle instantanée de l'état du joueur et de ses priorités.
-
-```text
-┌────────────────────────────────────────────────────────────────────────┐
-│ 🏙️ YOUTH CITY                      [🔔 Notifications] [👤 Profil]     │
-├────────────────────────────────────────────────────────────────────────┤
-│ 👋 Bonjour Emmanuel !                                                  │
-│                                                                        │
-│ 🎯 OBJECTIF EN COURS : Devenir Développeur Junior Web                 │
-│ Progression : [████████████████████████░░░░░░░░] 76%                   │
-├────────────────────────────────────────┬───────────────────────────────┤
-│ 💰 Portefeuille : 425 000 MGA          │ ⚡ Énergie  : 72%              │
-│ 🏦 Épargne      : 200 000 MGA          │ ❤️ Bien-être: 81%              │
-├────────────────────────────────────────┴───────────────────────────────┤
-│ 📅 PLAN D'ACTION DU JOUR (TODAY)                                       │
-│   [✓] 09:00 - Cours JavaScript (Campus District)                      │
-│   [○] 14:00 - Mission freelance : Intégration maquette                │
-│   [○] 18:00 - Challenge d'épargne hebdomadaire                       │
-├────────────────────────────────────────────────────────────────────────┤
-│ 🤖 CONSEIL DU MENTOR NOVA                                              │
-│ « Une entreprise recherche activement un profil correspondant à tes    │
-│   compétences React dans le Business District. Prépare ton CV ! »      │
-└────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-### 37. Carte interactive de la ville
-
-La carte permet de naviguer intuitivement entre les 7 districts :
-
-```text
-                            🎓 CAMPUS DISTRICT
-                            (Écoles & Formations)
-                                     │
-                                     │
-   🏠 RESIDENTIAL DISTRICT ─── 🏙️ CITY CENTER ─── 💼 BUSINESS DISTRICT
-   (Logements & Foyer)          (Hub Social)        (Emplois & Coworking)
-                                     │
-                                     │
-                            🏦 FINANCE DISTRICT
-                            (Banques & Épargne)
-                                     │
-                            🚀 STARTUP DISTRICT
-                            (Incubateur & Projets)
-                                     │
-                            🛒 MARKET DISTRICT
-                            (Commerces & Équipements)
-```
-
-> [!TIP]
-> **Orientation MVP** : Une carte vectorielle 2D interactive, cliquable et fluide est largement suffisante et prioritaire par rapport à un monde 3D lourd et complexe.
-
----
-
-### 38. Conception Responsive & Vision Mobile
-
-L'application est conçue selon l'approche **Mobile-First** :
-1. **Smartphone (Priorité N°1)** : Interface optimisée pour écrans tactiles verticaux, navigation par onglets inférieurs ;
-2. **Tablette (Priorité N°2)** : Affichage hybride cartes + panneaux latéraux ;
-3. **Desktop (Priorité N°3)** : Expérience plein écran avec dashboard étendu.
-
-Une déclinaison en **PWA (Progressive Web App)** garantira une installation instantanée sans passer obligatoirement par les stores d'applications.
-
----
-
-## ⚙️ PARTIE VIII — Architecture Technique, Sécurité & Modération
-
-### 39. Stack technique recommandée
-
-Afin de garantir robustesse, modernité et pérennité :
-
-```mermaid
-flowchart LR
-    subgraph Frontend ["Frontend (Web & PWA)"]
-        A1["React 19 / TS"]
-        A2["Vite"]
-        A3["Tailwind CSS"]
-        A4["Zustand (State)"]
-        A5["TanStack Query"]
-        A6["Framer Motion"]
-    end
-
-    subgraph Backend ["Backend & Logique Métier"]
-        B1["Django 5.x"]
-        B2["Django REST Framework"]
-        B3["Celery (Tâches asynchrones)"]
-    end
-
-    subgraph Data ["Données & Cache"]
-        C1[("PostgreSQL")]
-        C2[("Redis")]
-    end
-
-    subgraph AI ["IA & LLM Gateway"]
-        D1["Fournisseurs Multi-LLM<br>(OpenAI / Claude / Gemini / OpenRouter)"]
-    end
-
-    Frontend --> Backend
-    Backend --> Data
-    Backend --> AI
-```
-
-- **Frontend** : **React + TypeScript + Vite**, stylisé avec **Tailwind CSS**, gestion d'état avec **Zustand**, requêtage et cache avec **TanStack Query**, et animations fluides avec **Framer Motion**.
-- **Backend** : **Python / Django + Django REST Framework** : idéal pour modéliser la riche logique métier (comptes, portefeuilles, compétences, inventaires, progression).
-- **Base de données** : **PostgreSQL** (intégrité relationnelle, transactions ACID strictes pour les portefeuilles virtuels).
-- **Cache & Asynchronisme** : **Redis** pour les sessions et le calcul des classements en temps réel.
-- **Connecteur IA agnostique** : Couche d'abstraction compatible avec les principaux modèles du marché (OpenAI, Google Gemini, Anthropic, OpenRouter) sans dépendance exclusive.
-
----
-
-### 40. Architecture logicielle (Frontend & Backend)
-
-```text
+-   React Router pour la navigation ;
+-   TanStack Query pour les données serveur ;
+-   Zustand pour l'état client partagé ;
+-   Tailwind CSS pour les styles ;
+-   bibliothèque de composants accessible et réutilisable ;
+-   Framer Motion pour les animations, avec usage mesuré.
+
+### 27.2. Backend
+
+**Django + Django REST Framework**
+
+Justification :
+
+YOUTH CITY comporte de nombreuses règles métier : utilisateurs,
+personnages, économie, compétences, missions, progression, événements,
+projets et interactions sociales. Django fournit une base structurée
+pour gérer ces domaines.
+
+### 27.3. Base de données
+
+**PostgreSQL**
+
+Elle stockera les comptes, personnages, compétences, transactions
+virtuelles, activités, projets, événements et données de progression.
+
+### 27.4. Cache et tâches asynchrones
+
+**Redis** pourra être utilisé pour le cache, les files de tâches et
+certaines fonctions temps réel. Un outil de tâches asynchrones pourra
+être ajouté lorsque les besoins seront confirmés.
+
+### 27.5. IA
+
+Créer une couche de service indépendante des fournisseurs afin de
+faciliter le changement de modèle et la gestion des coûts.
+
+------------------------------------------------------------------------
+
+## 28. Organisation indicative du code
+
+``` text
 frontend/
-├── app/                  # Configuration racine, routeur et providers
-├── components/           # Composants atomiques réutilisables (Boutons, Modales, Inputs)
-├── features/             # Organisation modulaire par domaine métier
-│   ├── city/             # Carte interactive et navigation entre quartiers
-│   ├── character/        # Avatar, statistiques, jauges d'énergie
-│   ├── education/        # Cours, quiz, modules du Campus
-│   ├── career/           # Emplois, offres, tests de recrutement
-│   ├── finance/          # Portefeuille, compte bancaire, budget
-│   ├── business/         # Création d'entreprise, startup, clients
-│   ├── projects/         # Gestion de projets individuels et d'équipe
-│   ├── social/           # Amis, équipes, messagerie, guildes
-│   ├── challenges/       # Missions hebdomadaires et classements
-│   └── ai/               # Interface de chat et recommandations NOVA
-├── hooks/                # Hooks personnalisés
-├── services/             # Clients API REST & WebSocket
-├── stores/               # Stores globaux Zustand
-└── types/                # Types et interfaces TypeScript
+├── public/
+├── src/
+│   ├── app/
+│   ├── assets/
+│   ├── components/
+│   ├── features/
+│   │   ├── city/
+│   │   ├── character/
+│   │   ├── education/
+│   │   ├── career/
+│   │   ├── finance/
+│   │   ├── business/
+│   │   ├── projects/
+│   │   ├── social/
+│   │   ├── challenges/
+│   │   └── ai/
+│   ├── pages/
+│   ├── hooks/
+│   ├── services/
+│   ├── stores/
+│   ├── types/
+│   └── utils/
+├── tests/
+└── README.md
 
 backend/
-├── core/                 # Configuration générale Django et sécurité
-├── users/                # Authentification, profils, permissions
-├── characters/           # Modèles de citoyens, statistiques, inventaires
-├── city/                 # Bâtiments, quartiers, navigation urbaine
-├── skills/               # Arborescence des compétences et validation
-├── education/            # Cours, évaluations, certifications
-├── careers/              # Entreprises virtuelles, offres d'emploi, candidatures
-├── finance/              # Transactions virtuelles, comptes, crédits
-├── businesses/           # Entités startups, flux de trésorerie
-├── projects/             # Projets créés par les utilisateurs
-├── social/               # Amitiés, guildes, invitations
-├── challenges/           # Événements, récompenses, XP
-└── ai/                   # Orchestration des prompts et appels LLM
+├── config/
+├── apps/
+│   ├── users/
+│   ├── city/
+│   ├── characters/
+│   ├── skills/
+│   ├── education/
+│   ├── careers/
+│   ├── finance/
+│   ├── businesses/
+│   ├── projects/
+│   ├── social/
+│   ├── challenges/
+│   ├── events/
+│   ├── ai/
+│   └── notifications/
+├── tests/
+├── manage.py
+└── README.md
 ```
 
----
+Cette structure est indicative. Elle devra être adaptée à la taille
+réelle du MVP, sans multiplier prématurément les applications ou couches
+abstraites.
 
-### 41. Modèle de données principal
+------------------------------------------------------------------------
 
-```text
-┌──────────────────────┐         ┌──────────────────────┐
-│        User          │ 1     1 │      Character       │
-│──────────────────────│─────────│──────────────────────│
-│ • id                 │         │ • id                 │
-│ • username           │         │ • user_id (FK)       │
-│ • email              │         │ • name               │
-│ • password_hash      │         │ • level              │
-│ • created_at         │         │ • xp                 │
-└──────────────────────┘         │ • energy             │
-                                 │ • wellbeing          │
-                                 │ • money (MGA)        │
-                                 └──────────┬───────────┘
-                                            │
-         ┌──────────────────┬───────────────┼───────────────┬──────────────────┐
-         │ 1              * │ 1           * │ 1           * │ 1              * │
-┌────────┴─────────┐ ┌──────┴────────┐ ┌────┴────────────┐ ┌┴────────────────┐ ┌┴────────────────┐
-│  CharacterSkill  │ │    Property   │ │       Job       │ │    Project     │ │     Event      │
-│──────────────────│ │───────────────│ │─────────────────│ │────────────────│ │────────────────│
-│ • character_id   │ │ • id          │ │ • id            │ │ • id           │ │ • id           │
-│ • skill_id (FK)  │ │ • name        │ │ • title         │ │ • owner_id (FK)│ │ • title        │
-│ • level          │ │ • rent_price  │ │ • company       │ │ • name         │ │ • type         │
-│ • experience     │ │ • comfort_rate│ │ • salary        │ │ • budget       │ │ • reward_xp    │
-└────────┬─────────┘ └───────────────┘ └─────────────────┘ │ • status       │ └────────────────┘
-         │ *                                               └────────────────┘
-┌────────┴─────────┐
-│      Skill       │
-│──────────────────│
-│ • id             │
-│ • name           │
-│ • category       │
-│ • description    │
-└──────────────────┘
+## 29. Modèle de données initial
+
+Les entités principales envisagées sont les suivantes.
+
+### User
+
+-   id ;
+-   username ;
+-   email ;
+-   password_hash ;
+-   date de création ;
+-   statut ;
+-   paramètres de confidentialité.
+
+### Character
+
+-   id ;
+-   user_id ;
+-   nom public ;
+-   niveau ;
+-   XP ;
+-   énergie ;
+-   bien-être simulé ;
+-   argent virtuel ;
+-   date de création.
+
+### Skill
+
+-   id ;
+-   nom ;
+-   catégorie ;
+-   description ;
+-   règles de validation.
+
+### CharacterSkill
+
+-   character_id ;
+-   skill_id ;
+-   niveau ;
+-   expérience ;
+-   statut de validation ;
+-   preuves associées.
+
+### Property
+
+-   id ;
+-   nom ;
+-   type ;
+-   prix ;
+-   loyer ;
+-   confort ;
+-   disponibilité.
+
+### Job
+
+-   id ;
+-   titre ;
+-   entreprise ;
+-   salaire virtuel ;
+-   description ;
+-   prérequis ;
+-   statut.
+
+### Project
+
+-   id ;
+-   owner_id ;
+-   nom ;
+-   description ;
+-   budget virtuel ;
+-   statut ;
+-   dates.
+
+### Event
+
+-   id ;
+-   titre ;
+-   description ;
+-   type ;
+-   difficulté ;
+-   récompense ;
+-   conditions de déclenchement ;
+-   période de disponibilité.
+
+### Transaction
+
+Une entité de transaction est indispensable pour l'économie :
+
+-   id ;
+-   character_id ;
+-   type ;
+-   montant ;
+-   devise virtuelle ;
+-   motif ;
+-   référence à l'activité ;
+-   date ;
+-   solde avant ;
+-   solde après.
+
+Les opérations financières virtuelles doivent être atomiques, contrôlées
+côté serveur et auditables.
+
+------------------------------------------------------------------------
+
+## 30. API et logique métier
+
+Le backend devra exposer des API documentées, versionnées et protégées.
+
+Domaines d'API indicatifs :
+
+-   authentification et comptes ;
+-   personnages et profils ;
+-   carte et quartiers ;
+-   compétences ;
+-   formations et évaluations ;
+-   emplois et candidatures ;
+-   portefeuille et transactions virtuelles ;
+-   logements et inventaire ;
+-   projets et équipes ;
+-   événements et challenges ;
+-   communautés ;
+-   mentor IA ;
+-   notifications.
+
+Les règles sensibles --- calcul des soldes, attribution d'XP, validation
+de compétences, conditions d'accès et conséquences des choix --- doivent
+être exécutées côté serveur.
+
+------------------------------------------------------------------------
+
+## 31. Sécurité et confidentialité
+
+Prévoir :
+
+-   authentification sécurisée ;
+-   hachage robuste des mots de passe ;
+-   gestion des sessions ou jetons ;
+-   protection CSRF selon le mode d'authentification ;
+-   limitation du débit des requêtes ;
+-   validation stricte côté serveur ;
+-   permissions par rôle ;
+-   journalisation des actions sensibles ;
+-   protection contre les abus ;
+-   sauvegardes ;
+-   gestion des secrets par variables d'environnement ;
+-   politique de conservation et suppression des données.
+
+### 31.1. Protection des mineurs
+
+Comme le public peut inclure des mineurs :
+
+-   collecter le minimum de données personnelles ;
+-   définir des règles d'âge et de consentement adaptées aux lois
+    applicables ;
+-   limiter les messages privés et les contacts non sollicités ;
+-   proposer blocage et signalement ;
+-   modérer les contenus et comportements ;
+-   éviter l'exposition publique de données personnelles ;
+-   prévoir des paramètres de confidentialité adaptés ;
+-   ne pas utiliser de mécaniques de pression ou de dépenses réelles.
+
+Une revue juridique et de protection des données devra être réalisée
+avant l'ouverture au public.
+
+------------------------------------------------------------------------
+
+## 32. Modération et sécurité communautaire
+
+Le parcours de modération doit comprendre :
+
+``` text
+SIGNALEMENT
+    |
+EXAMEN
+    |
+DÉCISION
+    |
+AVERTISSEMENT OU SANCTION
+    |
+SUIVI ET POSSIBILITÉ DE RECOURS
 ```
 
----
+Les règles doivent couvrir :
 
-### 42. Sécurité & Protection des utilisateurs
+-   spam ;
+-   harcèlement ;
+-   menaces ;
+-   contenus sexuels inappropriés ;
+-   fraude ;
+-   usurpation d'identité ;
+-   comportements abusifs ;
+-   partage de données personnelles.
 
-- **Authentification & Droits** : Sessions sécurisées ou JWT (JSON Web Tokens) avec refresh tokens stockés en cookies `HttpOnly` / `SameSite` ;
-- **Protection contre les vulnérabilités courantes** : CSRF tokens, sanitization des données, prévention des injections SQL via ORM ;
-- **Rate Limiting** : Restriction des requêtes sur les endpoints sensibles (authentification, création de contenu, appels IA) ;
-- **Protection des utilisateurs mineurs (15-17 ans)** :
-  - Paramètres de confidentialité stricts activés par défaut ;
-  - Modération renforcée des messages privés ;
-  - Absence totale de mécanismes addictifs de type *gambling* ou *loot boxes*.
+Prévoir une interface d'administration des signalements et un historique
+des décisions.
 
----
+------------------------------------------------------------------------
 
-### 43. Modération & Système de signalement
+## 33. Monétisation
 
-Pour maintenir un espace bienveillant et constructif :
-- Détection automatique par mots-clés et filtres IA contre le spam, le harcèlement, la haine et les contenus inappropriés ;
-- Bouton de signalement accessible sur tous les contenus utilisateurs ;
-- **Circuit de modération** :
-  `Signalement` ➔ `Mise en quarantaine` ➔ `Examen par l'équipe` ➔ `Sanction graduée` (Avertissement ➔ Suspension temporaire ➔ Bannissement définitif).
+Le gameplay essentiel doit rester accessible gratuitement.
 
----
+### 33.1. Offre gratuite
 
-## 📊 PARTIE IX — Modèle Économique, Administration & Mesure d'Impact
+-   accès à la ville de base ;
+-   création de personnage ;
+-   progression ;
+-   formations de base ;
+-   missions ;
+-   emplois virtuels ;
+-   challenges ;
+-   portfolio de base.
 
-### 44. Modèle de monétisation
+### 33.2. Offre Premium éventuelle
 
-Le gameplay fondamental est **100 % gratuit** (*Free-to-Learn*).
+-   mentor IA avec limites plus élevées ;
+-   simulations supplémentaires ;
+-   analyses détaillées ;
+-   personnalisation cosmétique ;
+-   outils avancés de suivi.
 
-```text
-┌────────────────────────────────────────────────────────────────────────┐
-│ MODÈLE FREEMIUM & B2B ÉTHIQUE                                          │
-├───────────────────┬────────────────────────────┬───────────────────────┤
-│ 🆓 OFFRE GRATUITE │ ⭐ PREMIUM (Optionnel)     │ 🏫 B2B INSTITUTIONS   │
-├───────────────────┼────────────────────────────┼───────────────────────┤
-│ • Accès à la ville│ • Mentorat IA approfondi   │ • Espaces universitaires│
-│ • Tous les cursus │ • Simulations avancées     │ • Tableaux de bord prof│
-│ • Emplois de base │ • Analyses statistiques    │ • Challenges privés   │
-│ • Mode social     │ • Personnalisations visuelles│ • Licences écoles/ONG │
-└───────────────────┴────────────────────────────┴───────────────────────┘
+Les fonctionnalités éducatives fondamentales ne doivent pas être
+artificiellement bloquées derrière un abonnement.
+
+### 33.3. Offre B2B
+
+Des établissements scolaires, universités ou organisations pourraient
+disposer d'espaces privés :
+
+**YOUTH CITY CAMPUS --- Université X**
+
+Un enseignant ou animateur pourrait :
+
+-   créer une classe ;
+-   inviter des participants ;
+-   assigner des missions ;
+-   suivre les résultats pédagogiques ;
+-   organiser des challenges ;
+-   consulter des statistiques agrégées.
+
+Les données individuelles des jeunes doivent rester protégées.
+
+------------------------------------------------------------------------
+
+## 34. Back-office d'administration
+
+Un espace réservé aux administrateurs et modérateurs doit permettre de
+gérer :
+
+-   utilisateurs ;
+-   rôles et permissions ;
+-   compétences ;
+-   formations ;
+-   emplois ;
+-   entreprises virtuelles ;
+-   bâtiments et quartiers ;
+-   événements ;
+-   challenges ;
+-   récompenses ;
+-   paramètres économiques ;
+-   contenus pédagogiques ;
+-   signalements ;
+-   statistiques ;
+-   paramètres IA.
+
+Les actions administratives sensibles doivent être journalisées.
+
+------------------------------------------------------------------------
+
+## 35. Analytics et indicateurs de réussite
+
+Mesurer notamment :
+
+-   utilisateurs actifs ;
+-   rétention ;
+-   parcours commencés et terminés ;
+-   formations terminées ;
+-   compétences démontrées ;
+-   projets créés ;
+-   challenges réussis ;
+-   collaborations réalisées ;
+-   progression des objectifs ;
+-   satisfaction utilisateur.
+
+Ne pas optimiser uniquement le temps passé ou le nombre de connexions.
+La réussite du produit doit être évaluée à travers les apprentissages et
+réalisations.
+
+------------------------------------------------------------------------
+
+## 36. MVP --- Première version
+
+Il est fortement déconseillé de développer toute la ville dès le départ.
+
+Le MVP doit valider la boucle principale : apprendre, développer une
+compétence, obtenir une opportunité, gagner un revenu virtuel, gérer ses
+dépenses et observer les conséquences.
+
+### 36.1. Fonctionnalités incluses
+
+1.  Inscription, connexion et profil.
+2.  Création du personnage.
+3.  Dashboard principal.
+4.  Carte 2D avec quelques quartiers.
+5.  Campus et formations simples.
+6.  Système de compétences.
+7.  Missions et objectifs.
+8.  Quelques offres d'emploi virtuelles.
+9.  Candidature et entretien simplifiés.
+10. Salaire virtuel.
+11. Budget et dépenses de base.
+12. Quelques événements et décisions.
+13. XP, niveaux et badges.
+14. Historique des actions.
+
+### 36.2. Parcours MVP
+
+``` text
+AUTHENTIFICATION
+       |
+CRÉATION DU PERSONNAGE
+       |
+EXPLORATION DE LA VILLE
+       |
+FORMATION
+       |
+COMPÉTENCE
+       |
+CANDIDATURE
+       |
+EMPLOI ET SALAIRE VIRTUEL
+       |
+BUDGET ET DÉPENSES
+       |
+DÉCISION
+       |
+CONSÉQUENCE
+       |
+PROGRESSION
 ```
 
----
+### 36.3. Critères d'acceptation du MVP
 
-### 45. Back-Office d'administration
+Le MVP pourra être considéré comme fonctionnel lorsque :
 
-Les gestionnaires de la plateforme disposent d'une console d'administration pour :
-- Piloter le catalogue des formations et certifications ;
-- Configurer les offres d'emploi virtuelles et ajuster les équilibres économiques ;
-- Créer et programmer les événements de la ville et les challenges ;
-- Modérer les comptes et analyser les flux de signalements ;
-- Superviser les métriques globales de rétention et de succès éducatif.
+-   un utilisateur peut créer et retrouver son compte ;
+-   son personnage est sauvegardé ;
+-   la carte permet d'accéder aux quartiers disponibles ;
+-   une formation peut être commencée et terminée ;
+-   les compétences progressent selon des règles définies ;
+-   les missions et récompenses sont validées côté serveur ;
+-   les candidatures suivent un processus cohérent ;
+-   le salaire virtuel est crédité correctement ;
+-   les dépenses sont débitées correctement ;
+-   le solde ne peut pas être modifié depuis le navigateur ;
+-   l'historique des transactions est consultable ;
+-   l'interface fonctionne sur mobile et desktop ;
+-   les erreurs et états de chargement sont gérés ;
+-   les tests critiques passent.
 
----
+------------------------------------------------------------------------
 
-### 46. Analytics & Indicateurs d'apprentissage
+## 37. Version 2
 
-Plutôt que d'optimiser le simple temps passé à l'écran, YOUTH CITY mesure la **valeur éducative produite** :
-- Taux de complétion des modules de formation ;
-- Volume de projets tangibles finalisés ;
-- Évolution moyenne de la compétence budgétaire des citoyens ;
-- Taux de réussite aux entretiens d'embauche simulés ;
-- Taux de conversion vers des candidatures professionnelles réelles.
+Après validation du MVP, ajouter :
 
----
+-   mentor IA NOVA ;
+-   projets personnels ;
+-   entrepreneuriat ;
+-   portfolio ;
+-   challenges avancés ;
+-   événements dynamiques ;
+-   fonctionnalités sociales ;
+-   communautés ;
+-   collaboration en équipe.
 
-## 🚀 PARTIE X — Roadmap, Gameplay Loop, UX & Synthèse
+------------------------------------------------------------------------
 
-### 47. MVP — Minimum Viable Product (Phase 1)
+## 38. Version 3
 
-> [!IMPORTANT]
-> Pour garantir une mise sur le marché rapide et maîtrisée, la Phase 1 se concentre sur la boucle essentielle :
+Évolutions possibles :
 
-```text
-[ AUTHENTIFICATION ]
-         │
-         ▼
-[ CRÉATION DU PERSONNAGE ]
-         │
-         ▼
-[ CARTE 2D DES QUARTIERS ]
-         │
-         ▼
-[ CAMPUS : 1 FORMATION TYPE (ex : Dev Web) ]
-         │
-         ▼
-[ ACQUISITION DE COMPÉTENCES ]
-         │
-         ▼
-[ POSTULATION BUSINESS DISTRICT ]
-         │
-         ▼
-[ PERCEPTION DU PREMIER SALAIRE ]
-         │
-         ▼
-[ GESTION DU BUDGET & LOGEMENT ]
-         │
-         ▼
-[ PREMIÈRE DÉCISION / DILEMME ]
-         │
-         ▼
-[ MONTÉE DE NIVEAU (XP) ]
+-   guildes ;
+-   compétitions ;
+-   économie virtuelle avancée ;
+-   Career Passport ;
+-   espaces pour établissements partenaires ;
+-   PWA ;
+-   notifications avancées ;
+-   application mobile dédiée ;
+-   davantage de quartiers et de scénarios.
+
+------------------------------------------------------------------------
+
+## 39. Exemple de journée de jeu
+
+Un joueur se connecte et découvre son état :
+
+-   argent virtuel : 500 000 Ar ;
+-   énergie : 80 % ;
+-   objectif : devenir développeur.
+
+**08 h --- Formation**
+
+Le joueur suit un module JavaScript de deux heures virtuelles et gagne
+50 XP.
+
+**12 h --- Opportunité**
+
+Une entreprise virtuelle recherche un développeur junior. Le joueur ne
+possède pas encore toutes les compétences demandées.
+
+**15 h --- Mission**
+
+Il reçoit une mission de création de landing page, avec une récompense
+simulée de 100 000 Ar.
+
+**18 h --- Réalisation**
+
+Il termine la mission, reçoit la récompense et ajoute le travail à son
+portfolio.
+
+**20 h --- Conseil de NOVA**
+
+Le mentor lui recommande de documenter le projet et de renforcer une
+compétence précise.
+
+Résumé de la journée :
+
+``` text
+XP : +250
+Argent virtuel : +100 000 Ar
+Portfolio : +1 projet
+JavaScript : progression +4 %
 ```
 
----
+Les horaires et récompenses sont des exemples de scénario.
 
-### 48. Version 2 — Consolidation & IA Mentor
-- Déploiement complet du **Mentor IA NOVA** avec conseils personnalisés quotidiens ;
-- Module de création et de gestion de **Startups et Projets** ;
-- Système de **Portfolio exportable** ;
-- Moteur d'**événements dynamiques et imprévus** ;
-- Système d'amitié et challenges hebdomadaires.
+------------------------------------------------------------------------
 
----
+## 40. Innovations différenciantes
 
-### 49. Version 3 — Écosystème & Partenariats B2B
-- Lancement des **Guildes professionnelles** et hackathons multijoueurs ;
-- Déploiement officiel du **Career Passport** vérifiable ;
-- Espaces partenaires B2B pour universités, lycées et incubateurs ;
-- Application mobile native et mode hors-ligne partiel.
+### 40.1. Life Simulation Engine
 
----
+Moteur de simulation qui fait évoluer la ville selon les décisions, les
+ressources, les compétences et les événements.
 
-### 50. Vision à long terme
+### 40.2. AI Life Mentor
 
-À terme, YOUTH CITY a l'ambition de devenir :
-> **Le métavers éducatif de référence, léger, accessible et engageant, accompagnant chaque jeune vers son autonomie et sa réussite dans la vie adulte.**
+Mentor qui comprend le parcours de l'utilisateur et l'aide à définir des
+prochaines étapes réalistes.
 
----
+### 40.3. Skill Passport
 
-### 51. Boucle de gameplay fondamentale
+Profil de compétences basé sur des preuves concrètes et des
+réalisations.
 
-```mermaid
-flowchart TD
-    A["🎯 DÉFINITION DE L'OBJECTIF<br><i>(Ex : Trouver un travail qualifié)</i>"] --> B["📚 SE FORMER AU CAMPUS<br><i>(Acquisition de savoirs)</i>"]
-    B --> C["🧠 MONTER EN COMPÉTENCES<br><i>(Validation des hard/soft skills)</i>"]
-    C --> D["💼 SAISIR UNE OPPORTUNITÉ<br><i>(Emploi ou mission freelance)</i>"]
-    D --> E["💰 TOUCHER UN REVENU VIRTUEL<br><i>(Perception du salaire en MGA)</i>"]
-    E --> F["⚖️ ARBITRER & DÉCIDER<br><i>(Budget, investissement, logement)</i>"]
-    F --> G["📈 ASSUMER LES CONSÉQUENCES<br><i>(Énergie, bien-être, imprévus)</i>"]
-    G --> H["🏆 PROGRESSER EN XP & RANG<br><i>(Montée de niveau citoyen)</i>"]
-    H --> A
+### 40.4. Dynamic Life Events
+
+Événements adaptés au parcours, plutôt qu'une succession identique de
+scénarios pour tous.
+
+### 40.5. Parcours multiples
+
+Exemples :
+
+``` text
+PARCOURS A
+Études
+  |
+Développeur
+  |
+Freelance
+  |
+Startup
+  |
+Entrepreneur
 ```
 
----
-
-### 52. Scénario illustratif : Une journée type dans Youth City
-
-```text
-08:00 — ☀️ RÉVEIL DU PERSONNAGE
-        • État : Solde = 500 000 MGA | Énergie = 80%
-        • Petit-déjeuner au logement : +5% bien-être
-
-09:00 — 🎓 SESSION DE FORMATION AU CAMPUS
-        • Module : « Algorithmique & JavaScript » (Durée : 2h)
-        • Bilan : +50 XP, Énergie -15%
-
-12:00 — 💼 MARCHÉ DU TRAVAIL & OPPORTUNITÉ
-        • Événement : TechSolutions publie une offre Junior.
-        • Compétences encore insuffisantes (manque 15% en React).
-        • Arbitrage : Continuer l'apprentissage plutôt que postuler prématurément.
-
-15:00 — 💻 MISSION FREELANCE DISPONIBLE
-        • Mission : Création d'une page d'atterrissage pour un commerce local.
-        • Réalisation validée en 2h.
-        • Gain immédiat : +100 000 MGA, +40 XP.
-
-18:00 — 🏠 GESTION DU LOGEMENT & DÉPENSES
-        • Paiement de la facture d'électricité : -25 000 MGA.
-        • Rangement et repos.
-
-20:00 — 🤖 BRIEFING DU MENTOR NOVA
-        • Message : « Bravo pour ta mission freelance ! Ton portfolio compte
-          désormais un nouveau livrable. Demain, nous attaquerons React. »
-
-BILAN DE LA JOURNÉE :
-  ✨ XP : +290 pts  |  💵 Trésorerie : +75 000 MGA nets  |  🧠 JavaScript : +4%
+``` text
+PARCOURS B
+Université
+  |
+Marketing
+  |
+Entreprise
+  |
+Manager
+  |
+Consultant
 ```
 
----
+Aucun parcours ne doit être présenté comme intrinsèquement supérieur. Le
+jeu doit montrer les avantages, limites et compromis de chaque choix.
 
-### 53. Facteurs clés de différenciation & Innovations
+------------------------------------------------------------------------
 
-1. **Life Simulation Engine** : Un moteur systémique où chaque paramètre de vie (santé, budget, compétences, réputation) s'influence mutuellement.
-2. **AI Life Mentor (NOVA)** : Un coach intelligent qui ne se contente pas de répondre à des requêtes, mais analyse proactivement les vulnérabilités et les forces du joueur.
-3. **Skill Passport par la preuve** : Les compétences ne sont pas déclaratives, mais attestées par la réussite de projets et de missions concrètes.
-4. **Dynamic Life Events** : Des centaines de ramifications narratives garantissant que deux joueurs ne vivront jamais exactement la même aventure.
+## 41. Navigation
 
----
+Navigation principale proposée :
 
-### 54. Étude comparative : Deux trajectoires citoyennes
+-   Ville ;
+-   Missions ;
+-   Apprendre ;
+-   Travail ;
+-   Projets ;
+-   Finance ;
+-   Social ;
+-   Profil ;
+-   NOVA.
 
-```text
-┌──────────────────────────────────────┬──────────────────────────────────────┐
-│ 🧑 JOUEUR A : Profil Startup & Tech   │ 👩 JOUEUR B : Profil Entreprise & Mgt │
-├──────────────────────────────────────┼──────────────────────────────────────┤
-│ 1. Études courtes ciblées au Campus  │ 1. Cycle universitaire complet       │
-│ 2. Missions Freelance précoces       │ 2. Stage en grande entreprise        │
-│ 3. Lancement d'une Startup au Hub    │ 3. Poste de Chef de Projet junior    │
-│ 4. Prise de risque financier élevée  │ 4. Épargne rigoureuse & stabilité    │
-│ 5. Rôle final : Entrepreneur Tech    │ 5. Rôle final : Manager / Consultante│
-└──────────────────────────────────────┴──────────────────────────────────────┘
+La navigation mobile doit rester compacte et donner la priorité à la
+ville, aux missions, au travail, au mentor et au profil.
+
+------------------------------------------------------------------------
+
+## 42. Principes UX essentiels
+
+L'utilisateur ne doit jamais se demander ce qu'il peut faire ensuite.
+
+Prévoir une zone **Prochaine action** présentant une recommandation
+concrète :
+
+> Termine le module JavaScript. Récompense : +100 XP.
+
+Cette recommandation doit rester facultative. L'utilisateur doit pouvoir
+explorer librement d'autres activités.
+
+Autres exigences :
+
+-   onboarding progressif ;
+-   explication des règles au moment utile ;
+-   tutoriel court ;
+-   sauvegarde fiable ;
+-   retours visuels après chaque action ;
+-   messages d'erreur compréhensibles ;
+-   possibilité de reprendre une activité ;
+-   paramètres de notifications ;
+-   réduction des animations ;
+-   absence de pénalité excessive en cas d'inactivité.
+
+------------------------------------------------------------------------
+
+## 43. Tests et qualité
+
+Prévoir plusieurs niveaux de tests (les exigences détaillées de qualité figurent au §49) :
+
+### Tests unitaires
+
+-   calcul d'XP ;
+-   progression des compétences ;
+-   calcul des salaires ;
+-   transactions virtuelles ;
+-   conditions d'accès ;
+-   déclenchement d'événements.
+
+### Tests d'intégration
+
+-   inscription et connexion ;
+-   formation et validation ;
+-   candidature et recrutement ;
+-   crédit de salaire ;
+-   achat et débit ;
+-   collaboration et récompenses.
+
+### Tests end-to-end
+
+-   parcours complet d'un nouvel utilisateur ;
+-   parcours étudiant ;
+-   parcours recherche d'emploi ;
+-   parcours entrepreneur ;
+-   expérience mobile.
+
+### Tests non fonctionnels
+
+-   performance ;
+-   sécurité ;
+-   accessibilité ;
+-   compatibilité navigateurs ;
+-   comportement sur réseau lent ;
+-   sauvegarde et restauration.
+
+------------------------------------------------------------------------
+
+## 44. Déploiement et exploitation
+
+L'architecture devra prévoir (les exigences d'exploitation détaillées figurent au §49.9) :
+
+-   environnements développement, test et production ;
+-   variables d'environnement ;
+-   migrations de base de données ;
+-   sauvegardes automatiques ;
+-   logs applicatifs ;
+-   surveillance des erreurs ;
+-   pipeline CI/CD ;
+-   gestion des secrets ;
+-   documentation de déploiement ;
+-   stratégie de restauration.
+
+Le frontend et le backend peuvent être déployés séparément, à condition
+de gérer correctement les URL d'API, CORS, cookies ou jetons, les
+environnements et les versions.
+
+------------------------------------------------------------------------
+
+## 45. Indicateurs de réussite du projet
+
+Le succès doit être évalué à plusieurs niveaux.
+
+**Engagement utile**
+
+-   utilisateurs qui reviennent ;
+-   missions terminées ;
+-   participation aux événements.
+
+**Apprentissage**
+
+-   compétences démontrées ;
+-   formations terminées ;
+-   progression aux évaluations.
+
+**Création**
+
+-   projets réalisés ;
+-   portfolios complétés ;
+-   collaborations terminées.
+
+**Impact**
+
+-   objectifs personnels atteints dans le jeu ;
+-   amélioration des connaissances mesurées ;
+-   satisfaction des utilisateurs et partenaires.
+
+------------------------------------------------------------------------
+
+## 46. Vision à long terme
+
+À terme, YOUTH CITY pourrait devenir un environnement de simulation
+éducative à grande échelle : un monde interactif dans lequel les jeunes
+peuvent expérimenter des situations de la vie adulte, apprendre à gérer
+leurs ressources, développer leurs compétences et construire des
+projets.
+
+Il n'est pas nécessaire de créer un métavers 3D coûteux. Une expérience
+2D riche, réactive, accessible et bien scénarisée peut offrir une valeur
+pédagogique supérieure à un monde visuellement complexe mais pauvre en
+activités.
+
+La boucle fondamentale du produit est :
+
+``` text
+OBJECTIF
+   |
+APPRENDRE
+   |
+DÉVELOPPER UNE COMPÉTENCE
+   |
+SAISIR UNE OPPORTUNITÉ
+   |
+PRENDRE UNE DÉCISION
+   |
+OBSERVER LES CONSÉQUENCES
+   |
+PROGRESSER
+   |
+NOUVEL OBJECTIF
 ```
 
-> [!NOTE]
-> Aucun des deux parcours n'est jugé supérieur à l'autre. La plateforme valorise la cohérence des choix, la gestion des risques et l'apprentissage tiré des échecs temporaires.
+------------------------------------------------------------------------
 
----
+## 47. Résumé exécutif
 
-### 55. Identité visuelle & Direction artistique
+YOUTH CITY est une plateforme de simulation interactive de la vie adulte
+destinée principalement aux jeunes de 15 à 30 ans.
 
-- **Ambiance générale** : Moderne, jeune, chaleureuse, lumineuse et légèrement futuriste ;
-- **Style graphique** : Illustration isométrique ou vectorielle semi-stylisée (évocation d'un croisement harmonieux entre *SimCity*, une application néobanque type *Revolut* et une plateforme comme *Duolingo*) ;
-- **Palette chromatique** : Tons bleus nuit profonds, blanc pur, avec des touches vives d'émeraude (succès financier), d'ambre (énergie) et de violet électrique (technologie et IA).
+Elle réunit :
 
----
+  Pilier    Fonction
+  --------- --------------------------------------------------
+  Learn     Apprendre et développer ses compétences
+  Work      Découvrir les métiers et les opportunités
+  Build     Construire des projets et simuler une entreprise
+  Money     Apprendre à gérer un budget virtuel
+  Network   Collaborer et participer à une communauté
 
-### 56. Architecture UX & Parcours utilisateur
+Le tout est soutenu par une ville interactive, un moteur de simulation,
+un système de progression, des événements et un mentor IA.
 
-#### Navigation principale sur Desktop
-`🏙️ Ma Ville` | `🎯 Missions` | `📚 Campus` | `💼 Carrière` | `🚀 Projets` | `💰 Finances` | `🤝 Social` | `🤖 NOVA` | `👤 Profil`
+### Positionnement final
 
-#### Barre de navigation inférieure sur Mobile
-```text
-┌────────────────────────────────────────────────────────┐
-│   🏙️          🎯          💼          🤖          👤   │
-│  Ville      Missions    Carrière     NOVA       Profil │
-└────────────────────────────────────────────────────────┘
-```
+> **YOUTH CITY est une simulation interactive de la vie adulte
+> permettant aux jeunes d'apprendre, d'expérimenter et de construire
+> leur avenir dans un monde virtuel.**
 
----
+### Règle fondamentale de conception
 
-### 57. Principe ergonomique clé : La « Next Action »
+Chaque fonctionnalité doit remplir au moins l'un des rôles suivants :
 
-Pour éviter tout égarement du joueur dans la richesse de la simulation, le système affiche en permanence un composant universel :
+1.  apprendre quelque chose ;
+2.  permettre de construire quelque chose ;
+3.  créer une décision intéressante ;
+4.  faire progresser le joueur.
 
-```text
-┌────────────────────────────────────────────────────────┐
-│ 🎯 PROCHAINE ACTION CONSEILLÉE                         │
-├────────────────────────────────────────────────────────┤
-│ Finalise le quiz sur les bases budgétaires au Campus   │
-│ Récompense garantie : +75 XP & +15% Compétence Finance │
-└────────────────────────────────────────────────────────┘
-```
+Cette règle doit guider les choix fonctionnels, techniques et graphiques
+afin d'éviter de créer une plateforme volumineuse, mais dépourvue
+d'objectif pédagogique clair.
 
----
+------------------------------------------------------------------------
 
-### 58. Indicateurs de réussite du projet (KPIs)
+## 48. Décisions de conception et état d'avancement (v1.1)
 
-- **Engagement & Progression** : Nombre de formations finalisées par citoyen par trimestre ;
-- **Autonomie financière simulée** : Proportion d'utilisateurs maintenant un ratio d'épargne positif après 3 mois virtuels ;
-- **Impact réel perçu** : Enquêtes semestrielles mesurant la confiance des jeunes dans leurs démarches réelles (recherche d'emploi, gestion budgétaire, orientation).
+Cette section consigne les décisions prises lors de la mise en œuvre du MVP et précise la lecture
+des sections précédentes. En cas de contradiction, le §48 prévaut.
 
----
+### 48.1. Règles de jeu appliquées côté serveur
 
-### 59. Résumé synthétique du produit
+  Sujet                    Décision
+  ------------------------ ------------------------------------------------------------------------------------------
+  Formations (§7, §13)     Inscription payante (frais débités et tracés). Les modules se valident dans l'ordre, par quiz. XP, compétences et certification ne sont versées qu'une fois, à la fin du parcours.
+  Embauche (§11)           Prérequis de compétences et entretien simulé réussi obligatoires. L'XP d'embauche est versée une fois par offre.
+  Temps et énergie (§9)    L'énergie ne se récupère qu'au passage à la journée suivante. Dormir fait passer la nuit (et le loyer éventuel).
+  Revenus (§10)            Un shift salarié par jour de jeu. Les revenus d'une startup s'encaissent une fois par période de 30 jours de jeu.
+  Décisions (§15)          Seul le dilemme déclenché par le serveur peut être résolu, une seule fois.
+  Personnage (§6)          Création en une fois. « Nouvelle partie » remet tout à zéro, y compris les publications du passeport.
+  Transactions (§29)       Chaque transaction enregistre le solde courant avant et après l'opération.
+  Guildes (§19.1)          Le bonus de bienvenue est versé une seule fois par citoyen.
+  Badges (§8.3)            Huit badges aux règles explicites, attribués par le serveur. « 30 Days In » correspond au jour de jeu 30, non à une série de connexions.
+  Catalogues publics       Les bonnes réponses des quiz et le barème des entretiens ne sont jamais envoyés au client.
 
-```text
-                               YOUTH CITY
-                                   │
-              ┌────────────────────┼────────────────────┐
-              │                    │                    │
-           🎓 LEARN             💼 WORK              🚀 BUILD
-         Formations &          Emplois &            Startups &
-         Compétences           Carrières             Projets
-              │                    │                    │
-              └────────────────────┼────────────────────┘
-                                   │
-                              💰 FINANCE
-                                   │
-                              ⚖️ DÉCISIONS
-                                   │
-                              📈 CONSÉQUENCES
-                                   │
-                              🏆 PROGRESSION (XP)
-                                   │
-                              🤖 MENTORAT IA
-                                   │
-                              🌍 CITOYEN ACCOMPLI
-```
+### 48.2. Protection des mineurs et confidentialité (§19.2, §31.1)
+
+-   **Données collectées :** l'année de naissance uniquement, l'acceptation des conditions
+    d'utilisation et, pour les moins de 18 ans, la déclaration d'accord du représentant légal.
+-   **Âge minimal d'inscription :** 13 ans (le public cible reste 15-30 ans). Les seuils (13 et 18 ans)
+    sont des choix de produit soumis à la revue juridique exigée au §31.1.
+-   **Âge inconnu :** traité comme mineur. Les comptes antérieurs à cette règle déclarent leur année
+    de naissance une seule fois ; seul un administrateur peut la corriger ensuite.
+-   **Cloisonnement :** un mineur et un adulte ne s'écrivent pas directement et n'apparaissent pas dans
+    l'annuaire ou les classements l'un de l'autre.
+-   **Visibilité :** les profils de mineurs sont masqués par défaut ; chaque joueur peut modifier sa
+    présence dans l'annuaire et les classements. Un citoyen masqué ne peut pas être contacté en devinant
+    son identifiant.
+-   **Blocage et signalement :** blocage bidirectionnel (plus de messages, plus de visibilité) et
+    signalement depuis la messagerie.
+-   **Citoyens simulés :** les pairs fictifs du jeu sont signalés comme tels, leurs réponses sont
+    automatiques, et ils sont exclus des classements.
+-   **Modération (§32) :** les décisions sont validées, tracées (auteur, date) et appliquées :
+    suspension de compte (sauf comptes du personnel), quarantaine d'un message. Une sanction peut être
+    levée par une nouvelle décision.
+
+### 48.3. Career Passport (§22)
+
+-   Il ne contient que des faits enregistrés dans la plateforme. Aucune donnée de remplissage n'est
+    ajoutée : un passeport vide reste vide.
+-   Les certifications sont internes à YOUTH CITY et ne sont pas des diplômes (§13.3).
+-   La publication est facultative et choisie section par section (compétences, certifications,
+    projets, badges, statistiques). Elle génère un code aléatoire que le joueur peut révoquer ; retirer la
+    publication invalide immédiatement les liens déjà partagés.
+-   La vérification publique se fait par ce code uniquement, jamais par un identifiant citoyen, avec une
+    limite de débit. Seules les sections autorisées sont renvoyées.
+-   Le contenu est signé par le serveur (HMAC-SHA256) : cela garantit son origine, pas une qualification
+    officielle.
+
+### 48.4. Mentor IA NOVA (§17, §18)
+
+-   Une interface de fournisseur unique ; la logique métier ne dépend d'aucun fournisseur. Fournisseurs
+    disponibles : règles locales (par défaut, gratuites) et Claude via le SDK officiel. Tout autre
+    fournisseur s'ajoute derrière la même interface.
+-   Le choix se fait par configuration (`NOVA_AI_PROVIDER`, `NOVA_AI_MODEL`). Sans clé API ni paquet
+    optionnel, NOVA fonctionne avec les règles locales.
+-   L'IA ne produit que du texte : elle ne peut modifier ni solde, ni XP, ni progression. Le message du
+    joueur est transmis comme donnée, jamais mêlé au prompt système. En cas d'erreur, de refus ou de
+    réponse vide, NOVA retombe sur les règles locales.
+-   Limites par compte : 20 messages par minute et 200 par jour, pour borner le coût.
+-   Les réponses générées par IA sont signalées comme telles à l'utilisateur.
+
+### 48.5. Périmètre reporté et points ouverts
+
+  Sujet                          État
+  ------------------------------ -------------------------------------------------------------------------------
+  PWA (§25)                      Reportée après le MVP : le jeu fait autorité côté serveur, un mode hors ligne exigerait un modèle de synchronisation.
+  Entretien par IA (§12)         Reste un QCM ; le texte libre évalué par IA est prévu en V2.
+  Désactiver NOVA (§18)          Non implémenté (V2).
+  Amis et équipes (§19)          Non implémentés ; seuls les groupes (guildes) et la messagerie existent.
+  Recours de modération (§32)    Un compte suspendu ne peut pas s'authentifier : le recours passe hors application et reste à outiller.
+  Revue juridique (§31.1)        À réaliser avant l'ouverture au public (seuils d'âge, consentement, conservation des données).
+  Infrastructure (§27, §44)      PostgreSQL, Redis et pipeline CI/CD ne sont pas encore en place (voir §49.5 et §49.9).
+
+------------------------------------------------------------------------
+
+## 49. Exigences de maintenabilité et de qualité (v1.2)
+
+Ces exigences s'appliquent à tout nouveau code. Pour l'existant, la colonne « État » indique l'écart à
+résorber ; elle alimente le plan de travail. Chaque exigence porte un identifiant stable (famille et
+numéro) à citer dans le code, les tests, les décisions d'architecture et les revues, à la place des
+numéros de section qui changent d'une version du cahier à l'autre.
+
+États : **Conforme** · **Partiel** · **Non conforme**. Situation relevée en novembre 2026.
+
+### 49.1. Source de vérité des règles (ARC)
+
+| ID | Exigence | Critère vérifiable | État |
+|---|---|---|---|
+| ARC-01 | Toute règle de jeu (gains, coûts, conditions d'accès, calculs d'XP, de salaire, de loyer, validations) est exécutée côté serveur et n'est écrite qu'une seule fois. Le frontend n'affiche que ce que le serveur renvoie. | Aucun calcul de solde, d'XP ou de gain dans le code du frontend. | Partiel |
+| ARC-02 | Le mode invité est une visite en lecture seule : carte, catalogues publics, présentation. Toute action de jeu exige un compte. Aucune simulation locale. | Un invité ne peut modifier aucun état ; aucun store ne contient de logique de jeu. | Non conforme |
+| ARC-03 | Aucune donnée de jeu en dur dans le frontend (catalogues, prix, barèmes, dilemmes) : elles viennent de l'API. | Le fichier de données statiques est supprimé ; seuls des jeux de données de test subsistent. | Non conforme |
+| ARC-04 | Toute modification d'argent, d'XP, de compétence ou de progression passe par une fonction de domaine unique, dans une transaction qui verrouille le personnage. | Aucune écriture directe de ces champs dans les vues ; contrôle automatique en CI. | Partiel |
+
+### 49.2. Contrat d'API (API)
+
+| ID | Exigence | Critère vérifiable | État |
+|---|---|---|---|
+| API-01 | Le schéma OpenAPI généré fait foi. Les types du frontend en sont générés. | La CI régénère les types et échoue s'ils diffèrent de ceux du dépôt. | Non conforme |
+| API-02 | Un changement incompatible crée une nouvelle version (`/api/v2/`). Un endpoint retiré est d'abord déprécié pendant une version. | Journal des changements d'API ; en-tête de dépréciation. | Partiel |
+| API-03 | Un seul format d'erreur : `{ "code": "...", "message": "...", "fields": { } }`, avec des codes stables. | Toutes les réponses 4xx respectent ce schéma (test automatique). | Non conforme |
+| API-04 | Les listes sont bornées (pagination ou limite documentée). | Test sur chaque endpoint de liste. | Partiel |
+
+### 49.3. Organisation du code (ORG)
+
+| ID | Exigence | Critère vérifiable | État |
+|---|---|---|---|
+| ORG-01 | Backend : une application par domaine (comptes, personnage, campus, carrière, finance, marché, startup, social, passeport, mentor IA, modération), conformément au §28. | Chaque application a ses modèles, services, vues, tests et README. | Non conforme |
+| ORG-02 | Les règles métier vivent dans des fonctions de service testables sans HTTP. Les vues valident, appellent un service et sérialisent. | Les services sont testés sans client HTTP. | Non conforme |
+| ORG-03 | Frontend : un dossier par domaine, un store par domaine, et les données serveur gérées par une couche de requêtes (TanStack Query, déjà prévue au §27.1). | Aucun store de plus de 300 lignes. | Non conforme |
+| ORG-04 | Plafonds de taille au-delà desquels la revue exige une justification ou un découpage : fichier 400 lignes, fonction 50 lignes, composant React 300 lignes. | Contrôle automatique en CI (avertissement). | Non conforme |
+| ORG-05 | Identifiants de code en anglais ; commentaires, messages et documentation en français. | Revue de code. | Partiel |
+
+### 49.4. Équilibrage et économie (BAL)
+
+| ID | Exigence | Critère vérifiable | État |
+|---|---|---|---|
+| BAL-01 | Les paramètres d'équilibrage (gains d'XP, jours ouvrés par mois, taux d'intérêt, seuils de réussite, délais, prix de référence, plafonds) sont dans une configuration versionnée, modifiable sans toucher aux vues, avec un journal des changements (§3.3, §8.1). | Aucune constante d'équilibrage en dur dans les vues. | Non conforme |
+| BAL-02 | Invariant : aucune action répétable ne rapporte sans consommer une ressource qui ne se régénère pas gratuitement (temps, énergie, argent). | Test automatique pour chaque action répétable. | Partiel |
+| BAL-03 | Des simulations de parcours types (étudiant, salarié, entrepreneur) sur 90 jours de jeu vérifient que le solde final reste dans des bornes documentées. | Script de simulation exécuté en CI. | Non conforme |
+| BAL-04 | La masse monétaire virtuelle (totale et par joueur) est mesurée et déclenche une alerte en cas de croissance anormale. | Indicateur au back-office et seuil d'alerte. | Partiel |
+
+### 49.5. Qualité et intégration continue (QUA)
+
+| ID | Exigence | Critère vérifiable | État |
+|---|---|---|---|
+| QUA-01 | Dépôt git, branche principale protégée, toute modification passe par une revue, messages de commit conventionnels. | Aucun commit direct sur la branche principale. | Non conforme |
+| QUA-02 | Intégration continue bloquante : lint Python, tests backend avec couverture globale d'au moins 80 % (90 % pour les services et l'économie), `makemigrations --check`, `check --deploy`, typecheck et lint frontend, tests frontend, build, `pip-audit`, `npm audit` (niveau élevé). | Aucune fusion si un contrôle échoue. | Non conforme |
+| QUA-03 | Contrôles locaux avant commit (lint, typecheck rapide). | Hook de pré-commit installé par un script. | Non conforme |
+| QUA-04 | Une migration appliquée ne se modifie jamais. Un champ ne se supprime qu'en deux versions. Les migrations de données sont réversibles quand c'est possible. | Revue et contrôle des migrations en CI. | Conforme |
+| QUA-05 | Le seed est idempotent et n'écrase jamais des données de joueurs. Les données de démonstration n'existent que sur demande explicite (`--demo-citizen`). | Test du seed exécuté deux fois. | Conforme |
+
+### 49.6. Tests (TST)
+
+| ID | Exigence | Critère vérifiable | État |
+|---|---|---|---|
+| TST-01 | Pyramide de tests : unitaires sur les services, intégration sur l'API, quelques tests de bout en bout. | Rapport de tests par niveau. | Partiel |
+| TST-02 | Tests rangés par domaine (un module par application) et nommés par comportement. | Aucun fichier de test de plus de 400 lignes. | Partiel |
+| TST-03 | Frontend : tests Vitest et Testing Library pour les stores et composants critiques (inscription, inscription à une formation, publication du passeport). | Couverture des parcours critiques. | Non conforme |
+| TST-04 | Tests de bout en bout (Playwright) du parcours MVP du §36.2, sur ordinateur et sur mobile. | Exécutés en CI avant chaque version. | Non conforme |
+| TST-05 | Toute faille ou exploit corrigé laisse un test de non-régression. | Revue de chaque correction. | Conforme |
+| TST-06 | Contrôle d'accessibilité automatique (axe) des vues principales ; contrastes, clavier et réduction des animations (§26.3). | Zéro erreur bloquante. | Non conforme |
+
+### 49.7. Traçabilité et documentation (DOC)
+
+| ID | Exigence | Critère vérifiable | État |
+|---|---|---|---|
+| DOC-01 | Chaque exigence du cahier a un identifiant stable. Le code, les tests et les décisions citent ces identifiants, jamais un numéro de section. | Aucune référence « §N » dans le code. | Non conforme |
+| DOC-02 | Une matrice dans `docs/` relie chaque exigence du MVP à son statut (fait, partiel, absent), son code et son test. Elle est mise à jour dans la même modification que le code. | Matrice sans exigence MVP orpheline. | Non conforme |
+| DOC-03 | Journal des décisions d'architecture (`docs/adr/`) : un fichier court par décision structurante (contexte, décision, conséquences, date, statut). | Une décision structurante sans fichier est refusée en revue. | Non conforme |
+| DOC-04 | README par application, journal des changements (CHANGELOG) et guide d'exploitation (déploiement, restauration, incident). | Fichiers présents et à jour. | Partiel |
+| DOC-05 | La définition de « terminé » du §49.11 est appliquée à chaque fonctionnalité. | Liste de contrôle dans chaque demande de fusion. | Non conforme |
+
+### 49.8. Internationalisation (I18)
+
+| ID | Exigence | Critère vérifiable | État |
+|---|---|---|---|
+| I18-01 | Aucun texte d'interface ni message d'erreur en dur : l'API renvoie des codes stables (API-03) et les textes sont dans des catalogues par langue. | Recherche automatique de chaînes en dur. | Non conforme |
+| I18-02 | La devise, le fuseau horaire et les formats de date et de montant dépendent d'une configuration de pays (§3.3), non du code. | Un second pays se configure sans modifier le code. | Partiel |
+
+### 49.9. Exploitation (OPS)
+
+| ID | Exigence | Critère vérifiable | État |
+|---|---|---|---|
+| OPS-01 | Journaux structurés (JSON) avec identifiant de requête et identifiant de joueur pseudonymisé ; jamais de mot de passe, de jeton ni de contenu de message. | Test de non-fuite sur les journaux. | Partiel |
+| OPS-02 | Suivi des erreurs du frontend et du backend (Sentry ou équivalent). | Une erreur provoquée apparaît dans l'outil. | Non conforme |
+| OPS-03 | Sauvegardes automatiques ; restauration testée à blanc avant chaque version majeure. Objectifs de départ : perte maximale de 24 h, rétablissement en 4 h (à ajuster). | Compte rendu de restauration daté. | Non conforme |
+| OPS-04 | Trois environnements (développement, test, production) configurés par variables ; fonctionnalités V2 et V3 derrière des interrupteurs (par exemple le mentor IA). | Un interrupteur désactive une fonctionnalité sans déploiement. | Partiel |
+| OPS-05 | Sonde de santé publique et sonde de disponibilité de la base. | Sonde utilisée par le déploiement. | Conforme |
+| OPS-06 | Budgets de performance : routes de jeu sous 300 ms au 95e centile ; JavaScript initial d'au plus 200 ko compressé ; interface utilisable sur réseau mobile lent (§43). | Mesure automatique à chaque version. | Non conforme |
+| OPS-07 | Base de production PostgreSQL (§27.3) ; SQLite réservée au développement. | Le déploiement échoue sans base PostgreSQL. | Non conforme |
+
+### 49.10. Dépendances, sécurité continue et données personnelles (SEC)
+
+| ID | Exigence | Critère vérifiable | État |
+|---|---|---|---|
+| SEC-01 | Mises à jour automatiques de dépendances (Dependabot ou Renovate). Faille haute ou critique corrigée sous 7 jours, autre faille sous 30 jours. | Délai mesuré sur les alertes. | Non conforme |
+| SEC-02 | Versions figées (fichiers de verrouillage) et audit à chaque intégration continue. | Audit présent dans la CI. | Partiel |
+| SEC-03 | Modèle de menace court (STRIDE), revu à chaque version majeure. Journal d'audit en base des actions d'administration et de modération (aujourd'hui dans les journaux applicatifs). | Table d'audit en lecture seule. | Partiel |
+| SEC-04 | Données personnelles : durée de conservation définie (par exemple compte inactif 24 mois puis anonymisation), export et suppression à la demande du joueur (§31). | Procédure testée de bout en bout. | Non conforme |
+| SEC-05 | Recours de modération : un compte suspendu peut contester via un canal outillé, avec un délai de réponse annoncé (§32). | Parcours de recours testé. | Non conforme |
+
+### 49.11. Définition de « terminé »
+
+Une fonctionnalité est terminée lorsque :
+
+1.  elle cite l'identifiant de l'exigence qu'elle satisfait et met à jour la matrice (DOC-02) ;
+2.  toute règle sensible est appliquée et validée côté serveur (ARC-01, ARC-04) ;
+3.  elle a des tests unitaires du service, des tests d'intégration de l'API, et un test de
+    non-régression si elle corrige un défaut (TST-01, TST-05) ;
+4.  elle a des états de chargement, d'erreur et de succès, et passe le contrôle d'accessibilité
+    (TST-06) ;
+5.  elle ne contient aucun texte en dur (I18-01) ni constante d'équilibrage en dur (BAL-01) ;
+6.  si l'action est répétable, l'invariant BAL-02 est testé ;
+7.  l'intégration continue est verte, la documentation et le journal des changements sont à jour, et
+    une décision structurante est consignée dans un ADR (DOC-03) ;
+8.  l'impact sur les mineurs et les données personnelles est examiné lorsqu'elle collecte ou expose
+    des données (§31.1).
+
+### 49.12. Ordre de mise en œuvre
+
+| Phase | Exigences | Objectif |
+|---|---|---|
+| 1. Fondations | QUA-01, QUA-02, QUA-03, SEC-01 | Rien ne se fusionne sans contrôle automatique. |
+| 2. Source de vérité | ARC-01, ARC-02, ARC-03, API-01, API-03 | Une règle, un endroit ; le contrat d'API ne dérive plus. |
+| 3. Économie et tests | BAL-02, BAL-03, TST-01 à TST-06, BAL-01 | Les exploits sont détectés avant les joueurs. |
+| 4. Structure | ORG-01 à ORG-05, ARC-04 | Le code reste lisible quand l'équipe et le périmètre grandissent. |
+| 5. Traçabilité | DOC-01 à DOC-05 | Chaque exigence se retrouve dans le code et dans un test. |
+| 6. Exploitation | OPS-01 à OPS-07, I18-01, I18-02, SEC-02 à SEC-05 | Prêt pour des utilisateurs réels. |
+
+**Avant toute ouverture au public :** QUA-01, QUA-02, OPS-02, OPS-03, OPS-07, SEC-04, SEC-05 et la
+revue juridique du §31.1.
