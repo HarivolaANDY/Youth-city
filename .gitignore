@@ -1,9 +1,131 @@
-.venv/
-__pycache__/
-*.pyc
-node_modules/
-dist/
+# ==============================================================================
+# Youth City — Root .gitignore
+# Multi-stack: Python/Django Backend, React/Vite Frontend, Docker, OS & IDEs
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Environment Variables & Credentials
+# ------------------------------------------------------------------------------
 .env
+.env.*
+*.env
+*.env.local
+# Explicitly preserve public example environment templates
+!.env.example
+!**/.env.example
+
+# ------------------------------------------------------------------------------
+# 2. Python & Virtual Environments
+# ------------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+/lib/
+/lib64/
+!frontend/src/lib/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# ------------------------------------------------------------------------------
+# 3. Django Framework & Databases
+# ------------------------------------------------------------------------------
+# Local SQLite database files & transaction journals
 *.sqlite3
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+db.sqlite3
+
+# Django staticfiles and media uploads
+collected_static/
+staticfiles/
+media/
+
+# Logs
+*.log
+logs/
+
+# ------------------------------------------------------------------------------
+# 4. Python Testing, Coverage & Quality Tools
+# ------------------------------------------------------------------------------
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+
+# ------------------------------------------------------------------------------
+# 5. Node.js & React / Vite Frontend
+# ------------------------------------------------------------------------------
+node_modules/
+dist-ssr/
+*.local
+.vite/
+.cache/
+
+# Node package manager logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ------------------------------------------------------------------------------
+# 6. IDEs, Editors & Tooling
+# ------------------------------------------------------------------------------
+# Visual Studio Code
 .vscode/
+
+# JetBrains (PyCharm, WebStorm)
+.idea/
+
+# Visual Studio / Editor swap
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Agent / Tool local state
 .freebuff/
+
+# ------------------------------------------------------------------------------
+# 7. Operating System Clutter
+# ------------------------------------------------------------------------------
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+desktop.ini
+$RECYCLE.BIN/
