@@ -13,12 +13,34 @@ export const AuthModal: React.FC = () => {
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
   const [citizenName, setCitizenName] = useState('');
+  const [birthYear, setBirthYear] = useState('');
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [guardianConsent, setGuardianConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const currentYear = new Date().getFullYear();
+  const birthYearNumber = Number(birthYear);
+  const hasValidYear = Number.isInteger(birthYearNumber) && birthYearNumber >= currentYear - 100 && birthYearNumber <= currentYear;
+  const isMinor = hasValidYear && currentYear - birthYearNumber < 18;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (authMode === 'register') {
+      if (!hasValidYear) {
+        setError("Indique une année de naissance valide (4 chiffres).");
+        return;
+      }
+      if (!acceptTerms) {
+        setError("Accepte les conditions d'utilisation pour créer ton compte.");
+        return;
+      }
+      if (isMinor && !guardianConsent) {
+        setError("Un accord de ton représentant légal est requis pour les moins de 18 ans.");
+        return;
+      }
+    }
     setLoading(true);
 
     try {
@@ -35,6 +57,9 @@ export const AuthModal: React.FC = () => {
           email: email.trim() || undefined,
           password,
           citizenName: citizenName.trim() || undefined,
+          birthYear: birthYearNumber,
+          acceptTerms,
+          guardianConsent: isMinor ? guardianConsent : undefined,
         });
         if (!res.success) {
           setError(res.error || "Erreur lors de la création du compte.");
@@ -52,6 +77,9 @@ export const AuthModal: React.FC = () => {
     setPassword('');
     setEmail('');
     setCitizenName('');
+    setBirthYear('');
+    setAcceptTerms(false);
+    setGuardianConsent(false);
     setError(null);
   };
 
@@ -217,6 +245,59 @@ export const AuthModal: React.FC = () => {
             <p className="mt-1 text-2xs text-mist-500">Au moins 6 caractères pour sécuriser ton compte.</p>
           )}
         </div>
+
+        {authMode === 'register' && (
+          <div className="space-y-3">
+            <div>
+              <label htmlFor="auth-birth-year" className="block text-2xs font-bold uppercase tracking-wider text-mist-300">
+                Année de naissance <span className="text-risk-400">*</span>
+              </label>
+              <input
+                id="auth-birth-year"
+                type="number"
+                inputMode="numeric"
+                required
+                min={currentYear - 100}
+                max={currentYear}
+                value={birthYear}
+                onChange={(e) => setBirthYear(e.target.value)}
+                placeholder="Ex: 2002"
+                className="mt-1 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-xs text-white placeholder:text-mist-500 focus:border-brand-400 focus:bg-white/[0.06] focus:outline-none"
+              />
+              <p className="mt-1 text-2xs text-mist-500">
+                Sert uniquement à adapter la protection de ton compte (messages, visibilité). Seule l'année est conservée.
+              </p>
+            </div>
+
+            {isMinor && (
+              <label className="flex items-start gap-2 rounded-lg border border-warn-400/30 bg-warn-500/10 p-3 text-2xs text-mist-200">
+                <input
+                  type="checkbox"
+                  checked={guardianConsent}
+                  onChange={(e) => setGuardianConsent(e.target.checked)}
+                  className="mt-0.5 size-4 shrink-0 accent-brand-500"
+                />
+                <span>
+                  Je déclare que mon représentant légal est d'accord pour que j'utilise Youth City. Mon profil sera masqué par défaut et je ne pourrai
+                  échanger directement qu'avec d'autres personnes de moins de 18 ans.
+                </span>
+              </label>
+            )}
+
+            <label className="flex items-start gap-2 text-2xs text-mist-300">
+              <input
+                type="checkbox"
+                checked={acceptTerms}
+                onChange={(e) => setAcceptTerms(e.target.checked)}
+                className="mt-0.5 size-4 shrink-0 accent-brand-500"
+              />
+              <span>
+                J'accepte les conditions d'utilisation. Youth City est une simulation éducative : l'argent, les offres et les certifications
+                y sont virtuels et n'ont aucune valeur officielle.
+              </span>
+            </label>
+          </div>
+        )}
 
         {authMode === 'register' && (
           <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 text-2xs text-mist-400 space-y-1">

@@ -4,6 +4,7 @@ import type {
   Dilemma,
   Course,
   CourseQuizValidationResult,
+  CourseEnrollmentResult,
   Job,
   Housing,
   AuthUser,
@@ -22,6 +23,7 @@ import type {
   RecurringCycleInfo,
   RecurringSettlementSummary,
   CareerPassportData,
+  PassportSection,
   FreelanceContract,
   FreelanceResponse,
   NovaProactiveGuidance,
@@ -43,7 +45,7 @@ export interface FreelanceCompletionData {
   citizen: Citizen;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 const TOKEN_STORAGE_KEY = 'yc_access_token';
 const REFRESH_STORAGE_KEY = 'yc_refresh_token';
 
@@ -132,11 +134,41 @@ const fetchAuth = async (url: string, options: RequestInit = {}): Promise<Respon
   return res;
 };
 
+// Dernier message d'erreur renvoyé par le serveur (ou réseau) : permet à l'UI d'expliquer un refus
+// au lieu de basculer silencieusement sur un état local qui divergerait du serveur.
+let lastApiError: string | null = null;
+export const getLastApiError = (): string | null => lastApiError;
+
+// Appelé quand une action est tentée sans compte (401 sans jeton) : l'UI propose de se connecter.
+let unauthorizedHandler: (() => void) | null = null;
+export const setUnauthorizedHandler = (fn: (() => void) | null) => {
+  unauthorizedHandler = fn;
+};
+
+const NETWORK_ERROR = 'Impossible de joindre le serveur Youth City.';
+
+const captureFailure = async (res: Response, notifyUnauthorized: boolean): Promise<void> => {
+  let message = 'Le serveur a refusé cette action.';
+  try {
+    const data = await res.json();
+    message = data?.error || data?.detail || message;
+  } catch {
+    // Réponse sans corps JSON : on garde le message générique.
+  }
+  lastApiError = message;
+  if (notifyUnauthorized && res.status === 401 && !tokenStorage.getAccess()) {
+    unauthorizedHandler?.();
+  }
+};
+
 const getJSON = async <T>(path: string): Promise<T | null> => {
   try {
     const res = await fetchAuth(`${API_BASE_URL}${path}`);
-    return res.ok ? await res.json() : null;
+    if (res.ok) return await res.json();
+    await captureFailure(res, false);
+    return null;
   } catch {
+    lastApiError = NETWORK_ERROR;
     return null;
   }
 };
@@ -147,8 +179,11 @@ const postJSON = async <T>(path: string, body?: unknown): Promise<T | null> => {
       method: 'POST',
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
-    return res.ok ? await res.json() : null;
+    if (res.ok) return await res.json();
+    await captureFailure(res, true);
+    return null;
   } catch {
+    lastApiError = NETWORK_ERROR;
     return null;
   }
 };
@@ -160,9 +195,13 @@ const postWithResult = async <T>(path: string, body?: unknown, fallbackError = '
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
     const data = await res.json();
-    return res.ok ? data : { error: data.error || fallbackError };
+    if (res.ok) return data;
+    lastApiError = data.error || data.detail || fallbackError;
+    if (res.status === 401 && !tokenStorage.getAccess()) unauthorizedHandler?.();
+    return { error: data.error || data.detail || fallbackError };
   } catch {
-    return { error: 'Impossible de joindre le serveur Youth City.' };
+    lastApiError = NETWORK_ERROR;
+    return { error: NETWORK_ERROR };
   }
 };
 
@@ -182,6 +221,9 @@ export const api = {
     email?: string;
     password: string;
     citizenName?: string;
+    birthYear: number;
+    acceptTerms: boolean;
+    guardianConsent?: boolean;
   }): Promise<{ data?: AuthResponse; error?: string }> {
     try {
       const res = await fetch(`${API_BASE_URL}/auth/register/`, {
@@ -195,6 +237,10 @@ export const api = {
           data.username?.[0] ||
           data.password?.[0] ||
           data.email?.[0] ||
+          data.birthYear?.[0] ||
+          data.acceptTerms?.[0] ||
+          data.guardianConsent?.[0] ||
+          data.non_field_errors?.[0] ||
           data.error ||
           'Erreur lors de la création du compte.';
         return { error: errorMsg };
@@ -268,14 +314,28 @@ export const api = {
     message?: string;
     citizen: Citizen;
   }>('/game/advance_day/', { days }),
-  restAndSleep: () => postJSON<{ energy: number; citizen: Citizen }>('/game/sleep/'),
+  restAndSleep: () =>
+    postJSON<{
+      energy: number;
+      day: number;
+      timeSlot: string;
+      recurringCycle?: RecurringCycleInfo;
+      settlementSummary?: RecurringSettlementSummary | null;
+      message: string;
+      citizen: Citizen;
+    }>('/game/sleep/'),
   changeHousing: (housingId: string) => postJSON<{ citizen: Citizen }>('/game/housing/', { housing_id: housingId }),
 
   // --- CAMPUS DISTRICT ---
   getCourses: () => getJSON<Course[]>('/campus/courses/'),
-  completeCourse: (courseKey: string) => postJSON<{ citizen: Citizen; xpAwarded: number; levelUp: boolean }>(`/campus/courses/${courseKey}/complete/`),
+  enrollCourse: (courseKey: string) =>
+    postWithResult<CourseEnrollmentResult>(`/campus/courses/${courseKey}/enroll/`, undefined, "Impossible de t'inscrire à cette formation."),
   validateCourseQuiz: (courseKey: string, moduleIndex: number, answerIndex: number) =>
-    postJSON<CourseQuizValidationResult>(`/campus/courses/${courseKey}/validate-quiz/`, { moduleIndex, answerIndex }),
+    postWithResult<CourseQuizValidationResult>(
+      `/campus/courses/${courseKey}/validate-quiz/`,
+      { moduleIndex, answerIndex },
+      'Validation du quiz impossible.'
+    ),
 
   // --- BUSINESS DISTRICT & CARRIÈRE ---
   getJobs: () => getJSON<Job[]>('/business/jobs/'),
@@ -342,12 +402,26 @@ export const api = {
 
   // --- NOVA AI MENTOR API (§27, §28 — P2/P3) ---
   chatWithNova: (message: string) =>
-    postWithResult<{ reply: string; citizenName: string; isGuardrailTriggered: boolean }>('/nova/chat/', { message }, 'Erreur lors de la communication avec NOVA.'),
+    postWithResult<{ reply: string; citizenName: string; isGuardrailTriggered: boolean; source?: string }>('/nova/chat/', { message }, 'Erreur lors de la communication avec NOVA.'),
   getNovaProactiveGuidance: () =>
     getJSON<NovaProactiveGuidance>('/nova/proactive-guidance/'),
 
   // --- CAREER PASSPORT & PORTFOLIO VÉRIFIABLE (§34, §35) ---
   getCareerPassport: () => getJSON<{ success: boolean; passport?: CareerPassportData }>('/passport/'),
+  updatePassportPublication: (isPublic: boolean, sections?: Partial<Record<PassportSection, boolean>>) =>
+    postWithResult<{ success: boolean; message: string; passport: CareerPassportData }>(
+      '/passport/publication/',
+      { public: isPublic, ...(sections ? { sections } : {}) },
+      'Impossible de modifier la publication du passeport.'
+    ),
+
+  // --- ÂGE, CONFIDENTIALITÉ ET BLOCAGES (§19.2, §31.1) ---
+  declareAge: (payload: { birthYear: number; acceptTerms: boolean; guardianConsent?: boolean }) =>
+    postWithResult<{ message: string; citizen: Citizen }>('/character/age-declaration/', payload, "Impossible d'enregistrer ton année de naissance."),
+  updatePrivacy: (payload: { showInDirectory?: boolean; showInLeaderboard?: boolean }) =>
+    postWithResult<{ showInDirectory: boolean; showInLeaderboard: boolean }>('/character/privacy/', payload, 'Impossible de modifier la confidentialité.'),
+  blockCitizen: (citizenId: number) =>
+    postWithResult<{ message: string; blocked: boolean }>(`/hub/blocks/${citizenId}/`, undefined, 'Impossible de bloquer ce citoyen.'),
   async verifyPassport(code: string): Promise<{ success: boolean; verified?: boolean; verificationCode?: string; signature?: string; passport?: CareerPassportData } | { error: string }> {
     try {
       const res = await fetch(`${API_BASE_URL}/passport/verify/${encodeURIComponent(code)}/`);

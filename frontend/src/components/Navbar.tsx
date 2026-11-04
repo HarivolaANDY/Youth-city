@@ -151,7 +151,11 @@ export const Navbar: React.FC = () => {
                   tone={isBackendConnected ? 'gain' : 'brand'}
                   variant="square"
                   className="tracking-[0.14em] flex items-center gap-1.5"
-                  title={isBackendConnected ? 'Backend Django & Base de Données synchronisés' : 'Mode MVP local'}
+                  title={
+                    isBackendConnected
+                      ? 'Backend Django & Base de Données synchronisés'
+                      : 'Session invité : démo locale, rien n\'est enregistré. Connecte-toi pour sauvegarder ta progression.'
+                  }
                 >
                   <span
                     className={`size-1.5 rounded-full ${
@@ -160,7 +164,7 @@ export const Navbar: React.FC = () => {
                         : 'bg-brand-400'
                     }`}
                   />
-                  {isBackendConnected ? 'API SYNC' : 'MVP'}
+                  {isBackendConnected ? 'API SYNC' : 'DÉMO LOCALE'}
                 </Badge>
               </span>
               <span className="hidden text-2xs font-medium text-mist-400 sm:block">
@@ -388,18 +392,20 @@ export const Navbar: React.FC = () => {
                       </button>
                     )}
 
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        toggleCharacterCreation(true);
-                        setMenuOpen(false);
-                      }}
-                      className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-bold text-white transition-colors hover:bg-brand-500/15 focus-visible:outline-none"
-                    >
-                      <Sparkles className="size-3.5 text-brand-400" aria-hidden="true" />
-                      <span>Personnaliser mon Citoyen</span>
-                    </button>
+                    {isAuthenticated && !citizen.onboardingCompleted && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          toggleCharacterCreation(true);
+                          setMenuOpen(false);
+                        }}
+                        className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-bold text-white transition-colors hover:bg-brand-500/15 focus-visible:outline-none"
+                      >
+                        <Sparkles className="size-3.5 text-brand-400" aria-hidden="true" />
+                        <span>Créer mon personnage</span>
+                      </button>
+                    )}
                   </div>
 
                   <p className="px-2.5 pt-1.5 pb-2 text-2xs font-bold tracking-wider text-mist-500 uppercase">

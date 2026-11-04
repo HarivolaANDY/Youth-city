@@ -58,7 +58,9 @@ export const NovaMentorModal: React.FC = () => {
     api.chatWithNova(text).then((res) => {
       let reply = '';
       if (res && 'reply' in res) {
-        reply = res.reply;
+        reply = res.source && res.source !== 'rules'
+          ? `${res.reply}\n\n— Réponse générée par IA : elle peut contenir des erreurs. Ce sont des repères pour le jeu, pas un avis professionnel.`
+          : res.reply;
       } else if (sanitization.isSuspect) {
         reply = `⚠️ Alerte Garde-Fou : ${sanitization.reason || "Requête non autorisée."} En tant que mentor de Youth City, mes règles de jeu, valeurs éthiques et directives d'apprentissage ne peuvent pas être contournées. Repartons sur un conseil constructif pour ta carrière !`;
       } else {

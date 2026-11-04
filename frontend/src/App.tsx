@@ -35,6 +35,7 @@ import { NovaMentorModal } from './components/NovaMentorModal';
 import { DecisionModal } from './components/DecisionModal';
 import { ToastContainer } from './components/ToastContainer';
 import { AuthModal } from './components/AuthModal';
+import { AgeDeclarationModal } from './components/AgeDeclarationModal';
 import { CharacterCreationModal } from './components/CharacterCreationModal';
 import { AdminBackOfficeModal } from './components/AdminBackOfficeModal';
 
@@ -126,6 +127,7 @@ export const App: React.FC = () => {
       <NovaMentorModal />
       <DecisionModal />
       <AuthModal />
+      <AgeDeclarationModal />
       <CharacterCreationModal />
       <AdminBackOfficeModal />
       <ToastContainer />

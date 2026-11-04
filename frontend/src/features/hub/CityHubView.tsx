@@ -20,6 +20,8 @@ import {
   Send,
   Search,
   ArrowUpRight,
+  Ban,
+  Flag,
 } from 'lucide-react';
 import { useGameStore } from '../../stores/useGameStore';
 import { formatNumber } from '../../lib/format';
@@ -34,6 +36,53 @@ const GUILD_ICONS: Record<string, React.ComponentType<{ className?: string }>> =
   TrendingUp,
   Leaf,
   Users,
+};
+
+/** Visibilité du joueur dans l'annuaire et les classements (§19.2, §21) : toujours modifiable. */
+const PrivacyControls: React.FC = () => {
+  const { isAuthenticated, citizen, applyServerCitizen, addNotification } = useGameStore();
+  if (!isAuthenticated || !citizen.privacy) return null;
+  const privacy = citizen.privacy;
+
+  const change = async (patch: { showInDirectory?: boolean; showInLeaderboard?: boolean }) => {
+    const res = await api.updatePrivacy(patch);
+    if ('error' in res) {
+      addNotification('Confidentialité', res.error, 'warning');
+      return;
+    }
+    applyServerCitizen({ ...citizen, privacy: res });
+  };
+
+  return (
+    <fieldset className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-3">
+      <legend className="px-1 text-2xs font-bold uppercase tracking-wider text-mist-300">Ma visibilité</legend>
+      <div className="flex flex-wrap gap-x-6 gap-y-2">
+        <label className="flex items-center gap-2 text-xs text-mist-200">
+          <input
+            type="checkbox"
+            checked={privacy.showInDirectory}
+            onChange={(e) => change({ showInDirectory: e.target.checked })}
+            className="size-4 accent-brand-500"
+          />
+          Apparaître dans l&apos;annuaire
+        </label>
+        <label className="flex items-center gap-2 text-xs text-mist-200">
+          <input
+            type="checkbox"
+            checked={privacy.showInLeaderboard}
+            onChange={(e) => change({ showInLeaderboard: e.target.checked })}
+            className="size-4 accent-brand-500"
+          />
+          Apparaître dans les classements
+        </label>
+      </div>
+      {citizen.ageGroup !== 'adult' ? (
+        <p className="mt-2 text-2xs text-mist-500">
+          Les profils de moins de 18 ans ne sont visibles que par d&apos;autres personnes de moins de 18 ans.
+        </p>
+      ) : null}
+    </fieldset>
+  );
 };
 
 export const CityHubView: React.FC = () => {
@@ -88,6 +137,36 @@ export const CityHubView: React.FC = () => {
       mounted = false;
     };
   }, []);
+
+  const handleBlockCitizen = async (peer: DirectoryCitizen) => {
+    if (!window.confirm(`Bloquer ${peer.name} ? Vous ne pourrez plus vous écrire ni vous voir dans l'annuaire.`)) return;
+    const res = await api.blockCitizen(peer.id);
+    if ('error' in res) {
+      addNotification('Blocage impossible', res.error, 'warning');
+      return;
+    }
+    setDirectoryCitizens((prev) => prev.filter((c) => c.id !== peer.id));
+    setMessages((prev) => prev.filter((m) => m.senderId !== peer.id && m.recipientId !== peer.id));
+    setSelectedContact(null);
+    addNotification('Citoyen bloqué', res.message, 'success');
+  };
+
+  const handleReportCitizen = async (peer: DirectoryCitizen) => {
+    const details = window.prompt(`Décris brièvement le problème avec ${peer.name} (la modération examinera ton signalement) :`);
+    if (!details || !details.trim()) return;
+    const res = await api.createModerationReport({
+      targetType: 'citizen_profile',
+      targetId: String(peer.id),
+      targetName: peer.name,
+      reason: 'other',
+      details: details.trim(),
+    });
+    if ('error' in res) {
+      addNotification('Signalement impossible', res.error, 'warning');
+      return;
+    }
+    addNotification('Signalement transmis', res.message, 'success');
+  };
 
   const handleSelectContact = (peer: DirectoryCitizen) => {
     setSelectedContact(peer);
@@ -693,6 +772,8 @@ export const CityHubView: React.FC = () => {
             </div>
           </div>
 
+          <PrivacyControls />
+
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             {/* Colonne Gauche : Annuaire Citoyen */}
             <div className="lg:col-span-5 space-y-4">
@@ -758,6 +839,14 @@ export const CityHubView: React.FC = () => {
                               {peer.isMe && (
                                 <span className="rounded bg-brand-500/20 px-1.5 py-0.2 text-3xs font-semibold text-brand-300">Moi</span>
                               )}
+                              {peer.isSimulated && (
+                                <span
+                                  className="rounded bg-white/10 px-1.5 py-0.2 text-3xs font-semibold text-mist-300"
+                                  title="Citoyen fictif du jeu : aucune personne réelle ne vous répond."
+                                >
+                                  Simulé
+                                </span>
+                              )}
                               <span className="text-2xs text-warn-400 font-bold">Niv. {peer.level}</span>
                             </div>
                             <p className="text-xs text-mist-400 line-clamp-1">{peer.title}</p>
@@ -799,7 +888,7 @@ export const CityHubView: React.FC = () => {
                           <h3 className="font-bold text-white text-sm">{selectedContact.name}</h3>
                           <span className="flex items-center gap-1 text-2xs text-emerald-400 font-semibold">
                             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                            Citoyen actif
+                            {selectedContact.isSimulated ? 'Pair simulé (réponses automatiques)' : 'Citoyen actif'}
                           </span>
                         </div>
                         <p className="text-2xs text-mist-400 truncate">{selectedContact.title} • {selectedContact.guildName}</p>
@@ -814,6 +903,28 @@ export const CityHubView: React.FC = () => {
                       <span>Career Passport</span>
                       <ArrowUpRight className="h-3 w-3" />
                     </button>
+                    {!selectedContact.isSimulated && !selectedContact.isMe && (
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleReportCitizen(selectedContact)}
+                          className="px-2.5 py-1 rounded-lg border border-white/[0.08] hover:border-warn-400/40 text-mist-300 hover:text-white text-2xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                          title="Signaler ce citoyen à la modération"
+                        >
+                          <Flag className="h-3 w-3" aria-hidden="true" />
+                          <span>Signaler</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleBlockCitizen(selectedContact)}
+                          className="px-2.5 py-1 rounded-lg border border-white/[0.08] hover:border-risk-400/40 text-mist-300 hover:text-white text-2xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                          title="Bloquer : plus aucun message dans les deux sens"
+                        >
+                          <Ban className="h-3 w-3" aria-hidden="true" />
+                          <span>Bloquer</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Messages Scrollable */}

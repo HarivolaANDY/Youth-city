@@ -30,7 +30,7 @@ import { getGuidance } from '../../lib/guidance';
 import { formatNumber } from '../../lib/format';
 
 export const Dashboard: React.FC = () => {
-  const { citizen, day, setActiveTab, toggleNovaModal, workShift, transactions, toggleCharacterCreation } = useGameStore();
+  const { citizen, day, setActiveTab, toggleNovaModal, workShift, transactions, toggleCharacterCreation, isAuthenticated } = useGameStore();
 
   const currentHousing = HOUSINGS.find((h) => h.id === citizen.currentHousingId) || HOUSINGS[0];
   const currentJob = JOBS.find((j) => j.id === citizen.currentJobId);
@@ -54,15 +54,17 @@ export const Dashboard: React.FC = () => {
                       Bonjour, {citizen.name} !
                     </h2>
                     <Badge tone="brand">Niveau {citizen.level}</Badge>
-                    <button
-                      type="button"
-                      onClick={() => toggleCharacterCreation(true)}
-                      title="Personnaliser ton prénom, ton avatar et ton archétype (§14)"
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1 text-2xs font-semibold text-mist-300 transition-colors hover:border-brand-400/40 hover:bg-brand-500/15 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 active:scale-95"
-                    >
-                      <Sparkles className="size-3 text-brand-400" aria-hidden="true" />
-                      <span>Personnaliser</span>
-                    </button>
+                    {isAuthenticated && !citizen.onboardingCompleted && (
+                      <button
+                        type="button"
+                        onClick={() => toggleCharacterCreation(true)}
+                        title="Créer ton personnage : prénom, avatar et archétype (§14). Cette étape ne se fait qu'une fois."
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1 text-2xs font-semibold text-mist-300 transition-colors hover:border-brand-400/40 hover:bg-brand-500/15 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 active:scale-95"
+                      >
+                        <Sparkles className="size-3 text-brand-400" aria-hidden="true" />
+                        <span>Créer mon personnage</span>
+                      </button>
+                    )}
                   </div>
                   <p className="mt-1 text-xs text-mist-400">
                     {citizen.title} &bull; Citoyen actif depuis {day} jours

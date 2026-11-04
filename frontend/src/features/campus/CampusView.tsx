@@ -29,7 +29,7 @@ import { formatNumber } from '../../lib/format';
 type PedagogicalStep = 'theory' | 'practice' | 'quiz' | 'mission' | 'diploma';
 
 export const CampusView: React.FC = () => {
-  const { citizen, spendMoney, completeCourseModule, addNotification } = useGameStore();
+  const { citizen, isAuthenticated, enrollInCourse, applyServerCitizen, completeCourseModule, addNotification } = useGameStore();
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [activeModuleIndex, setActiveModuleIndex] = useState(0);
   const [currentStep, setCurrentStep] = useState<PedagogicalStep>('theory');
@@ -39,56 +39,57 @@ export const CampusView: React.FC = () => {
   const [quizExplanation, setQuizExplanation] = useState<string>('');
   const [isValidatingApi, setIsValidatingApi] = useState(false);
 
-  const startCourse = (course: Course) => {
-    if (citizen.completedCourses.includes(course.id)) {
-      setSelectedCourse(course);
-      setActiveModuleIndex(0);
-      setCurrentStep('theory');
-      setSelectedQuizAnswer(null);
-      setQuizSubmitted(false);
-      setIsQuizCorrect(null);
-      return;
+  const startCourse = async (course: Course) => {
+    const alreadyCompleted = citizen.completedCourses.includes(course.id);
+    if (!alreadyCompleted) {
+      // Connecté : le serveur prélève les frais (une seule fois) ; invité : démo locale.
+      const enrolled = await enrollInCourse(course);
+      if (!enrolled.success) return;
     }
-
-    const paid = spendMoney(course.cost, `Frais de formation : ${course.title}`, 'Éducation');
-    if (paid) {
-      setSelectedCourse(course);
-      setActiveModuleIndex(0);
-      setCurrentStep('theory');
-      setSelectedQuizAnswer(null);
-      setQuizSubmitted(false);
-      setIsQuizCorrect(null);
-      addNotification('Inscription validée', `Tu as rejoint la formation "${course.title}".`, 'success');
-    }
+    setSelectedCourse(course);
+    setActiveModuleIndex(0);
+    setCurrentStep('theory');
+    setSelectedQuizAnswer(null);
+    setQuizSubmitted(false);
+    setIsQuizCorrect(null);
+    setQuizExplanation('');
   };
 
   const activeModule = selectedCourse?.modules[activeModuleIndex];
 
   const handleValidateQuiz = async () => {
     if (selectedQuizAnswer === null || !selectedCourse || !activeModule) return;
-    setIsValidatingApi(true);
 
+    // Invité : démo locale (aucun serveur). Connecté : le serveur seul valide et récompense.
+    if (!isAuthenticated) {
+      fallbackLocalValidation();
+      return;
+    }
+
+    setIsValidatingApi(true);
     try {
       const res = await api.validateCourseQuiz(selectedCourse.id, activeModuleIndex, selectedQuizAnswer);
-      if (res) {
-        setQuizSubmitted(true);
-        setIsQuizCorrect(res.isCorrect);
-        setQuizExplanation(res.explanation);
+      if ('error' in res) {
+        addNotification('Validation impossible', res.error, 'warning');
+        return;
+      }
+      setQuizSubmitted(true);
+      setIsQuizCorrect(res.isCorrect);
+      setQuizExplanation(res.explanation);
 
-        if (res.isCorrect) {
-          addNotification('Bonne réponse !', 'Notion assimilée avec succès.', 'success');
-          if (res.isCourseCompleted) {
-            completeCourseModule(selectedCourse.id);
-          }
-        } else {
-          addNotification('Réponse incorrecte', 'Lis attentivement l\'explication pédagogique et réessaye.', 'warning');
+      if (res.isCorrect) {
+        addNotification('Bonne réponse !', 'Notion assimilée avec succès.', 'success');
+        if (res.isCourseCompleted && res.citizen) {
+          applyServerCitizen(res.citizen);
+          addNotification(
+            'Formation terminée !',
+            `Certification obtenue : ${res.certificationName ?? selectedCourse.certificationName} (+${res.xpAwarded} XP).`,
+            'success'
+          );
         }
       } else {
-        // Fallback local
-        fallbackLocalValidation();
+        addNotification('Réponse incorrecte', 'Lis attentivement l\'explication pédagogique et réessaye.', 'warning');
       }
-    } catch {
-      fallbackLocalValidation();
     } finally {
       setIsValidatingApi(false);
     }

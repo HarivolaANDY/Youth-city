@@ -1,16 +1,16 @@
-export type DistrictId = 
-  | 'campus' 
-  | 'business' 
-  | 'residential' 
-  | 'finance' 
-  | 'market' 
-  | 'startup' 
+export type DistrictId =
+  | 'campus'
+  | 'business'
+  | 'residential'
+  | 'finance'
+  | 'market'
+  | 'startup'
   | 'cityhub';
 
-export type TimeSlot = 
-  | 'Matin (08:00)' 
-  | 'Après-midi (14:00)' 
-  | 'Soir (18:00)' 
+export type TimeSlot =
+  | 'Matin (08:00)'
+  | 'Après-midi (14:00)'
+  | 'Soir (18:00)'
   | 'Nuit (22:00)';
 
 export interface Citizen {
@@ -38,6 +38,20 @@ export interface Citizen {
   completedProjects: number;
   completedChallenges: number;
   inventory: string[];
+  badges?: CitizenBadge[];
+  onboardingCompleted?: boolean;
+  ageGroup?: 'minor' | 'adult' | 'unknown';
+  needsAgeDeclaration?: boolean;
+  privacy?: { showInDirectory: boolean; showInLeaderboard: boolean };
+  workedToday?: boolean;
+}
+
+export interface CitizenBadge {
+  key: string;
+  name: string;
+  description: string;
+  icon: string;
+  awardedAt: string;
 }
 
 export interface MarketItem {
@@ -94,6 +108,7 @@ export interface DirectoryCitizen {
   certificationsCount: number;
   unreadMessagesCount: number;
   isMe: boolean;
+  isSimulated?: boolean;
 }
 
 export interface CitizenMessage {
@@ -108,6 +123,7 @@ export interface CitizenMessage {
   isRead: boolean;
   createdAt: string;
   isFromMe: boolean;
+  senderIsSimulated?: boolean;
 }
 
 export interface SendMessagePayload {
@@ -177,6 +193,14 @@ export interface CourseQuizValidationResult {
   citizen?: Citizen;
 }
 
+export interface CourseEnrollmentResult {
+  message: string;
+  alreadyEnrolled: boolean;
+  enrollment: { courseKey: string; status: 'in_progress' | 'completed'; validatedModules: number; totalModules: number; paidAmount: number };
+  transaction?: Transaction | null;
+  citizen: Citizen;
+}
+
 export interface Job {
   id: string;
   title: string;
@@ -235,6 +259,8 @@ export interface Transaction {
   amount: number;
   type: 'income' | 'expense' | 'savings_in' | 'savings_out';
   category: string;
+  balanceBefore?: number | null;
+  balanceAfter?: number | null;
 }
 
 export interface ToastNotification {
@@ -308,11 +334,11 @@ export interface StartupProject {
   created_at?: string;
 }
 
-export type StartupActionType = 
-  | 'market_study' 
-  | 'develop_mvp' 
-  | 'launch_campaign' 
-  | 'recruit_partner' 
+export type StartupActionType =
+  | 'market_study'
+  | 'develop_mvp'
+  | 'launch_campaign'
+  | 'recruit_partner'
   | 'collect_revenue';
 
 export interface Guild {
@@ -520,7 +546,13 @@ export interface CareerPassportData {
   badges: PassportBadge[];
   publicShareUrl: string;
   isVerified: boolean;
+  isPublic?: boolean;
+  shareCode?: string;
+  sections?: Record<PassportSection, boolean>;
+  hiddenSections?: PassportSection[];
 }
+
+export type PassportSection = 'skills' | 'certifications' | 'projects' | 'badges' | 'stats';
 
 export type FreelanceCategory = 'tech' | 'marketing' | 'finance' | 'design' | 'writing';
 
@@ -566,10 +598,3 @@ export interface FreelanceResponse {
     totalCompleted: number;
   };
 }
-
-
-
-
-
-
-

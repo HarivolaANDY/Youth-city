@@ -37,7 +37,7 @@ import {
   DEFAULT_ADMIN_OVERVIEW,
   DEFAULT_FREELANCE_GIGS,
 } from '../data/mockData';
-import { api } from '../services/api';
+import { api, getLastApiError, setUnauthorizedHandler } from '../services/api';
 import { formatNumber } from '../lib/format';
 
 interface GameState {
@@ -68,14 +68,14 @@ interface GameState {
   authMode: 'login' | 'register';
   toggleAuthModal: (open?: boolean, mode?: 'login' | 'register') => void;
   login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  register: (payload: { username: string; email?: string; password: string; citizenName?: string }) => Promise<{ success: boolean; error?: string }>;
+  register: (payload: { username: string; email?: string; password: string; citizenName?: string; birthYear: number; acceptTerms: boolean; guardianConsent?: boolean }) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
 
   // Création guidée & Onboarding Citoyen (§14, §47)
   isCharacterCreationOpen: boolean;
   toggleCharacterCreation: (open?: boolean) => void;
   customizeCharacter: (payload: CharacterCustomizationPayload) => Promise<{ success: boolean; error?: string }>;
-  
+
   // Lifecycle
   initGame: () => Promise<void>;
 
@@ -86,7 +86,7 @@ interface GameState {
   dismissDilemma: () => void;
   triggerDilemma: (dilemma?: Dilemma) => void;
   triggerDynamicEvent: () => Promise<void>;
-  
+
   // Startup District (§12, §24)
   fetchStartupProjects: () => Promise<void>;
   createStartupProject: (payload: { name: string; sector: string; pitch: string; initialCapital?: number }) => Promise<{ success: boolean; error?: string }>;
@@ -127,16 +127,19 @@ interface GameState {
   withdrawSavings: (amount: number) => boolean;
   buyMarketItem: (itemKey: string) => Promise<{ success: boolean; error?: string }>;
   completeCourseModule: (courseId: string) => void;
-  hireForJob: (jobId: string) => void;
+  enrollInCourse: (course: { id: string; title: string; cost: number }) => Promise<{ success: boolean; error?: string }>;
+  applyServerCitizen: (citizen: Citizen, transaction?: Transaction | null) => void;
+  setCareerPassport: (passport: CareerPassportData) => void;
+  resyncFromServer: (reason?: string) => Promise<void>;
   simulateInterview: (jobId: string, answerIndex: number) => Promise<InterviewResult | null>;
   workShift: () => boolean;
   changeHousing: (housingId: string) => void;
   resolveDilemmaOption: (optionId: string) => void;
-  
+
   // Feedback
   addNotification: (title: string, message: string, type?: ToastNotification['type']) => void;
   removeNotification: (id: string) => void;
-  
+
   // Reset
   resetGame: (preset: 'demo' | 'new') => void;
 }
@@ -262,7 +265,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   customizeCharacter: async (payload) => {
     const res = await api.customizeCharacter(payload);
     if (!res) {
-      return { success: false, error: 'Impossible de personnaliser le profil.' };
+      return { success: false, error: getLastApiError() || 'Impossible de personnaliser le profil.' };
     }
     set({
       citizen: res.citizen,
@@ -360,7 +363,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
     // Attempt dynamic contextual event from backend first, fallback to SAMPLE_DILEMMA
     get().triggerDynamicEvent().catch(() => {
-      set({ activeDilemma: SAMPLE_DILEMMA });
+      if (!get().isAuthenticated) set({ activeDilemma: SAMPLE_DILEMMA });
     });
   },
 
@@ -374,11 +377,13 @@ export const useGameStore = create<GameState>((set, get) => ({
           `Un nouvel imprévu requiert ton arbitrage : ${res.dilemma.title}`,
           'warning'
         );
-      } else {
+      } else if (!get().isAuthenticated) {
         set({ activeDilemma: SAMPLE_DILEMMA });
+      } else {
+        get().addNotification('Rien à signaler', 'Aucun événement disponible actuellement.', 'info');
       }
     } catch {
-      set({ activeDilemma: SAMPLE_DILEMMA });
+      if (!get().isAuthenticated) set({ activeDilemma: SAMPLE_DILEMMA });
     }
   },
 
@@ -1034,7 +1039,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   depositSavings: (amount) => {
     const { citizen, spendMoney, addNotification } = get();
     if (amount <= 0 || citizen.money < amount) return false;
-    
+
     spendMoney(amount, 'Virement vers livret d\'épargne', 'Épargne');
     set({
       citizen: {
@@ -1045,7 +1050,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     addNotification('Épargne sécurisée', `${formatNumber(amount)} MGA placés sur ton livret de précaution.`, 'success');
 
     // Sync with backend
-    api.depositSavings(amount).then((res) => {
+    syncServer(() => api.depositSavings(amount)).then((res) => {
       if (res && res.citizen) {
         set({ citizen: res.citizen });
       }
@@ -1068,7 +1073,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     addNotification('Retrait d\'épargne', `${formatNumber(amount)} MGA transférés sur ton compte courant.`, 'info');
 
     // Sync with backend
-    api.withdrawSavings(amount).then((res) => {
+    syncServer(() => api.withdrawSavings(amount)).then((res) => {
       if (res && res.citizen) {
         set({ citizen: res.citizen });
       }
@@ -1099,7 +1104,13 @@ export const useGameStore = create<GameState>((set, get) => ({
       // Fallback to local offline logic
     }
 
-    // 2. Offline fallback logic
+    if (get().isAuthenticated) {
+      const error = getLastApiError() || 'Achat impossible pour le moment.';
+      addNotification('Achat refusé', error, 'warning');
+      return { success: false, error };
+    }
+
+    // 2. Session invité : démo locale
     const item = MARKET_ITEMS.find((it) => it.id === itemKey);
     if (!item) {
       return { success: false, error: 'Article introuvable au Market District.' };
@@ -1158,12 +1169,12 @@ export const useGameStore = create<GameState>((set, get) => ({
   advanceTime: () => {
     const { timeSlot, day, restAndSleep } = get();
     const currentIndex = TIME_SLOTS.indexOf(timeSlot);
-    
+
     if (currentIndex < TIME_SLOTS.length - 1) {
       set({ timeSlot: TIME_SLOTS[currentIndex + 1] });
     } else {
-      // Fin de journée -> Nuit -> Nouveau jour
-      restAndSleep();
+      // Fin de journée -> Nuit -> Nouveau jour (joueur connecté : la nuit est gérée par le serveur)
+      if (!get().isAuthenticated) restAndSleep();
       set({
         day: day + 1,
         timeSlot: TIME_SLOTS[0],
@@ -1171,7 +1182,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
 
     // Sync with backend
-    api.advanceTime().then((res) => {
+    syncServer(() => api.advanceTime()).then((res) => {
       if (res && res.citizen) {
         set({
           day: res.day,
@@ -1250,10 +1261,28 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   restAndSleep: () => {
+    if (get().isAuthenticated) {
+      // Dormir fait passer la nuit côté serveur (jour suivant, loyer éventuel) : on applique sa réponse.
+      void (async () => {
+        const res = await api.restAndSleep();
+        if (res && res.citizen) {
+          set({
+            citizen: res.citizen,
+            day: res.day,
+            timeSlot: res.timeSlot as TimeSlot,
+            recurringCycle: res.recurringCycle || get().recurringCycle,
+          });
+          get().addNotification('Nuit de sommeil réparatrice', res.message, 'success');
+        } else {
+          await get().resyncFromServer();
+        }
+      })();
+      return;
+    }
     const { citizen, addNotification } = get();
     const housing = HOUSINGS.find((h) => h.id === citizen.currentHousingId) || HOUSINGS[0];
     const recoveredEnergy = Math.min(100, citizen.energy + housing.energyRecoveryPerNight);
-    
+
     addNotification(
       'Nuit de sommeil réparatrice',
       `Ton logement (${housing.title}) t'a permis de récupérer +${housing.energyRecoveryPerNight}% d'énergie.`,
@@ -1266,13 +1295,54 @@ export const useGameStore = create<GameState>((set, get) => ({
         energy: recoveredEnergy,
       },
     });
+  },
 
-    // Sync with backend
-    api.restAndSleep().then((res) => {
-      if (res && res.citizen) {
-        set({ citizen: res.citizen });
-      }
-    });
+  setCareerPassport: (passport) => set({ careerPassport: passport }),
+
+  applyServerCitizen: (citizen, transaction) => {
+    set((state) => ({
+      citizen,
+      transactions: transaction ? [transaction, ...state.transactions].slice(0, 30) : state.transactions,
+    }));
+  },
+
+  // Remet l'état local d'un joueur connecté en conformité avec le serveur après un refus ou une panne :
+  // le serveur fait autorité, aucune progression locale ne doit survivre à un échec.
+  resyncFromServer: async (reason) => {
+    const message = reason || getLastApiError() || 'Le serveur a refusé cette action.';
+    const state = await api.getGameState();
+    if (state && state.citizen) {
+      set({
+        citizen: state.citizen,
+        day: state.day,
+        timeSlot: (state.timeSlot as TimeSlot) || 'Matin (08:00)',
+        recurringCycle: state.recurringCycle || null,
+        transactions: state.transactions || [],
+        activeDilemma: state.activeDilemma || null,
+      });
+      get().addNotification('Action non enregistrée', `${message} Ton état a été resynchronisé avec le serveur.`, 'warning');
+    } else {
+      get().addNotification('Serveur injoignable', `${message} Ta dernière action n'est peut-être pas enregistrée.`, 'warning');
+    }
+  },
+
+  enrollInCourse: async (course) => {
+    const { isAuthenticated, addNotification, spendMoney } = get();
+    if (!isAuthenticated) {
+      // Session invité : démo locale uniquement, rien n'est enregistré.
+      const paid = spendMoney(course.cost, `Frais de formation : ${course.title}`, 'Éducation');
+      return paid ? { success: true } : { success: false, error: 'Fonds insuffisants.' };
+    }
+    const res = await api.enrollCourse(course.id);
+    if ('error' in res) {
+      addNotification('Inscription impossible', res.error, 'warning');
+      return { success: false, error: res.error };
+    }
+    get().applyServerCitizen(res.citizen, res.transaction);
+    if (!res.alreadyEnrolled) {
+      addNotification('Inscription validée', res.message, 'success');
+    }
+    return { success: true };
   },
 
   completeCourseModule: (courseId) => {
@@ -1287,7 +1357,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     });
 
     const isFirstTime = !citizen.completedCourses.includes(courseId);
-    const updatedCompleted = isFirstTime 
+    const updatedCompleted = isFirstTime
       ? [...citizen.completedCourses, courseId]
       : citizen.completedCourses;
 
@@ -1312,39 +1382,6 @@ export const useGameStore = create<GameState>((set, get) => ({
       'success'
     );
 
-    // Sync with backend
-    api.completeCourse(courseId).then((res) => {
-      if (res && res.citizen) {
-        set({ citizen: res.citizen });
-      }
-    });
-  },
-
-  hireForJob: (jobId) => {
-    const { citizen, addNotification, addXp } = get();
-    const job = JOBS.find((j) => j.id === jobId);
-    if (!job) return;
-
-    set({
-      citizen: {
-        ...citizen,
-        currentJobId: jobId,
-      },
-    });
-
-    addXp(120);
-    addNotification(
-      '🎉 Embauché(e) !',
-      `Félicitations, tu occupes désormais le poste de ${job.title} chez ${job.company} !`,
-      'success'
-    );
-
-    // Sync with backend
-    api.hireJob(jobId).then((res) => {
-      if (res && res.citizen) {
-        set({ citizen: res.citizen });
-      }
-    });
   },
 
   simulateInterview: async (jobId: string, answerIndex: number) => {
@@ -1384,7 +1421,12 @@ export const useGameStore = create<GameState>((set, get) => ({
       // Offline fallback
     }
 
-    // 2. Offline fallback logic
+    if (get().isAuthenticated) {
+      addNotification('Entretien impossible', getLastApiError() || "L'entretien n'a pas pu être enregistré.", 'warning');
+      return null;
+    }
+
+    // 2. Session invité : démo locale
     if (!job) return null;
     const sample = job.sampleAnswers[answerIndex];
     if (!sample) return null;
@@ -1455,6 +1497,19 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   workShift: () => {
+    if (get().isAuthenticated) {
+      // Joueur connecté : le serveur décide (emploi, énergie, un seul shift par jour) et on applique sa réponse.
+      void (async () => {
+        const res = await api.workShift();
+        if (res && res.citizen) {
+          get().applyServerCitizen(res.citizen, res.transaction);
+          get().addNotification('Journée de travail accomplie', `+${formatNumber(res.salaryEarned)} MGA virtuels perçus.`, 'success');
+        } else {
+          get().addNotification('Shift impossible', getLastApiError() || "Le shift n'a pas pu être enregistré.", 'warning');
+        }
+      })();
+      return true;
+    }
     const { citizen, earnMoney, addXp, addNotification } = get();
     const job = JOBS.find((j) => j.id === citizen.currentJobId);
     if (!job) {
@@ -1480,7 +1535,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     });
 
     // Sync with backend
-    api.workShift().then((res) => {
+    syncServer(() => api.workShift()).then((res) => {
       if (res && res.citizen) {
         set({ citizen: res.citizen });
       }
@@ -1504,7 +1559,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     addNotification('Nouveau logement', `Tu as emménagé dans : ${housing.title}`, 'info');
 
     // Sync with backend
-    api.changeHousing(housingId).then((res) => {
+    syncServer(() => api.changeHousing(housingId)).then((res) => {
       if (res && res.citizen) {
         set({ citizen: res.citizen });
       }
@@ -1559,7 +1614,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
 
     // Sync with backend
-    api.resolveDilemma(optionId, activeDilemma.id).then((res) => {
+    syncServer(() => api.resolveDilemma(optionId, activeDilemma.id)).then((res) => {
       if (res && res.citizen) {
         set({ citizen: res.citizen });
       }
@@ -1610,7 +1665,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
 
     // Sync with backend
-    api.resetGame(preset).then((res) => {
+    syncServer(() => api.resetGame(preset)).then((res) => {
       if (res && res.citizen) {
         set({
           citizen: res.citizen,
@@ -1622,3 +1677,29 @@ export const useGameStore = create<GameState>((set, get) => ({
     });
   },
 }));
+
+/**
+ * Synchronise une action locale avec le serveur, uniquement pour un joueur connecté.
+ * Les invités jouent en démo locale (rien n'est envoyé) ; en cas de refus ou de panne, l'état local
+ * d'un joueur connecté est aligné sur celui du serveur (pas de progression fantôme).
+ */
+function syncServer<T>(call: () => Promise<T | null>): Promise<T | null> {
+  if (!useGameStore.getState().isAuthenticated) return Promise.resolve(null);
+  return call().then((res) => {
+    if (res === null) void useGameStore.getState().resyncFromServer();
+    return res;
+  });
+}
+
+// Action tentée sans compte : on propose de se connecter plutôt que d'échouer silencieusement.
+setUnauthorizedHandler(() => {
+  const state = useGameStore.getState();
+  if (!state.isAuthenticated && !state.isAuthModalOpen) {
+    state.toggleAuthModal(true, 'login');
+    state.addNotification(
+      'Connexion requise',
+      'Connecte-toi pour enregistrer ta progression : la session invité est une démo locale.',
+      'info'
+    );
+  }
+});

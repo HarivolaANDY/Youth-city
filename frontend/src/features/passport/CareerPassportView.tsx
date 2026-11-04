@@ -31,7 +31,7 @@ import { IconChip } from '../../components/ui/IconChip';
 import { MeterRow } from '../../components/ui/MeterRow';
 import { Modal } from '../../components/ui/Modal';
 import { Progress } from '../../components/ui/Progress';
-import type { CareerPassportData, PassportBadge } from '../../types/game';
+import type { CareerPassportData, PassportBadge, PassportSection } from '../../types/game';
 
 const BADGE_ICONS: Record<string, React.ReactNode> = {
   first_job: <Briefcase className="size-5" aria-hidden="true" />,
@@ -40,6 +40,119 @@ const BADGE_ICONS: Record<string, React.ReactNode> = {
   team_player: <Users className="size-5" aria-hidden="true" />,
   serial_entrepreneur: <Rocket className="size-5" aria-hidden="true" />,
   streak_30: <Flame className="size-5" aria-hidden="true" />,
+};
+
+const SECTION_LABELS: Record<PassportSection, string> = {
+  skills: 'Compétences démontrées',
+  certifications: 'Certifications internes',
+  projects: 'Projets et missions',
+  badges: 'Badges obtenus',
+  stats: 'Statistiques',
+};
+const ALL_SECTIONS: PassportSection[] = ['skills', 'certifications', 'projects', 'badges', 'stats'];
+
+/** Le joueur choisit si son passeport est public et quelles sections le sont (§22.1). Rien n'est public par défaut. */
+const PassportPublicationPanel: React.FC<{ passport: CareerPassportData }> = ({ passport }) => {
+  const { isAuthenticated, setCareerPassport, addNotification, toggleAuthModal } = useGameStore();
+  const [busy, setBusy] = useState(false);
+  // Les cases cochées = sections enregistrées par le serveur, plus les changements pas encore envoyés
+  const [pending, setPending] = useState<Partial<Record<PassportSection, boolean>>>({});
+  const sections: Record<PassportSection, boolean> = {
+    skills: true,
+    certifications: true,
+    projects: true,
+    badges: true,
+    stats: true,
+    ...(passport.sections ?? {}),
+    ...pending,
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <Panel as="section" className="p-5 sm:p-6">
+        <h3 className="text-base font-bold text-white">Partager mon passeport</h3>
+        <p className="mt-1 text-xs text-mist-400">
+          Les passeports ne se partagent qu&apos;avec un compte : tu choisis ce qui est public et tu peux retirer le lien à tout moment.
+        </p>
+        <Button variant="primary" size="md" className="mt-3" onClick={() => toggleAuthModal(true, 'login')}>
+          Se connecter
+        </Button>
+      </Panel>
+    );
+  }
+
+  const submit = async (makePublic: boolean) => {
+    setBusy(true);
+    const res = await api.updatePassportPublication(makePublic, sections);
+    setBusy(false);
+    if ('error' in res) {
+      addNotification('Publication impossible', res.error, 'warning');
+      return;
+    }
+    setCareerPassport(res.passport);
+    setPending({});
+    addNotification(makePublic ? 'Passeport publié' : 'Passeport retiré', res.message, 'success');
+  };
+
+  const copyCode = () => {
+    if (!passport.shareCode) return;
+    navigator.clipboard?.writeText(passport.shareCode);
+    addNotification('Code copié', 'Donne ce code : il se vérifie dans « Vérifier un passeport ».', 'info');
+  };
+
+  return (
+    <Panel as="section" className="space-y-4 p-5 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-base font-bold text-white">Partager mon passeport</h3>
+        <Badge tone={passport.isPublic ? 'gain' : 'neutral'}>{passport.isPublic ? 'Publié' : 'Privé'}</Badge>
+      </div>
+      <p className="text-xs text-mist-400">
+        Par défaut, personne ne peut voir ton passeport. En le publiant, tu génères un code aléatoire que seules les personnes à qui tu le donnes
+        peuvent utiliser. Retire la publication et le code cesse immédiatement de fonctionner.
+      </p>
+
+      <fieldset className="space-y-2">
+        <legend className="text-2xs font-bold uppercase tracking-wider text-mist-300">Sections visibles publiquement</legend>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {ALL_SECTIONS.map((section) => (
+            <label key={section} className="flex items-center gap-2 text-xs text-mist-200">
+              <input
+                type="checkbox"
+                checked={sections[section]}
+                onChange={(e) => setPending((prev) => ({ ...prev, [section]: e.target.checked }))}
+                className="size-4 accent-brand-500"
+              />
+              {SECTION_LABELS[section]}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      {passport.isPublic && passport.shareCode ? (
+        <div className="panel-inset flex items-center justify-between gap-3 p-3">
+          <div className="min-w-0">
+            <span className="block text-3xs font-semibold tracking-wider text-mist-400 uppercase">Code de partage</span>
+            <code className="block truncate font-mono text-xs font-bold text-brand-300">{passport.shareCode}</code>
+          </div>
+          <Button variant="secondary" size="sm" onClick={copyCode}>
+            <Copy className="size-3.5" aria-hidden="true" />
+            <span>Copier</span>
+          </Button>
+        </div>
+      ) : null}
+
+      <div className="flex flex-wrap gap-2">
+        <Button variant="primary" size="md" disabled={busy} onClick={() => submit(true)}>
+          {passport.isPublic ? 'Mettre à jour les sections' : 'Publier mon passeport'}
+        </Button>
+        {passport.isPublic ? (
+          <Button variant="ghost" size="md" disabled={busy} onClick={() => submit(false)}>
+            Retirer la publication
+          </Button>
+        ) : null}
+      </div>
+    </Panel>
+  );
 };
 
 export const CareerPassportView: React.FC = () => {
@@ -62,14 +175,14 @@ export const CareerPassportView: React.FC = () => {
 
   // Données de secours fiables si le backend n'a pas encore répondu
   const passport: CareerPassportData = careerPassport || {
-    citizenId: '#YC-84920',
+    citizenId: '',
     citizenName: citizen.name,
     title: citizen.title,
     level: citizen.level,
     xp: citizen.xp,
     avatarSeed: citizen.avatarSeed,
-    verificationCode: 'YC-VERIF-84920A1F',
-    cryptographicSignature: 'SHA256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+    verificationCode: '',
+    cryptographicSignature: 'EXEMPLE — session invité, non signé',
     issuedAt: '14 Octobre 2026',
     authority: 'République de Youth City • Direction de l\'Émancipation Citoyenne',
     aptitudeScore: 85,
@@ -177,15 +290,18 @@ export const CareerPassportView: React.FC = () => {
         date: day >= 30 ? '14/10/2026' : null,
       },
     ],
-    publicShareUrl: `/verify-passport/YC-VERIF-84920A1F`,
-    isVerified: true,
+    publicShareUrl: '',
+    isVerified: false,
   };
 
   const handleCopyLink = () => {
-    const url = `${window.location.origin}/verify-passport/${passport.verificationCode}`;
-    navigator.clipboard?.writeText(url);
+    if (!passport.verificationCode) {
+      addNotification('Passeport privé', 'Publie ton passeport (onglet « Partage & vérification ») pour obtenir un code à partager.', 'info');
+      return;
+    }
+    navigator.clipboard?.writeText(passport.verificationCode);
     setCopiedUrl(true);
-    addNotification('Lien copié !', 'Le lien public vérifié de ton Career Passport a été copié.', 'success');
+    addNotification('Code copié !', 'Donne ce code : il se vérifie dans « Vérifier un passeport ».', 'success');
     setTimeout(() => setCopiedUrl(false), 2500);
   };
 
@@ -228,17 +344,17 @@ export const CareerPassportView: React.FC = () => {
       <div className="hidden print:block mb-6 border-b-2 border-slate-900 pb-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">RÉPUBLIQUE DE YOUTH CITY</h1>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">YOUTH CITY — SIMULATION ÉDUCATIVE</h1>
             <p className="text-xs font-bold text-slate-700 uppercase tracking-widest">
-              Direction de l'Émancipation Citoyenne &amp; Insertion Professionnelle
+              Certifications internes, sans valeur de diplôme officiel
             </p>
             <p className="text-xs text-slate-600 mt-0.5">
-              Passeport de Compétences &amp; Portfolio Certifié par la Preuve (§34, §35)
+              Passeport de compétences &amp; portfolio par la preuve (§22)
             </p>
           </div>
           <div className="text-right">
             <p className="text-xs font-mono font-bold text-slate-900">ID : {passport.citizenId}</p>
-            <p className="text-xs font-mono text-slate-700">Sceau SHA-256 : {passport.verificationCode}</p>
+            <p className="text-xs font-mono text-slate-700">Code de partage : {passport.verificationCode || 'non publié'}</p>
             <p className="text-3xs text-slate-500">Délivré le {passport.issuedAt}</p>
           </div>
         </div>
@@ -250,10 +366,10 @@ export const CareerPassportView: React.FC = () => {
           headingId="passport-title"
           tone="brand"
           badgeIcon={<ShieldCheck />}
-          badgeLabel="Career Passport vérifié & Infalsifiable (§34, §35)"
-          meta={`Identifiant citoyen officiel : ${passport.citizenId}`}
+          badgeLabel="Career Passport — preuves enregistrées sur YOUTH CITY (§22)"
+          meta={`Identifiant citoyen : ${passport.citizenId || 'non communiqué'}`}
           title="Passeport de compétences & portfolio par la preuve"
-          description="Les réalisations et aptitudes attestées ici ne sont pas de simples déclarations : elles résultent de formations validées, de missions réelles et de projets concrets déployés dans Youth City."
+          description="Ces éléments viennent d'actions enregistrées dans la simulation (formations validées par quiz, missions et projets simulés). Ils ne constituent ni un diplôme ni une qualification officielle."
           aside={
             <div className="flex flex-wrap items-center gap-2">
               <Button variant="secondary" size="md" onClick={handlePrintPdf}>
@@ -352,12 +468,12 @@ export const CareerPassportView: React.FC = () => {
                     </IconChip>
                     <div className="min-w-0">
                       <span className="block truncate font-display text-2xs font-black tracking-wider text-brand-300 uppercase sm:tracking-[0.16em]">
-                        République de Youth City
+                        YOUTH CITY
                       </span>
-                      <span className="block text-3xs text-mist-400">Direction de l'Émancipation</span>
+                      <span className="block text-3xs text-mist-400">Simulation éducative</span>
                     </div>
                   </div>
-                  <Badge tone="gain" className="shrink-0">Infalsifiable</Badge>
+                  <Badge tone={passport.isPublic ? 'gain' : 'neutral'} className="shrink-0">{passport.isPublic ? 'Publié' : 'Privé'}</Badge>
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -415,10 +531,10 @@ export const CareerPassportView: React.FC = () => {
                     <QrCode className="size-7 shrink-0 text-brand-400" aria-hidden="true" />
                     <div className="min-w-0">
                       <span className="block text-3xs font-semibold tracking-wider text-mist-400 uppercase">
-                        Sceau Cryptographique SHA-256
+                        Code de partage
                       </span>
                       <span className="metric font-mono block truncate text-2xs font-bold text-white">
-                        {passport.verificationCode}
+                        {passport.verificationCode || 'Non publié'}
                       </span>
                     </div>
                   </div>
@@ -679,12 +795,13 @@ export const CareerPassportView: React.FC = () => {
       {/* TAB 4: SCEAU CRYPTOGRAPHIQUE & PREUVE D'INTÉGRITÉ */}
       {activeTab === 'verify' && (
         <div className="space-y-6">
+          <PassportPublicationPanel passport={passport} />
           <Panel as="section" className="p-5 sm:p-6">
             <h3 className="mb-2 text-base font-bold text-white">
-              🔐 Preuve Cryptographique d'Authenticité &amp; Non-Répudiation
+              🔐 Partage &amp; vérification
             </h3>
             <p className="mb-6 text-xs text-mist-400">
-              Le Career Passport de Youth City est protégé par une empreinte SHA-256 déterministe générée à partir des réalisations immuables du citoyen.
+              Le contenu du passeport est signé par le serveur (HMAC-SHA256). La vérification publique lit les données en direct, uniquement pour les passeports que leur propriétaire a publiés.
             </p>
 
             <div className="space-y-4">
