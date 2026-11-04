@@ -1,0 +1,41 @@
+# Contrôles locaux (QUA-03). Installation : voir CONTRIBUTING.md (scripts/install-hooks.*).
+default_install_hook_types: [pre-commit, pre-push]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: end-of-file-fixer
+        exclude: ^(docs/cahier-des-charges.*\.md|.*package-lock\.json)$
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+        exclude: ^(docs/cahier-des-charges.*\.md|.*package-lock\.json)$
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.3
+    hooks:
+      - id: ruff
+        args: [--config=backend/pyproject.toml]
+        files: ^backend/
+
+  - repo: local
+    hooks:
+      - id: frontend-lint
+        name: Lint frontend (oxlint)
+        entry: npm --prefix frontend run lint
+        language: system
+        files: ^frontend/src/
+        pass_filenames: false
+      - id: frontend-typecheck
+        name: Types frontend (tsc)
+        entry: npm --prefix frontend run typecheck
+        language: system
+        files: ^frontend/src/
+        pass_filenames: false
+        stages: [pre-push]
