@@ -43,7 +43,7 @@ allowed_hosts_env = os.getenv('DJANGO_ALLOWED_HOSTS')
 if allowed_hosts_env:
     ALLOWED_HOSTS = [h.strip() for h in allowed_hosts_env.split(',') if h.strip()]
 else:
-    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]']
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]', '0.0.0.0']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -190,6 +190,7 @@ else:
     CORS_ALLOWED_ORIGINS = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://[::1]:5173",
     ]
 CORS_ALLOW_CREDENTIALS = True
 
