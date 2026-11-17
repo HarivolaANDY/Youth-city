@@ -929,6 +929,3 @@ export const DEFAULT_CITIZEN_MESSAGES: CitizenMessage[] = [
     isFromMe: false,
   },
 ];
-
-
-

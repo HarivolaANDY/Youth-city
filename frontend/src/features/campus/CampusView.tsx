@@ -39,6 +39,13 @@ export const CampusView: React.FC = () => {
   const [quizExplanation, setQuizExplanation] = useState<string>('');
   const [isValidatingApi, setIsValidatingApi] = useState(false);
 
+  const resetQuizState = () => {
+    setSelectedQuizAnswer(null);
+    setQuizSubmitted(false);
+    setIsQuizCorrect(null);
+    setQuizExplanation('');
+  };
+
   const startCourse = async (course: Course) => {
     const alreadyCompleted = citizen.completedCourses.includes(course.id);
     if (!alreadyCompleted) {
@@ -49,10 +56,7 @@ export const CampusView: React.FC = () => {
     setSelectedCourse(course);
     setActiveModuleIndex(0);
     setCurrentStep('theory');
-    setSelectedQuizAnswer(null);
-    setQuizSubmitted(false);
-    setIsQuizCorrect(null);
-    setQuizExplanation('');
+    resetQuizState();
   };
 
   const activeModule = selectedCourse?.modules[activeModuleIndex];
@@ -117,10 +121,7 @@ export const CampusView: React.FC = () => {
     if (activeModuleIndex < selectedCourse.modules.length - 1) {
       setActiveModuleIndex((prev) => prev + 1);
       setCurrentStep('theory');
-      setSelectedQuizAnswer(null);
-      setQuizSubmitted(false);
-      setIsQuizCorrect(null);
-      setQuizExplanation('');
+      resetQuizState();
     } else {
       setCurrentStep('diploma');
     }
@@ -129,9 +130,7 @@ export const CampusView: React.FC = () => {
   const closeCourse = () => {
     setSelectedCourse(null);
     setCurrentStep('theory');
-    setSelectedQuizAnswer(null);
-    setQuizSubmitted(false);
-    setIsQuizCorrect(null);
+    resetQuizState();
   };
 
   // Sections du pipeline §23
@@ -154,13 +153,24 @@ export const CampusView: React.FC = () => {
         title="Pipeline Pédagogique & Montée en Compétences"
         description="Chaque cursus suit l'entonnoir pédagogique officiel (§23) : cours théorique synthétique, exercice guidé, quiz de contrôle avec feedback immédiat, mission professionnelle concrète et certification inscrite à ton Career Passport."
         aside={
-          <div className="panel-inset flex items-center gap-3 px-4 py-3">
-            <Award className="size-6 shrink-0 text-warn-400" aria-hidden="true" />
-            <div>
-              <span className="block text-2xs tracking-wider text-mist-400 uppercase">Certifications validées</span>
-              <span className="metric mt-1 block text-sm font-bold text-white">
-                {citizen.certifications.length} {citizen.certifications.length > 1 ? 'diplômes' : 'diplôme'}
-              </span>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="panel-inset flex items-center gap-2.5 px-3.5 py-2.5">
+              <Coins className="size-4 shrink-0 text-gain-400" aria-hidden="true" />
+              <div>
+                <span className="block text-2xs tracking-wider text-mist-500 uppercase">Solde disponible</span>
+                <span className="metric mt-0.5 block text-xs font-bold text-gain-300">
+                  {formatNumber(citizen.money)} MGA
+                </span>
+              </div>
+            </div>
+            <div className="panel-inset flex items-center gap-2.5 px-3.5 py-2.5">
+              <Award className="size-4 shrink-0 text-warn-400" aria-hidden="true" />
+              <div>
+                <span className="block text-2xs tracking-wider text-mist-500 uppercase">Certifications</span>
+                <span className="metric mt-0.5 block text-xs font-bold text-white">
+                  {citizen.certifications.length} {citizen.certifications.length > 1 ? 'diplômes' : 'diplôme'}
+                </span>
+              </div>
             </div>
           </div>
         }
@@ -218,7 +228,7 @@ export const CampusView: React.FC = () => {
                           setCurrentStep(step.key);
                         }
                       }}
-                      className={`flex w-full flex-col items-start gap-1 rounded-xl border p-2.5 text-left transition-all ${
+                      className={`flex w-full flex-col items-start gap-1 rounded-xl border p-2.5 text-left transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cool-400 ${
                         isActive
                           ? 'border-cool-400/80 bg-cool-500/15 text-white shadow-sm shadow-cool-950/40'
                           : isPassed
@@ -323,7 +333,7 @@ export const CampusView: React.FC = () => {
                       return (
                         <label
                           key={idx}
-                          className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border p-3.5 text-left text-xs transition-all duration-200 ${
+                          className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border p-3.5 text-left text-xs transition-all duration-200 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-cool-400 ${
                             quizSubmitted ? 'cursor-default' : ''
                           } ${tone}`}
                         >
@@ -396,11 +406,7 @@ export const CampusView: React.FC = () => {
                   ) : (
                     <Button
                       variant="secondary"
-                      onClick={() => {
-                        setQuizSubmitted(false);
-                        setSelectedQuizAnswer(null);
-                        setIsQuizCorrect(null);
-                      }}
+                      onClick={resetQuizState}
                     >
                       <RotateCcw className="size-3.5" aria-hidden="true" />
                       Réessayer le quiz

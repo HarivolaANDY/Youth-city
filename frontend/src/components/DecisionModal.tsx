@@ -73,7 +73,7 @@ export const DecisionModal: React.FC = () => {
             return (
               <label
                 key={opt.id}
-                className={`flex cursor-pointer flex-col gap-3 rounded-xl border p-3.5 transition-all duration-200 sm:flex-row sm:items-center sm:justify-between ${
+                className={`flex cursor-pointer flex-col gap-3 rounded-xl border p-3.5 transition-all duration-200 sm:flex-row sm:items-center sm:justify-between has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-warn-400 ${
                   !canAfford
                     ? 'cursor-not-allowed border-white/[0.06] bg-night-950/40 opacity-55'
                     : isSelected

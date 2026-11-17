@@ -22,6 +22,7 @@ import { api } from '../services/api';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { IconChip } from './ui/IconChip';
+import { formatMGA } from '../lib/format';
 import type { NovaProactiveGuidance } from '../types/game';
 
 type ValidTab = 'campus' | 'career' | 'finance' | 'residential' | 'startup' | 'cityhub';
@@ -125,7 +126,7 @@ export const NextActionBanner: React.FC = () => {
   const proactiveTip =
     remoteGuidance?.proactiveTip ||
     (citizen.savings < 50000
-      ? `Attention ${citizen.name} : Ton épargne est faible (${citizen.savings.toLocaleString('fr-FR')} MGA). Envisage d'épargner au moins 20 000 MGA par cycle pour te prémunir contre les aléas imprévus (§27).`
+      ? `Attention ${citizen.name} : Ton épargne est faible (${formatMGA(citizen.savings)}). Envisage d'épargner au moins 20 000 MGA par cycle pour te prémunir contre les aléas imprévus (§27).`
       : `Excellente gestion citoyenne, ${citizen.name} ! Équilibre toujours compétences au Campus, autonomie financière au Business District et vitalité au Résidentiel.`);
 
   const dailyChecklist = remoteGuidance?.dailyChecklist || [

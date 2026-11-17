@@ -116,7 +116,7 @@ export const CityMap: React.FC = () => {
           <span className="text-3xs text-mist-400 hidden sm:inline">Clique sur un quartier pour y accéder instantanément</span>
         </div>
 
-        <div className="relative w-full aspect-21/9 min-h-[220px] sm:min-h-[260px] rounded-2xl bg-night-950/80 border border-white/[0.06] overflow-hidden flex items-center justify-center p-2">
+        <div className="relative w-full aspect-[21/9] min-h-[220px] sm:min-h-[260px] rounded-2xl bg-night-950/80 border border-white/[0.06] overflow-hidden flex items-center justify-center p-2">
           {/* Subtle Grid / Roads Background */}
           <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-40" viewBox="0 0 800 320" fill="none">
             <path d="M 160 90 L 400 160 L 640 90" stroke="url(#cyan-glow)" strokeWidth="2" strokeDasharray="4 4" />
@@ -124,7 +124,7 @@ export const CityMap: React.FC = () => {
             <path d="M 160 90 L 160 230" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" />
             <path d="M 640 90 L 640 230" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" />
             <path d="M 400 60 L 400 260" stroke="rgba(124,58,237,0.3)" strokeWidth="1.5" strokeDasharray="2 4" />
-            
+
             <circle cx="400" cy="160" r="90" stroke="rgba(124,58,237,0.2)" strokeWidth="1" strokeDasharray="6 6" />
             <circle cx="400" cy="160" r="140" stroke="rgba(99,102,241,0.1)" strokeWidth="1" />
 
@@ -148,7 +148,7 @@ export const CityMap: React.FC = () => {
             <button
               type="button"
               onClick={() => selectDistrict('campus')}
-              className="group flex flex-col items-center gap-1.5 p-2 rounded-xl transition-transform hover:scale-110 cursor-pointer"
+              className="group flex flex-col items-center gap-1.5 p-2 rounded-xl transition-transform hover:scale-110 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
             >
               <div className="size-11 rounded-xl bg-blue-500/20 border border-blue-400/40 text-blue-300 grid place-items-center shadow-lg shadow-blue-500/20 group-hover:bg-blue-500/30">
                 <GraduationCap className="size-5" />
@@ -160,7 +160,7 @@ export const CityMap: React.FC = () => {
             <button
               type="button"
               onClick={() => selectDistrict('residential')}
-              className="group flex flex-col items-center gap-1.5 p-2 rounded-xl transition-transform hover:scale-110 cursor-pointer -translate-y-1"
+              className="group flex flex-col items-center gap-1.5 p-2 rounded-xl transition-transform hover:scale-110 cursor-pointer -translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
             >
               <div className="relative size-12 rounded-xl bg-pink-500/20 border-2 border-pink-400/60 text-pink-300 grid place-items-center shadow-lg shadow-pink-500/25 group-hover:bg-pink-500/30">
                 <Home className="size-5" />
@@ -176,7 +176,7 @@ export const CityMap: React.FC = () => {
             <button
               type="button"
               onClick={() => selectDistrict('business')}
-              className="group flex flex-col items-center gap-1.5 p-2 rounded-xl transition-transform hover:scale-110 cursor-pointer"
+              className="group flex flex-col items-center gap-1.5 p-2 rounded-xl transition-transform hover:scale-110 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
             >
               <div className="size-11 rounded-xl bg-purple-500/20 border border-purple-400/40 text-purple-300 grid place-items-center shadow-lg shadow-purple-500/20 group-hover:bg-purple-500/30">
                 <Briefcase className="size-5" />
@@ -188,7 +188,7 @@ export const CityMap: React.FC = () => {
             <button
               type="button"
               onClick={() => selectDistrict('market')}
-              className="group flex flex-col items-center gap-1.5 p-2 rounded-xl transition-transform hover:scale-110 cursor-pointer"
+              className="group flex flex-col items-center gap-1.5 p-2 rounded-xl transition-transform hover:scale-110 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
             >
               <div className="size-11 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-300 grid place-items-center shadow-lg shadow-amber-500/20 group-hover:bg-amber-500/30">
                 <ShoppingBag className="size-5" />
@@ -200,7 +200,7 @@ export const CityMap: React.FC = () => {
             <button
               type="button"
               onClick={() => selectDistrict('cityhub')}
-              className="group flex flex-col items-center gap-1.5 p-2.5 rounded-2xl transition-transform hover:scale-115 cursor-pointer ring-2 ring-brand-500/30 bg-surface-900/60"
+              className="group flex flex-col items-center gap-1.5 p-2.5 rounded-2xl transition-transform hover:scale-110 cursor-pointer ring-2 ring-brand-500/30 bg-night-900/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
             >
               <div className="size-13 rounded-2xl bg-brand-500/30 border-2 border-brand-400/70 text-brand-200 grid place-items-center shadow-xl shadow-brand-500/30 group-hover:bg-brand-500/40">
                 <Users className="size-6" />
@@ -214,7 +214,7 @@ export const CityMap: React.FC = () => {
             <button
               type="button"
               onClick={() => selectDistrict('startup')}
-              className="group flex flex-col items-center gap-1.5 p-2 rounded-xl transition-transform hover:scale-110 cursor-pointer"
+              className="group flex flex-col items-center gap-1.5 p-2 rounded-xl transition-transform hover:scale-110 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
             >
               <div className="size-11 rounded-xl bg-teal-500/20 border border-teal-400/40 text-teal-300 grid place-items-center shadow-lg shadow-teal-500/20 group-hover:bg-teal-500/30">
                 <Rocket className="size-5" />
@@ -227,7 +227,7 @@ export const CityMap: React.FC = () => {
               <button
                 type="button"
                 onClick={() => selectDistrict('finance')}
-                className="group flex flex-col items-center gap-1.5 p-2 rounded-xl transition-transform hover:scale-110 cursor-pointer translate-y-1"
+                className="group flex flex-col items-center gap-1.5 p-2 rounded-xl transition-transform hover:scale-110 cursor-pointer translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
               >
                 <div className="size-11 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 grid place-items-center shadow-lg shadow-emerald-500/20 group-hover:bg-emerald-500/30">
                   <Landmark className="size-5" />

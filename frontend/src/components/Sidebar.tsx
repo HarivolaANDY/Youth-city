@@ -43,7 +43,7 @@ export const Sidebar: React.FC = () => {
         </span>
       </button>
 
-      <span className="eyebrow mb-1 hidden pl-3 lg:block">Navigation</span>
+      <span className={`eyebrow mb-1 hidden pl-3 ${expanded ? 'lg:block' : ''}`}>Navigation</span>
 
       <ul id="app-sidebar-nav" className="flex flex-col gap-1">
         {TABS.map((tab) => {
@@ -57,7 +57,7 @@ export const Sidebar: React.FC = () => {
                 onClick={() => setActiveTab(tab.id)}
                 aria-current={isActive ? 'page' : undefined}
                 title={tab.label}
-                className={`relative mx-auto flex w-10 items-center gap-3 rounded-xl py-2.5 text-sm font-semibold transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 lg:w-full lg:justify-start lg:px-3 ${navItemClass(
+                className={`relative mx-auto flex w-10 items-center justify-center gap-3 rounded-xl py-2.5 text-sm font-semibold transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 ${expanded ? 'lg:w-full lg:justify-start lg:px-3' : ''} ${navItemClass(
                   isActive
                 )}`}
               >
@@ -68,7 +68,7 @@ export const Sidebar: React.FC = () => {
                   />
                 )}
                 <Icon className="size-5 shrink-0" aria-hidden="true" />
-                <span className={expanded ? 'hidden lg:inline' : 'sr-only'}>{tab.label}</span>
+                <span className={expanded ? 'sr-only lg:not-sr-only' : 'sr-only'}>{tab.label}</span>
               </button>
             </li>
           );

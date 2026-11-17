@@ -36,4 +36,3 @@ export const Avatar: React.FC<AvatarProps> = ({ name, seed = 'felix', size = 'md
     </span>
   );
 };
-

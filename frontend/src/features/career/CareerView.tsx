@@ -92,12 +92,8 @@ export const CareerView: React.FC = () => {
     ? displayGigs
     : displayGigs.filter((g) => g.category === selectedCategory);
 
-  const checkEligibility = (job: Job) => {
-    return job.requirements.every((req) => {
-      const citizenLevel = citizen.skills[req.skillKey] || 0;
-      return citizenLevel >= req.requiredPercent;
-    });
-  };
+  const checkEligibility = (job: Job) =>
+    job.requirements.every((req) => (citizen.skills[req.skillKey] || 0) >= req.requiredPercent);
 
   const handleStartInterview = (job: Job) => {
     if (!checkEligibility(job)) {
@@ -191,7 +187,7 @@ export const CareerView: React.FC = () => {
           <button
             type="button"
             onClick={() => setCareerMode('jobs')}
-            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 ${
               careerMode === 'jobs'
                 ? 'bg-brand-500 text-white shadow-sm'
                 : 'text-mist-400 hover:text-white'
@@ -203,7 +199,7 @@ export const CareerView: React.FC = () => {
           <button
             type="button"
             onClick={() => setCareerMode('freelance')}
-            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 ${
               careerMode === 'freelance'
                 ? 'bg-brand-500 text-white shadow-sm'
                 : 'text-mist-400 hover:text-white'
@@ -303,7 +299,7 @@ export const CareerView: React.FC = () => {
                   return (
                     <label
                       key={idx}
-                      className={`flex w-full cursor-pointer items-start gap-3 rounded-xl border p-3.5 text-left text-xs transition-all duration-200 ${
+                      className={`flex w-full cursor-pointer items-start gap-3 rounded-xl border p-3.5 text-left text-xs transition-all duration-200 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-400 ${
                         interviewResult !== null
                           ? 'cursor-default border-white/[0.06] bg-night-950/40 opacity-70'
                           : isSelected

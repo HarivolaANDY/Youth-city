@@ -126,7 +126,7 @@ export const AuthModal: React.FC = () => {
               toggleAuthModal(true, 'login');
               setError(null);
             }}
-            className={`flex-1 rounded-md py-1.5 text-xs font-bold transition-all ${
+            className={`flex-1 rounded-md py-1.5 text-xs font-bold transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 ${
               authMode === 'login'
                 ? 'bg-linear-to-r from-brand-600 to-iris-600 text-white shadow-brand'
                 : 'text-mist-400 hover:text-white'
@@ -140,7 +140,7 @@ export const AuthModal: React.FC = () => {
               toggleAuthModal(true, 'register');
               setError(null);
             }}
-            className={`flex-1 rounded-md py-1.5 text-xs font-bold transition-all ${
+            className={`flex-1 rounded-md py-1.5 text-xs font-bold transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 ${
               authMode === 'register'
                 ? 'bg-linear-to-r from-brand-600 to-iris-600 text-white shadow-brand'
                 : 'text-mist-400 hover:text-white'

@@ -76,10 +76,8 @@ export const MarketView: React.FC = () => {
     }
   };
 
-  const filteredItems = items.filter((item) => {
-    if (selectedCategory === 'all') return true;
-    return item.category === selectedCategory;
-  });
+  const filteredItems =
+    selectedCategory === 'all' ? items : items.filter((item) => item.category === selectedCategory);
 
   const ownedItemKeys = citizen.inventory || [];
   const ownedItems = items.filter((it) => ownedItemKeys.includes(it.id));
@@ -201,7 +199,7 @@ export const MarketView: React.FC = () => {
               type="button"
               key={tab.id}
               onClick={() => setSelectedCategory(tab.id)}
-              className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-medium transition-all ${
+              className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-medium transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 ${
                 isActive
                   ? 'border border-brand-400/30 bg-brand-500/15 text-white shadow-sm shadow-brand-500/20'
                   : 'border border-white/5 bg-night-800/60 text-mist-300 hover:border-white/15 hover:bg-white/[0.04] hover:text-white'

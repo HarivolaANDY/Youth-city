@@ -64,19 +64,9 @@ export const FinanceView: React.FC = () => {
   const isSolventWithSavings = citizen.money + citizen.savings >= rentAmount;
   const statusBadgeTone = isSolventDirect ? 'gain' : isSolventWithSavings ? 'warn' : 'risk';
 
-  const handleDeposit = () => {
-    const val = parseInt(savingsInput, 10);
-    if (!isNaN(val) && val > 0) {
-      depositSavings(val);
-    }
-  };
-
-  const handleWithdraw = () => {
-    const val = parseInt(savingsInput, 10);
-    if (!isNaN(val) && val > 0) {
-      withdrawSavings(val);
-    }
-  };
+  const validSavings = Math.max(0, parseInt(savingsInput, 10) || 0);
+  const handleDeposit = () => validSavings && depositSavings(validSavings);
+  const handleWithdraw = () => validSavings && withdrawSavings(validSavings);
 
   const monthlyPayment = Math.round((loanAmount * (1 + 0.05 * (loanDuration / 12))) / loanDuration);
 

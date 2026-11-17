@@ -4,6 +4,13 @@ import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import { NavigationTabs } from './components/NavigationTabs';
 import { Dashboard } from './features/dashboard/Dashboard';
+import { NovaMentorModal } from './components/NovaMentorModal';
+import { DecisionModal } from './components/DecisionModal';
+import { ToastContainer } from './components/ToastContainer';
+import { AuthModal } from './components/AuthModal';
+import { AgeDeclarationModal } from './components/AgeDeclarationModal';
+import { CharacterCreationModal } from './components/CharacterCreationModal';
+import { AdminBackOfficeModal } from './components/AdminBackOfficeModal';
 
 const CityMap = lazy(() => import('./features/city/CityMap').then((m) => ({ default: m.CityMap })));
 const CampusView = lazy(() => import('./features/campus/CampusView').then((m) => ({ default: m.CampusView })));
@@ -30,14 +37,6 @@ const ViewSkeleton: React.FC = () => (
     </div>
   </div>
 );
-
-import { NovaMentorModal } from './components/NovaMentorModal';
-import { DecisionModal } from './components/DecisionModal';
-import { ToastContainer } from './components/ToastContainer';
-import { AuthModal } from './components/AuthModal';
-import { AgeDeclarationModal } from './components/AgeDeclarationModal';
-import { CharacterCreationModal } from './components/CharacterCreationModal';
-import { AdminBackOfficeModal } from './components/AdminBackOfficeModal';
 
 export const App: React.FC = () => {
   const { activeTab, initGame } = useGameStore();

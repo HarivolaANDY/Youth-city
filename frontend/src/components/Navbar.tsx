@@ -133,7 +133,7 @@ export const Navbar: React.FC = () => {
     <>
     <header className="sticky top-0 z-40 border-b border-white/[0.07] bg-night-950/80 backdrop-blur-xl">
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center gap-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3 sm:h-16 sm:flex-nowrap sm:py-0">
           <button
             type="button"
             onClick={() => setActiveTab('dashboard')}
@@ -173,7 +173,7 @@ export const Navbar: React.FC = () => {
             </span>
           </button>
 
-          <div className="ml-auto hidden items-center gap-5 rounded-2xl border border-white/[0.07] bg-white/[0.03] px-4 py-2.5 lg:flex">
+          <div className="ml-auto hidden items-center gap-4 rounded-2xl border border-white/[0.07] bg-white/[0.03] px-3.5 py-2 xl:flex">
             <Vital
               icon={<Coins className="size-4" />}
               label="Disponible"
@@ -232,7 +232,7 @@ export const Navbar: React.FC = () => {
             </div></Tooltip>
           </div>
 
-          <div className="ml-auto flex items-center gap-2 lg:ml-0">
+          <div className="flex w-full items-center justify-between gap-1 sm:ml-auto sm:w-auto sm:justify-start sm:gap-2 xl:ml-0">
             <Tooltip text="Avancer au créneau horaire suivant">
               <Button onClick={advanceTime}>
                 <Clock className="text-iris-400" aria-hidden="true" />
@@ -273,6 +273,7 @@ export const Navbar: React.FC = () => {
                 <Button
                   variant="secondary"
                   onClick={() => toggleAuthModal(true, 'login')}
+                  aria-label={`Compte de ${user?.username ?? 'citoyen'}`}
                   className="border-brand-400/30 bg-brand-500/10 text-brand-200"
                 >
                   <User className="size-3.5 text-gain-400" aria-hidden="true" />
@@ -292,6 +293,7 @@ export const Navbar: React.FC = () => {
                 >
                   <LogIn className="size-3.5 text-brand-300" aria-hidden="true" />
                   <span className="hidden md:inline">Connexion</span>
+                  <span className="sr-only md:hidden">Connexion</span>
                 </Button>
               </Tooltip>
             )}
@@ -447,7 +449,7 @@ export const Navbar: React.FC = () => {
 
         <dl
           aria-label="Statistiques du citoyen"
-          className="flex items-center justify-between gap-3 border-t border-white/[0.06] py-2 text-xs lg:hidden"
+          className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-white/[0.06] py-2 text-xs xl:hidden"
         >
           <div className="flex items-center gap-1.5">
             <dt className="sr-only">Disponible</dt>
