@@ -38,4 +38,4 @@ repos:
         language: system
         files: ^frontend/src/
         pass_filenames: false
-        stages: [pre-push]
+        stages: [pre-commit]

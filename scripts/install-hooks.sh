@@ -3,4 +3,4 @@
 set -e
 python -m pip install --upgrade pre-commit
 pre-commit install --install-hooks
-echo "Hooks installés : ruff, oxlint et hygiène des fichiers au commit ; tsc au push."
+echo "Hooks installés : ruff, oxlint, tsc et hygiène des fichiers au commit."

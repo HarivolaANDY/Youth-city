@@ -2,4 +2,4 @@
 $ErrorActionPreference = 'Stop'
 python -m pip install --upgrade pre-commit
 pre-commit install --install-hooks
-Write-Host "Hooks installés : ruff, oxlint et hygiène des fichiers au commit ; tsc au push."
+Write-Host "Hooks installés : ruff, oxlint, tsc et hygiène des fichiers au commit."

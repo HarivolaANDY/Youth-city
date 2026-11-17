@@ -43,8 +43,8 @@ sh scripts/install-hooks.sh          # Linux / macOS / Git Bash
 powershell -File scripts/install-hooks.ps1   # Windows
 ```
 
-À chaque commit : hygiène des fichiers, `ruff` sur le backend, `oxlint` sur le frontend.
-À chaque push : vérification des types du frontend. Les hooks accélèrent le retour, la CI reste la référence.
+À chaque commit : hygiène des fichiers, `ruff` sur le backend, `oxlint` et vérification des types du frontend.
+Les hooks accélèrent le retour, la CI reste la référence.
 
 ## Réglages à faire une fois sur GitHub (administrateur du dépôt)
 
