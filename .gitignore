@@ -129,3 +129,7 @@ ehthumbs.db
 ehthumbs_vista.db
 desktop.ini
 $RECYCLE.BIN/
+
+# Playwright
+frontend/test-results/
+frontend/playwright-report/
