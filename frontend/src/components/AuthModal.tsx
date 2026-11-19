@@ -3,7 +3,6 @@ import { User, Lock, Mail, Sparkles, AlertCircle, ArrowRight, CheckCircle2 } fro
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { IconChip } from './ui/IconChip';
-import { Badge } from './ui/Badge';
 import { useGameStore } from '../stores/useGameStore';
 
 export const AuthModal: React.FC = () => {
@@ -96,8 +95,8 @@ export const AuthModal: React.FC = () => {
       describedBy="auth-modal-desc"
       size="md"
     >
-      <div className="border-b border-white/[0.08] bg-white/[0.02] px-6 py-5 pr-14">
-        <div className="flex items-center gap-3">
+      <div className="shrink-0 border-b border-white/[0.08] bg-white/[0.02] px-6 py-5">
+        <div className="flex items-center gap-3 pr-10">
           <IconChip tone="brand" className="size-11">
             <User className="size-5" />
           </IconChip>
@@ -106,9 +105,6 @@ export const AuthModal: React.FC = () => {
               <h2 id="auth-modal-title" className="text-base font-extrabold text-white">
                 {authMode === 'login' ? 'Connexion Citoyenne' : 'Rejoindre Youth City'}
               </h2>
-              <Badge tone="brand" variant="square">
-                §42 &amp; §47
-              </Badge>
             </div>
             <p id="auth-modal-desc" className="text-2xs text-mist-400 mt-0.5">
               {authMode === 'login'
@@ -151,7 +147,8 @@ export const AuthModal: React.FC = () => {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="p-6 space-y-4">
+      <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-6">
         {error && (
           <div
             role="alert"
@@ -236,7 +233,7 @@ export const AuthModal: React.FC = () => {
               autoComplete={authMode === 'login' ? 'current-password' : 'new-password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="Ton mot de passe"
               className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3.5 py-2.5 pl-10 text-xs text-white placeholder:text-mist-500 focus:border-brand-400 focus:bg-white/[0.06] focus:outline-none"
             />
             <Lock className="absolute left-3 top-3 size-4 text-mist-500" aria-hidden="true" />
@@ -310,9 +307,16 @@ export const AuthModal: React.FC = () => {
           </div>
         )}
 
-        <div className="pt-2 flex items-center justify-between gap-3">
+        {authMode === 'login' && (
+          <p className="text-2xs leading-relaxed text-mist-400">
+            Sans compte, la ville se visite en lecture seule : tu peux tout explorer, mais rien n&rsquo;est enregistré.
+          </p>
+        )}
+      </div>
+
+        <div className="flex shrink-0 items-center justify-between gap-3 border-t border-white/[0.08] bg-white/[0.02] px-6 py-4">
           <Button variant="ghost" onClick={handleClose} disabled={loading}>
-            Continuer en invité
+            Explorer sans compte
           </Button>
 
           <Button variant="primary" type="submit" disabled={loading}>

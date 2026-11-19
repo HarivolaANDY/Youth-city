@@ -19,12 +19,12 @@ import { IconChip } from './ui/IconChip';
 import { formatNumber } from '../lib/format';
 
 const CATEGORY_META = {
-  career: { label: 'Emploi & Carrière (§26, §52)', tone: 'iris' as const, icon: <Briefcase /> },
-  startup: { label: 'Startup & Innovation (§26, §24)', tone: 'brand' as const, icon: <Rocket /> },
-  finance: { label: 'Finance & Pouvoir d\'achat (§26)', tone: 'gain' as const, icon: <TrendingUp /> },
-  domestic: { label: 'Logement & Aléa Domestique (§26)', tone: 'warn' as const, icon: <Home /> },
-  campus: { label: 'Campus & Challenge Citoyen (§26, §31)', tone: 'brand' as const, icon: <Users /> },
-  general: { label: 'Événement Imprévu & Aléa (§25, §26)', tone: 'warn' as const, icon: <AlertTriangle /> },
+  career: { label: 'Emploi & Carrière', tone: 'iris' as const, icon: <Briefcase /> },
+  startup: { label: 'Startup & Innovation', tone: 'brand' as const, icon: <Rocket /> },
+  finance: { label: 'Finance & Pouvoir d\'achat', tone: 'gain' as const, icon: <TrendingUp /> },
+  domestic: { label: 'Logement & Aléa Domestique', tone: 'warn' as const, icon: <Home /> },
+  campus: { label: 'Campus & Challenge Citoyen', tone: 'brand' as const, icon: <Users /> },
+  general: { label: 'Événement Imprévu & Aléa', tone: 'warn' as const, icon: <AlertTriangle /> },
 };
 
 export const DecisionModal: React.FC = () => {

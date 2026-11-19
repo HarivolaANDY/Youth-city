@@ -133,7 +133,7 @@ export const Navbar: React.FC = () => {
     <>
     <header className="sticky top-0 z-40 border-b border-white/[0.07] bg-night-950/80 backdrop-blur-xl">
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3 sm:h-16 sm:flex-nowrap sm:py-0">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3 sm:h-16 sm:flex-nowrap sm:py-0 lg:h-auto lg:flex-wrap lg:py-2.5">
           <button
             type="button"
             onClick={() => setActiveTab('dashboard')}
@@ -154,7 +154,7 @@ export const Navbar: React.FC = () => {
                   title={
                     isBackendConnected
                       ? 'Backend Django & Base de Données synchronisés'
-                      : 'Session invité : démo locale, rien n\'est enregistré. Connecte-toi pour sauvegarder ta progression.'
+                      : 'Visite en lecture seule : rien n\'est enregistré. Connecte-toi pour agir et sauvegarder ta progression.'
                   }
                 >
                   <span
@@ -164,16 +164,16 @@ export const Navbar: React.FC = () => {
                         : 'bg-brand-400'
                     }`}
                   />
-                  {isBackendConnected ? 'API SYNC' : 'DÉMO LOCALE'}
+                  {isBackendConnected ? 'API SYNC' : 'VISITE'}
                 </Badge>
               </span>
-              <span className="hidden text-2xs font-medium text-mist-400 sm:block">
+              <span className="hidden text-2xs font-medium text-mist-400 lg:block">
                 Apprends la vie. Construis ton avenir.
               </span>
             </span>
           </button>
 
-          <div className="ml-auto hidden items-center gap-4 rounded-2xl border border-white/[0.07] bg-white/[0.03] px-3.5 py-2 xl:flex">
+          <div className="order-last hidden w-full items-center justify-between gap-4 rounded-2xl border border-white/[0.07] bg-white/[0.03] px-3.5 py-2 lg:flex">
             <Vital
               icon={<Coins className="size-4" />}
               label="Disponible"
@@ -218,7 +218,7 @@ export const Navbar: React.FC = () => {
 
             <span aria-hidden="true" className="h-7 w-px bg-white/10" />
 
-            <Tooltip text={`Jour et créneau horaire en cours • ${recurringCycle ? `Loyer dans ${recurringCycle.daysUntilRent} jour(s)` : 'Cycle mensuel'}`}><div className="flex items-center gap-2">
+            <Tooltip align="end" text={`Jour et créneau horaire en cours • ${recurringCycle ? `Loyer dans ${recurringCycle.daysUntilRent} jour(s)` : 'Cycle mensuel'}`}><div className="flex items-center gap-2">
               <Clock className="size-4 text-iris-400" aria-hidden="true" />
               <div className="text-xs leading-tight">
                 <div className="flex items-center gap-1.5">
@@ -232,35 +232,35 @@ export const Navbar: React.FC = () => {
             </div></Tooltip>
           </div>
 
-          <div className="flex w-full items-center justify-between gap-1 sm:ml-auto sm:w-auto sm:justify-start sm:gap-2 xl:ml-0">
+          <div className="flex w-full items-center justify-between gap-1 sm:ml-auto sm:w-auto sm:justify-start sm:gap-2">
             <Tooltip text="Avancer au créneau horaire suivant">
               <Button onClick={advanceTime}>
                 <Clock className="text-iris-400" aria-hidden="true" />
-                <span className="hidden md:inline">Temps +</span>
-                <span className="sr-only md:hidden">Avancer au créneau horaire suivant</span>
+                <span className="hidden xl:inline">Temps +</span>
+                <span className="sr-only xl:hidden">Avancer au créneau horaire suivant</span>
               </Button>
             </Tooltip>
 
             <Tooltip text="Dormir dans ton logement pour régénérer ton énergie">
               <Button onClick={restAndSleep}>
                 <Moon className="text-brand-300" aria-hidden="true" />
-                <span className="hidden md:inline">Dormir</span>
-                <span className="sr-only md:hidden">Dormir et régénérer ton énergie</span>
+                <span className="hidden xl:inline">Dormir</span>
+                <span className="sr-only xl:hidden">Dormir et régénérer ton énergie</span>
               </Button>
             </Tooltip>
 
             <Tooltip text="Simuler un événement aléatoire / dilemme citoyen">
               <Button variant="warnSoft" onClick={() => triggerDilemma()}>
                 <Sparkles className="text-warn-400" aria-hidden="true" />
-                <span className="hidden md:inline">Dilemme</span>
-                <span className="sr-only md:hidden">Lancer un dilemme</span>
+                <span className="hidden xl:inline">Dilemme</span>
+                <span className="sr-only xl:hidden">Lancer un dilemme</span>
               </Button>
             </Tooltip>
 
             <Button variant="primary" onClick={() => toggleNovaModal(true)}>
               <Bot className="text-brand-200" aria-hidden="true" />
-              <span className="hidden xl:inline">NOVA</span>
-              <span className="xl:hidden sr-only">Ouvrir le mentor NOVA</span>
+              <span className="hidden lg:inline">NOVA</span>
+              <span className="lg:hidden sr-only">Ouvrir le mentor NOVA</span>
               <span
                 aria-hidden="true"
                 className="size-1.5 rounded-full bg-gain-400 shadow-[0_0_8px] shadow-gain-400 animate-pulse-soft"
@@ -269,7 +269,7 @@ export const Navbar: React.FC = () => {
 
 
             {isAuthenticated ? (
-              <Tooltip text={`Connecté en tant que ${user?.username} — Espace Citoyen`}>
+              <Tooltip align="end" text={`Connecté en tant que ${user?.username} — Espace Citoyen`}>
                 <Button
                   variant="secondary"
                   onClick={() => toggleAuthModal(true, 'login')}
@@ -285,21 +285,21 @@ export const Navbar: React.FC = () => {
                 </Button>
               </Tooltip>
             ) : (
-              <Tooltip text="Se connecter ou s'inscrire pour sauvegarder sa progression">
+              <Tooltip align="end" text="Se connecter ou s'inscrire pour sauvegarder sa progression">
                 <Button
                   variant="secondary"
                   onClick={() => toggleAuthModal(true, 'login')}
                   className="border-white/10"
                 >
                   <LogIn className="size-3.5 text-brand-300" aria-hidden="true" />
-                  <span className="hidden md:inline">Connexion</span>
-                  <span className="sr-only md:hidden">Connexion</span>
+                  <span className="hidden sm:inline">Connexion</span>
+                  <span className="sr-only sm:hidden">Connexion</span>
                 </Button>
               </Tooltip>
             )}
 
             {user?.is_staff && (
-              <Tooltip text="Console d'Administration & Modération (§43, §45, §46)">
+              <Tooltip align="end" text="Console d'Administration & Modération">
                 <button
                   type="button"
                   onClick={() => toggleAdminModal(true)}
@@ -362,7 +362,7 @@ export const Navbar: React.FC = () => {
                     </div>
                   ) : (
                     <div className="border-b border-white/[0.06] px-2.5 py-2 mb-1 bg-white/[0.02] rounded-lg">
-                      <span className="block text-2xs text-mist-500 font-medium">Session invité / démo</span>
+                      <span className="block text-2xs text-mist-500 font-medium">Visite en lecture seule</span>
                       <button
                         type="button"
                         role="menuitem"
@@ -390,7 +390,7 @@ export const Navbar: React.FC = () => {
                         className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-bold text-amber-300 transition-colors hover:bg-amber-500/15 focus-visible:outline-none"
                       >
                         <ShieldAlert className="size-3.5 text-amber-400" aria-hidden="true" />
-                        <span>Console d'Administration (§43)</span>
+                        <span>Console d'Administration</span>
                       </button>
                     )}
 
@@ -449,7 +449,7 @@ export const Navbar: React.FC = () => {
 
         <dl
           aria-label="Statistiques du citoyen"
-          className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-white/[0.06] py-2 text-xs xl:hidden"
+          className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-white/[0.06] py-2 text-xs lg:hidden"
         >
           <div className="flex items-center gap-1.5">
             <dt className="sr-only">Disponible</dt>

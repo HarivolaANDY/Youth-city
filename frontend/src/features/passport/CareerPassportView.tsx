@@ -182,7 +182,7 @@ export const CareerPassportView: React.FC = () => {
     xp: citizen.xp,
     avatarSeed: citizen.avatarSeed,
     verificationCode: '',
-    cryptographicSignature: 'EXEMPLE — session invité, non signé',
+    cryptographicSignature: 'EXEMPLE — visite en lecture seule, non signé',
     issuedAt: '14 Octobre 2026',
     authority: 'République de Youth City • Direction de l\'Émancipation Citoyenne',
     aptitudeScore: 85,
@@ -349,7 +349,7 @@ export const CareerPassportView: React.FC = () => {
               Certifications internes, sans valeur de diplôme officiel
             </p>
             <p className="text-xs text-slate-600 mt-0.5">
-              Passeport de compétences &amp; portfolio par la preuve (§22)
+              Passeport de compétences &amp; portfolio par la preuve
             </p>
           </div>
           <div className="text-right">
@@ -366,7 +366,7 @@ export const CareerPassportView: React.FC = () => {
           headingId="passport-title"
           tone="brand"
           badgeIcon={<ShieldCheck />}
-          badgeLabel="Career Passport — preuves enregistrées sur YOUTH CITY (§22)"
+          badgeLabel="Career Passport — preuves enregistrées sur YOUTH CITY"
           meta={`Identifiant citoyen : ${passport.citizenId || 'non communiqué'}`}
           title="Passeport de compétences & portfolio par la preuve"
           description="Ces éléments viennent d'actions enregistrées dans la simulation (formations validées par quiz, missions et projets simulés). Ils ne constituent ni un diplôme ni une qualification officielle."
@@ -406,7 +406,7 @@ export const CareerPassportView: React.FC = () => {
           }`}
         >
           <ShieldCheck className="size-4" aria-hidden="true" />
-          <span>Career Passport (§35)</span>
+          <span>Career Passport</span>
         </button>
 
         <button
@@ -419,7 +419,7 @@ export const CareerPassportView: React.FC = () => {
           }`}
         >
           <Layers className="size-4" aria-hidden="true" />
-          <span>Portfolio Public (§34)</span>
+          <span>Portfolio Public</span>
         </button>
 
         <button
@@ -432,7 +432,7 @@ export const CareerPassportView: React.FC = () => {
           }`}
         >
           <Award className="size-4" aria-hidden="true" />
-          <span>Badges &amp; Trophées (§32)</span>
+          <span>Badges &amp; Trophées</span>
         </button>
 
         <button
@@ -592,7 +592,7 @@ export const CareerPassportView: React.FC = () => {
                     <IconChip tone="gain" size="sm">
                       <FileText />
                     </IconChip>
-                    <span>Certifications &amp; Titres Homologués (§34)</span>
+                    <span>Certifications &amp; Titres Homologués</span>
                   </h3>
                   <Badge tone="gain">{passport.certifications.length} Certifié(s)</Badge>
                 </div>
@@ -682,7 +682,7 @@ export const CareerPassportView: React.FC = () => {
               <div>
                 <h4 className="mb-3 flex items-center gap-2 text-xs font-bold tracking-wider text-mist-300 uppercase">
                   <Rocket className="size-4 text-brand-400" />
-                  <span>Projets Réalisés &amp; Déployés en Production (§34)</span>
+                  <span>Projets Réalisés &amp; Déployés en Production</span>
                 </h4>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   {passport.projects.map((proj) => (
@@ -737,7 +737,7 @@ export const CareerPassportView: React.FC = () => {
           <Panel as="section" className="p-5 sm:p-6">
             <div className="mb-6">
               <h3 className="text-base font-bold text-white">
-                🏆 Système de Badges &amp; Trophées Citoyens (§32)
+                🏆 Système de Badges &amp; Trophées Citoyens
               </h3>
               <p className="mt-1 text-xs text-mist-400">
                 Chaque badge atteste d'une étape clé franchie vers l'autonomie professionnelle et financière.

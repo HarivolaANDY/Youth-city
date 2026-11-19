@@ -91,7 +91,7 @@ export const MarketView: React.FC = () => {
         badgeIcon={<ShoppingBag className="size-3.5" />}
         badgeLabel="Commerce & Équipements"
         title="Market District"
-        description="Boutique urbaine : alimentation réparatrice, équipements professionnels et confort de vie (§11, §19)."
+        description="Boutique urbaine : alimentation réparatrice, équipements professionnels et confort de vie."
       />
 
       {/* Citizen Vital Status & Resources Bar */}

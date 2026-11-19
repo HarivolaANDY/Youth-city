@@ -211,7 +211,7 @@ export const AdminBackOfficeModal: React.FC = () => {
                 <Badge tone="warn">SUPERVISEUR</Badge>
               </div>
               <p id="admin-backoffice-description" className="text-xs text-mist-400">
-                Supervision pédagogique, éthique et analytics d'impact en temps réel (§43, §45, §46)
+                Supervision pédagogique, éthique et analytics d'impact en temps réel
               </p>
             </div>
           </div>
@@ -242,7 +242,7 @@ export const AdminBackOfficeModal: React.FC = () => {
             }`}
           >
             <BarChart3 className="size-4" />
-            <span>Impact & KPIs (§46)</span>
+            <span>Impact & KPIs</span>
           </button>
 
           <button
@@ -255,7 +255,7 @@ export const AdminBackOfficeModal: React.FC = () => {
             }`}
           >
             <ShieldCheck className="size-4" />
-            <span>File de Modération (§43)</span>
+            <span>File de Modération</span>
             {pendingCount > 0 && (
               <span className="grid size-5 place-items-center rounded-full bg-amber-500 text-[10px] font-bold text-night-950">
                 {pendingCount}
@@ -273,7 +273,7 @@ export const AdminBackOfficeModal: React.FC = () => {
             }`}
           >
             <Users className="size-4" />
-            <span>Citoyens & Bourses (§45)</span>
+            <span>Citoyens & Bourses</span>
           </button>
         </div>
       </div>
@@ -394,7 +394,7 @@ export const AdminBackOfficeModal: React.FC = () => {
               <div className="rounded-xl border border-white/10 bg-night-900/60 p-4 space-y-3">
                 <h4 className="flex items-center gap-2 text-sm font-semibold text-white">
                   <Coins className="size-4 text-amber-400" />
-                  <span>Règle Pédagogique d'Inclusion (§46)</span>
+                  <span>Règle Pédagogique d'Inclusion</span>
                 </h4>
                 <p className="text-xs leading-relaxed text-mist-300">
                   Youth City n'intègre aucun mécanisme de casino, de pay-to-win ni de monnaie réelle. Tous les MGA sont des points d'apprentissage simulant le coût de la vie à Antananarivo pour former les jeunes à la prévoyance et à l'autonomie.
@@ -627,7 +627,7 @@ export const AdminBackOfficeModal: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Coins className="size-4 text-cyan-400" />
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-cyan-300">
-                  Octroi d'une Bourse Administrative Citoyenne (§45)
+                  Octroi d'une Bourse Administrative Citoyenne
                 </h3>
               </div>
               <p className="text-xs text-mist-300">

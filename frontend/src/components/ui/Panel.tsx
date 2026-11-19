@@ -32,7 +32,7 @@ export const Panel = React.forwardRef<HTMLDivElement, PanelProps>(
   ({ tone = 'neutral', glow = false, as: Tag = 'div', className = '', children, ...props }, ref) => (
     <Tag
       ref={ref as React.Ref<HTMLDivElement>}
-      className={`panel ${TONE_RING[tone]} ${className}`}
+      className={`panel ${glow ? 'overflow-hidden' : ''} ${TONE_RING[tone]} ${className}`}
       {...props}
     >
       {glow && (

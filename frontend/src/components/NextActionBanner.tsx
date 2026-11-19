@@ -74,7 +74,7 @@ export const NextActionBanner: React.FC = () => {
     localBtnText = 'Missions Freelance';
     urgency = 'high';
   } else if (!citizen.completedCourses.includes('course-web-dev') && (citizen.skills.javascript || 0) < 50) {
-    localTitle = 'Perfectionne tes compétences au Campus District (§23)';
+    localTitle = 'Perfectionne tes compétences au Campus District';
     localDesc = 'Valide le cursus « Développement Web Fondamental », réussis le quiz de contrôle et obtiens ton certificat officiel.';
     localReward = '+150 XP & +20% Compétences';
     localTab = 'campus';
@@ -90,7 +90,7 @@ export const NextActionBanner: React.FC = () => {
     localBtnText = 'Voir les offres';
     urgency = 'medium';
   } else if (citizen.money >= 200000 && citizen.savings < 150000) {
-    localTitle = 'Sécurise ton épargne de précaution au Finance District (§27)';
+    localTitle = 'Sécurise ton épargne de précaution au Finance District';
     localDesc = 'Place une partie de tes liquidités sur ton livret d\'épargne pour parer aux imprévus de la vie adulte.';
     localReward = 'Protection financière';
     localTab = 'finance';
@@ -98,7 +98,7 @@ export const NextActionBanner: React.FC = () => {
     localBtnText = 'Gérer mon épargne';
     urgency = 'normal';
   } else if (citizen.money >= 300000) {
-    localTitle = 'Amorçage entrepreneurial au Startup District (§24)';
+    localTitle = 'Amorçage entrepreneurial au Startup District';
     localDesc = 'Tu disposes de réserves financières solides. Il est temps de prototyper un projet ou de postuler à une subvention.';
     localReward = '+300 XP & Dividendes';
     localTab = 'startup';
@@ -126,7 +126,7 @@ export const NextActionBanner: React.FC = () => {
   const proactiveTip =
     remoteGuidance?.proactiveTip ||
     (citizen.savings < 50000
-      ? `Attention ${citizen.name} : Ton épargne est faible (${formatMGA(citizen.savings)}). Envisage d'épargner au moins 20 000 MGA par cycle pour te prémunir contre les aléas imprévus (§27).`
+      ? `Attention ${citizen.name} : Ton épargne est faible (${formatMGA(citizen.savings)}). Envisage d'épargner au moins 20 000 MGA par cycle pour te prémunir contre les aléas imprévus.`
       : `Excellente gestion citoyenne, ${citizen.name} ! Équilibre toujours compétences au Campus, autonomie financière au Business District et vitalité au Résidentiel.`);
 
   const dailyChecklist = remoteGuidance?.dailyChecklist || [
@@ -199,7 +199,7 @@ export const NextActionBanner: React.FC = () => {
                 variant="square"
                 icon={<Target />}
               >
-                Next Action Conseillée (§57)
+                Next Action Conseillée
               </Badge>
               <span className="text-xs font-bold text-warn-300">{actionReward}</span>
               {activeUrgency === 'urgent' && (
@@ -256,7 +256,7 @@ export const NextActionBanner: React.FC = () => {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-bold text-brand-200 flex items-center gap-1.5">
-                    Conseil Proactif de NOVA (§27)
+                    Conseil Proactif de NOVA
                     <Sparkles className="size-3 text-warn-400" />
                   </span>
                   <button
@@ -278,7 +278,7 @@ export const NextActionBanner: React.FC = () => {
           <div className="rounded-xl border border-white/[0.06] bg-night-950/60 p-4">
             <div className="mb-3 flex items-center justify-between">
               <span className="eyebrow text-mist-400">
-                Plan d'action du jour de NOVA (§28)
+                Plan d'action du jour de NOVA
               </span>
               <span className="text-3xs text-mist-400">
                 {dailyChecklist.filter((t) => t.completed).length}/{dailyChecklist.length} complétés

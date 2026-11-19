@@ -340,7 +340,7 @@ export const CityHubView: React.FC = () => {
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-iris-400/30 bg-iris-500/10 text-xs font-semibold text-iris-300">
               <Users className="h-3.5 w-3.5" />
-              <span>City Hub & Dimension Sociale (§13, §30, §31, §33)</span>
+              <span>City Hub & Dimension Sociale</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
               Guildes Métiers & Hackathons d'Équipe
@@ -420,7 +420,7 @@ export const CityHubView: React.FC = () => {
             }`}
           >
             <MessageSquare className="h-4 w-4" />
-            <span>Annuaire &amp; Messagerie (§29)</span>
+            <span>Annuaire &amp; Messagerie</span>
             {totalUnread > 0 && (
               <span className="rounded-full bg-brand-500 px-1.5 py-0.2 text-3xs font-extrabold text-white animate-pulse">
                 {totalUnread}
@@ -650,7 +650,7 @@ export const CityHubView: React.FC = () => {
           <div>
             <h2 className="text-xl font-bold text-white">Classements Citoyens & Émulation Positive</h2>
             <p className="text-xs text-mist-400">
-              Conformément au cahier des charges (§33), ces classements thématiques valorisent l'entraide,
+              Ces classements thématiques valorisent l'entraide,
               les compétences et la rigueur d'épargne sans pression anxiogène.
             </p>
           </div>
@@ -758,7 +758,6 @@ export const CityHubView: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-xl font-bold text-white">Annuaire Citoyen &amp; Messagerie Sociale Directe</h2>
-                <span className="rounded-full bg-iris-500/20 px-2 py-0.5 text-3xs font-bold text-iris-300">§29</span>
               </div>
               <p className="text-xs text-mist-400 max-w-2xl mt-1">
                 Favorise l'apprentissage collaboratif et l'émulation positive : contacte tes pairs, constitue une équipe pluridisciplinaire et partage des recommandations sans les dérives des réseaux traditionnels.
@@ -1013,7 +1012,7 @@ export const CityHubView: React.FC = () => {
                       </button>
                     </div>
                     <div className="flex justify-between items-center text-3xs text-mist-500 px-1">
-                      <span>Apprentissage collaboratif (§29) — Filtre éthique OWASP actif</span>
+                      <span>Apprentissage collaboratif — Filtre éthique OWASP actif</span>
                       <span>{messageInput.length}/500</span>
                     </div>
                   </form>

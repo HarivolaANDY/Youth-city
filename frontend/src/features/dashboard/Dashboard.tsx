@@ -58,7 +58,7 @@ export const Dashboard: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => toggleCharacterCreation(true)}
-                        title="Créer ton personnage : prénom, avatar et archétype (§14). Cette étape ne se fait qu'une fois."
+                        title="Créer ton personnage : prénom, avatar et archétype. Cette étape ne se fait qu'une fois."
                         className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1 text-2xs font-semibold text-mist-300 transition-colors hover:border-brand-400/40 hover:bg-brand-500/15 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 active:scale-95"
                       >
                         <Sparkles className="size-3 text-brand-400" aria-hidden="true" />

@@ -140,7 +140,7 @@ export const CareerView: React.FC = () => {
         badgeLabel="Business District"
         meta="Entreprises & Opportunités"
         title="Carrière & Contrats Professionnels"
-        description="Trouve un poste salarié avec salaire mensuel ou exécute des missions freelance rémunérées à l'acte pour booster tes liquidités et forger ton Career Passport (§52)."
+        description="Trouve un poste salarié avec salaire mensuel ou exécute des missions freelance rémunérées à l'acte pour booster tes liquidités et forger ton Career Passport."
         aside={
           careerMode === 'jobs' ? (
             activeJob ? (
@@ -206,7 +206,7 @@ export const CareerView: React.FC = () => {
             }`}
           >
             <Zap className="size-3.5 text-warn-400" />
-            <span>Missions Freelance &amp; Contrats Courts (§52)</span>
+            <span>Missions Freelance &amp; Contrats Courts</span>
             <span className="rounded-full bg-white/20 px-1.5 py-0.2 text-2xs font-black">
               {displayGigs.length}
             </span>
@@ -674,7 +674,7 @@ export const CareerView: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <History className="size-4 text-brand-400" />
                   <h3 id="freelance-history-title" className="text-sm font-bold text-white">
-                    Historique des Contrats Freelance Validés (§52)
+                    Historique des Contrats Freelance Validés
                   </h3>
                 </div>
                 <Badge tone="gain">

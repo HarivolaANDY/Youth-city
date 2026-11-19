@@ -119,7 +119,7 @@ export const StartupView: React.FC = () => {
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-400/30 bg-emerald-500/10 text-xs font-semibold text-emerald-300">
               <Rocket className="h-3.5 w-3.5" />
-              <span>Startup District & Incubateur (§12, §24)</span>
+              <span>Startup District & Incubateur</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
               Fais Grandir ta Propre Entreprise

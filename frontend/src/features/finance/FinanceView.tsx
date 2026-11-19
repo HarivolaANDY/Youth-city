@@ -268,7 +268,7 @@ export const FinanceView: React.FC = () => {
             <IconChip tone="iris" size="sm">
               <Landmark />
             </IconChip>
-            📅 Échéances Récurrentes &amp; Synchronisation Mensuelle (§18, §20)
+            📅 Échéances Récurrentes &amp; Synchronisation Mensuelle
           </h3>
           <Badge tone={statusBadgeTone}>
             Cycle Jour {currentCycleDay} / 30 &mdash; {daysUntilRent === 0 ? "Échéance aujourd'hui !" : `${daysUntilRent} j restants`}

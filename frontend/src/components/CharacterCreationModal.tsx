@@ -189,9 +189,6 @@ const CharacterCreationContent: React.FC<CharacterCreationContentProps> = ({ onC
               <h2 id="char-creation-title" className="text-base font-extrabold text-white">
                 Passeport Citoyen &amp; Création d'Avatar
               </h2>
-              <Badge tone="brand" variant="square">
-                §14 &amp; §47
-              </Badge>
             </div>
             <p id="char-creation-desc" className="text-2xs text-mist-400 mt-0.5">
               Étape {step} sur 3 &mdash; Configure ton identité, ton profil et ta première ambition urbaine.
@@ -374,7 +371,7 @@ const CharacterCreationContent: React.FC<CharacterCreationContentProps> = ({ onC
           <div className="space-y-5 animate-rise-in">
             <div>
               <h3 className="text-xs font-bold uppercase tracking-wider text-mist-300">
-                Choisis ta première orientation citoyenne (§47) :
+                Choisis ta première orientation citoyenne :
               </h3>
               <p className="text-2xs text-mist-400 mt-0.5">
                 Cette orientation fixera ton premier objectif guidé dans la ville. Tu pourras ensuite explorer librement tous les autres quartiers.
