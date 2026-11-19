@@ -29,7 +29,7 @@ import { formatNumber } from '../../lib/format';
 type PedagogicalStep = 'theory' | 'practice' | 'quiz' | 'mission' | 'diploma';
 
 export const CampusView: React.FC = () => {
-  const { citizen, isAuthenticated, enrollInCourse, applyServerCitizen, completeCourseModule, addNotification } = useGameStore();
+  const { citizen, enrollInCourse, applyServerCitizen, addNotification } = useGameStore();
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [activeModuleIndex, setActiveModuleIndex] = useState(0);
   const [currentStep, setCurrentStep] = useState<PedagogicalStep>('theory');
@@ -49,7 +49,7 @@ export const CampusView: React.FC = () => {
   const startCourse = async (course: Course) => {
     const alreadyCompleted = citizen.completedCourses.includes(course.id);
     if (!alreadyCompleted) {
-      // Connecté : le serveur prélève les frais (une seule fois) ; invité : démo locale.
+      // Le serveur prélève les frais (une seule fois) ; sans compte, la connexion est proposée.
       const enrolled = await enrollInCourse(course);
       if (!enrolled.success) return;
     }
@@ -64,12 +64,7 @@ export const CampusView: React.FC = () => {
   const handleValidateQuiz = async () => {
     if (selectedQuizAnswer === null || !selectedCourse || !activeModule) return;
 
-    // Invité : démo locale (aucun serveur). Connecté : le serveur seul valide et récompense.
-    if (!isAuthenticated) {
-      fallbackLocalValidation();
-      return;
-    }
-
+    // Le serveur seul valide et récompense.
     setIsValidatingApi(true);
     try {
       const res = await api.validateCourseQuiz(selectedCourse.id, activeModuleIndex, selectedQuizAnswer);
@@ -96,23 +91,6 @@ export const CampusView: React.FC = () => {
       }
     } finally {
       setIsValidatingApi(false);
-    }
-  };
-
-  const fallbackLocalValidation = () => {
-    if (!activeModule || selectedQuizAnswer === null || !selectedCourse) return;
-    const correct = selectedQuizAnswer === activeModule.quiz.correctIndex;
-    setQuizSubmitted(true);
-    setIsQuizCorrect(correct);
-    setQuizExplanation(activeModule.quiz.explanation);
-
-    if (correct) {
-      addNotification('Bonne réponse !', 'Notion assimilée avec succès.', 'success');
-      if (activeModuleIndex === selectedCourse.modules.length - 1) {
-        completeCourseModule(selectedCourse.id);
-      }
-    } else {
-      addNotification('Réponse incorrecte', 'Lis attentivement l\'explication pédagogique et réessaye.', 'warning');
     }
   };
 
@@ -149,9 +127,9 @@ export const CampusView: React.FC = () => {
         tone="cool"
         badgeIcon={<GraduationCap />}
         badgeLabel="Campus District"
-        meta="Pôle universitaire & formations (§7, §23)"
+        meta="Pôle universitaire & formations"
         title="Pipeline Pédagogique & Montée en Compétences"
-        description="Chaque cursus suit l'entonnoir pédagogique officiel (§23) : cours théorique synthétique, exercice guidé, quiz de contrôle avec feedback immédiat, mission professionnelle concrète et certification inscrite à ton Career Passport."
+        description="Chaque cursus suit l'entonnoir pédagogique officiel : cours théorique synthétique, exercice guidé, quiz de contrôle avec feedback immédiat, mission professionnelle concrète et certification inscrite à ton Career Passport."
         aside={
           <div className="flex flex-wrap items-center gap-2.5">
             <div className="panel-inset flex items-center gap-2.5 px-3.5 py-2.5">
@@ -191,7 +169,6 @@ export const CampusView: React.FC = () => {
                 <span className="eyebrow text-cool-400">
                   {selectedCourse.category} • Module {activeModuleIndex + 1}/{selectedCourse.modules.length}
                 </span>
-                <span className="text-2xs text-mist-500">• Pipeline §23</span>
               </div>
               <h3 id="course-pipeline-heading" className="mt-1 text-lg font-bold text-white">
                 {selectedCourse.title}
@@ -491,7 +468,7 @@ export const CampusView: React.FC = () => {
                 </div>
 
                 <div className="mt-6 rounded-xl border border-white/[0.08] bg-night-950/60 p-4 text-xs text-mist-300">
-                  <span className="font-semibold text-white">Career Passport (§35) :</span> Ce diplôme a été automatiquement rattaché à ton profil public et augmente tes chances d'embauche au Business District.
+                  <span className="font-semibold text-white">Career Passport :</span> Ce diplôme a été automatiquement rattaché à ton profil public et augmente tes chances d'embauche au Business District.
                 </div>
               </div>
 
@@ -568,7 +545,7 @@ export const CampusView: React.FC = () => {
                     onClick={() => startCourse(course)}
                   >
                     <BookOpen className="size-4" aria-hidden="true" />
-                    {isCompleted ? 'Réviser le cursus (§23)' : 'S\'inscrire à la formation'}
+                    {isCompleted ? 'Réviser le cursus' : 'S\'inscrire à la formation'}
                   </Button>
                 </div>
               </Panel>
