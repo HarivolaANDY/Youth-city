@@ -98,7 +98,7 @@ Le projet s'appuie sur une architecture découplée, réactive et sécurisée :
 └───────────────────────────────────────┘   └─────────────────────────────────────┘
 ```
 
-> **Note relative à la base de données** : Le backend utilise actuellement SQLite 3 (`db.sqlite3`), convenant au prototypage local et aux conteneurs de test. Les pilotes PostgreSQL (`psycopg` et `psycopg-binary` v3) sont inclus dans les dépendances pour permettre un branchement managé en production.
+> **Base de données** : SQLite (`db.sqlite3`) en développement ; **PostgreSQL obligatoire en production** (`DJANGO_DEBUG=False` sans `DATABASE_URL` : Django refuse de démarrer). `docker compose up` fournit PostgreSQL, un volume persistant et une sauvegarde quotidienne. Exploitation, sauvegarde et restauration : [docs/exploitation-base-de-donnees.md](docs/exploitation-base-de-donnees.md).
 
 ---
 

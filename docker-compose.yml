@@ -1,11 +1,64 @@
-version: '3.8'
-
 # ============================================================
 # Youth City - Orchestration Docker Compose Sécurisée (P5)
 # Isolation réseau, non-root, limites de ressources & healthchecks
+# Base PostgreSQL persistante (OPS-07) + sauvegarde quotidienne (OPS-03)
 # ============================================================
 
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: youthcity-db
+    restart: unless-stopped
+    # Aucun port publié : la base n'est joignable que depuis le réseau interne.
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-youthcity}
+      POSTGRES_USER: ${POSTGRES_USER:-youthcity}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?ERREUR CRITIQUE DE SECURITE - POSTGRES_PASSWORD doit etre defini dans le fichier .env (ex. openssl rand -hex 24).}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - youthcity-network
+
+  # Sauvegarde logique quotidienne (pg_dump, format personnalisé), conservée BACKUP_RETENTION_DAYS jours.
+  # Le volume `backups` est sur la même machine : copier régulièrement les fichiers hors du serveur.
+  # Un dump interrompu reste en `.tmp` (jamais pris pour une sauvegarde valide) et expire comme les autres.
+  db-backup:
+    image: postgres:16-alpine
+    container_name: youthcity-db-backup
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGDATABASE: ${POSTGRES_DB:-youthcity}
+      PGUSER: ${POSTGRES_USER:-youthcity}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requis}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
+    volumes:
+      - backups:/backups
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        while true; do
+          f="/backups/youthcity-$$(date +%Y%m%d-%H%M%S).dump"
+          if pg_dump -Fc -f "$$f.tmp"; then mv "$$f.tmp" "$$f" && echo "Sauvegarde OK : $$f"; else echo "ECHEC de la sauvegarde" >&2; fi
+          find /backups -name 'youthcity-*' -mtime +$$BACKUP_RETENTION_DAYS -delete
+          sleep 86400
+        done
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - youthcity-network
+
   backend:
     build:
       context: ./backend
@@ -18,10 +71,15 @@ services:
       - DJANGO_DEBUG=${DJANGO_DEBUG:-False}
       - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,backend,frontend}
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost,http://127.0.0.1,http://localhost:80,http://localhost:5173}
-      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:?ERREUR CRITIQUE DE SECURITE: DJANGO_SECRET_KEY doit etre obligatoirement defini dans le fichier .env a la racine ou dans l environnement.}
+      # Production = PostgreSQL obligatoire : sans DATABASE_URL, Django refuse de démarrer (OPS-07).
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-youthcity}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-youthcity}
+      - "DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:?ERREUR CRITIQUE DE SECURITE - DJANGO_SECRET_KEY doit etre obligatoirement defini dans le fichier .env a la racine ou dans l environnement.}"
     env_file:
       - path: ./backend/.env
         required: false
+    depends_on:
+      db:
+        condition: service_healthy
     security_opt:
       - no-new-privileges:true
     deploy:
@@ -63,3 +121,9 @@ networks:
   youthcity-network:
     driver: bridge
     name: youthcity-bridge-net
+
+volumes:
+  pgdata:
+    name: youthcity-pgdata
+  backups:
+    name: youthcity-backups

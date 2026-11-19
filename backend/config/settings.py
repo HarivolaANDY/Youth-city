@@ -7,6 +7,8 @@ from pathlib import Path
 from datetime import timedelta
 import os
 
+from .database import resolve_databases
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load local .env file if present
@@ -93,12 +95,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
+# PostgreSQL via DATABASE_URL ; SQLite seulement en développement (voir config/database.py).
+DATABASES = resolve_databases(
+    debug=DEBUG,
+    url=os.getenv('DATABASE_URL'),
+    sqlite_path=os.getenv('DJANGO_DB_PATH', str(BASE_DIR / 'db.sqlite3')),
+)
 
 AUTH_PASSWORD_VALIDATORS = [
     {

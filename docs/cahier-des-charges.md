@@ -2119,11 +2119,11 @@ numéros de section qui changent d'une version du cahier à l'autre.
 |---|---|---|---|
 | OPS-01 | Journaux structurés (JSON) avec identifiant de requête et identifiant de joueur pseudonymisé ; jamais de mot de passe, de jeton ni de contenu de message. | Test de non-fuite sur les journaux. | Partiel |
 | OPS-02 | Suivi des erreurs du frontend et du backend (Sentry ou équivalent). | Une erreur provoquée apparaît dans l'outil. | Non conforme |
-| OPS-03 | Sauvegardes automatiques ; restauration testée à blanc avant chaque version majeure. Objectifs de départ : perte maximale de 24 h, rétablissement en 4 h (à ajuster). | Compte rendu de restauration daté. | Non conforme |
+| OPS-03 | Sauvegardes automatiques ; restauration testée à blanc avant chaque version majeure. Objectifs de départ : perte maximale de 24 h, rétablissement en 4 h (à ajuster). | Compte rendu de restauration daté. | Partiel (sauvegarde quotidienne et script de restauration en place ; premier compte rendu de restauration à produire) |
 | OPS-04 | Trois environnements (développement, test, production) configurés par variables ; fonctionnalités V2 et V3 derrière des interrupteurs (par exemple le mentor IA). | Un interrupteur désactive une fonctionnalité sans déploiement. | Partiel |
 | OPS-05 | Sonde de santé publique et sonde de disponibilité de la base. | Sonde utilisée par le déploiement. | Conforme |
 | OPS-06 | Budgets de performance : routes de jeu sous 300 ms au 95e centile ; JavaScript initial d'au plus 200 ko compressé ; interface utilisable sur réseau mobile lent (§43). | Mesure automatique à chaque version. | Non conforme |
-| OPS-07 | Base de production PostgreSQL (§27.3) ; SQLite réservée au développement. | Le déploiement échoue sans base PostgreSQL. | Non conforme |
+| OPS-07 | Base de production PostgreSQL (§27.3) ; SQLite réservée au développement. | Le déploiement échoue sans base PostgreSQL. | Conforme (production : `DATABASE_URL` obligatoire, test `game.test_database_config`) |
 
 ### 49.10. Dépendances, sécurité continue et données personnelles (SEC)
 
